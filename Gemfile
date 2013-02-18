@@ -14,7 +14,7 @@ group :assets do
   gem "therubyracer"
 end
 
-gem "rails", "3.2.11"
+gem "rails", "3.2.12"
 gem "pg", "0.12.2"
 gem "memcache-client", :require => "memcache"
 gem "delayed_job"
@@ -31,6 +31,8 @@ gem 'net-ssh'
 gem 'net-sftp'
 
 group :development do
+  gem 'newrelic_rpm'
+  gem 'ruby-prof'
   gem 'pry'
   gem 'awesome_print'
 end

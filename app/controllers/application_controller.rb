@@ -11,6 +11,7 @@ class ApplicationController < ActionController::Base
   rescue_from User::PrivilegeError, :with => :access_denied
 
 protected
+
   def access_denied
     previous_url = params[:url] || request.fullpath
 

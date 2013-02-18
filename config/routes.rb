@@ -196,6 +196,7 @@ Danbooru::Application.routes.draw do
   match "/artist" => redirect {|params, req| "/artists?page=#{req.params[:page]}"}
   match "/artist/index" => redirect {|params, req| "/artists?page=#{req.params[:page]}"}
   match "/artist/show/:id" => redirect("/artists/%{id}")
+  match "/artist/show" => redirect {|params, req| "/artists?name=#{req.params[:name]}"}
   match "/artist/history/:id" => redirect("/artist_versions?search[artist_id]=%{id}")
   
   match "/comment" => redirect {|params, req| "/comments?page=#{req.params[:page]}"}
@@ -204,6 +205,7 @@ Danbooru::Application.routes.draw do
   
   match "/favorite" => redirect {|params, req| "/favorites?page=#{req.params[:page]}"}
   match "/favorite/index" => redirect {|params, req| "/favorites?page=#{req.params[:page]}"}
+  match "/favorite/list_users.json", :controller => "legacy", :action => "unavailable"
   
   match "/forum" => redirect {|params, req| "/forum_topics?page=#{req.params[:page]}"}
   match "/forum/index" => redirect {|params, req| "/forum_topics?page=#{req.params[:page]}"}
@@ -221,17 +223,21 @@ Danbooru::Application.routes.draw do
   
   match "/post/index.xml", :controller => "legacy", :action => "posts", :format => "xml"
   match "/post/index.json", :controller => "legacy", :action => "posts", :format => "json"
-  match "/post/index" => redirect {|params, req| "/posts?tags=#{req.params[:tags]}&page=#{req.params[:page]}"}
-  match "/post" => redirect {|params, req| "/posts?tags=#{req.params[:tags]}&page=#{req.params[:page]}"}
+  match "/post/create.xml", :controller => "legacy", :action => "create_post"
+  match "/post/piclens", :controller => "legacy", :action => "unavailable"
+  match "/post/index" => redirect {|params, req| "/posts?tags=#{CGI::escape(req.params[:tags].to_s)}&page=#{req.params[:page]}"}
+  match "/post" => redirect {|params, req| "/posts?tags=#{CGI::escape(req.params[:tags].to_s)}&page=#{req.params[:page]}"}
   match "/post/upload" => redirect("/uploads/new")
   match "/post/moderate" => redirect("/moderator/post/queue")
-  match "/post/atom" => redirect("/posts.atom")
-  match "/post/atom.feed" => redirect("/posts.atom")
+  match "/post/atom" => redirect {|params, req| "/posts.atom?tags=#{CGI::escape(req.params[:tags].to_s)}"}
+  match "/post/atom.feed" => redirect {|params, req| "/posts.atom?tags=#{CGI::escape(req.params[:tags].to_s)}"}
   match "/post/popular_by_day" => redirect("/explore/posts/popular")
   match "/post/popular_by_week" => redirect("/explore/posts/popular")
   match "/post/popular_by_month" => redirect("/explore/posts/popular")
   match "/post/show/:id/:tag_title" => redirect("/posts/%{id}")
   match "/post/show/:id" => redirect("/posts/%{id}")
+  match "/post/view/:id/:tag_title" => redirect("/posts/%{id}")
+  match "/post/view/:id" => redirect("/posts/%{id}")
   
   match "/post_tag_history" => redirect {|params, req| "/post_versions?page=#{req.params[:page]}"}
   match "/post_tag_history/index" => redirect {|params, req| "/post_versions?page=#{req.params[:page]}"}
@@ -245,10 +251,12 @@ Danbooru::Application.routes.draw do
   match "/user/index.json", :controller => "legacy", :action => "users", :format => "json"
   match "/user" => redirect {|params, req| "/users?page=#{req.params[:page]}"}
   match "/user/index" => redirect {|params, req| "/users?page=#{req.params[:page]}"}
+  match "/user/show/:id" => redirect("/users/%{id}")
+  match "/user/login" => redirect("/sessions/new")
   
   match "/wiki" => redirect {|params, req| "/wiki_pages?page=#{req.params[:page]}"}
   match "/wiki/index" => redirect {|params, req| "/wiki_pages?page=#{req.params[:page]}"}
-  match "/wiki/show" => redirect {|params, req| "/wiki_pages?title=#{req.params[:title]}"}
+  match "/wiki/show" => redirect {|params, req| "/wiki_pages?title=#{CGI::escape(req.params[:title].to_s)}"}
   match "/wiki/recent_changes" => redirect("/wiki_page_versions")
   match "/wiki/history/:title" => redirect("/wiki_page_versions?title=%{title}")
 

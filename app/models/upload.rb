@@ -23,11 +23,14 @@ class Upload < ActiveRecord::Base
     # Because uploads are processed serially, there's no race condition here.
     def validate_md5_uniqueness
       md5_post = Post.find_by_md5(md5)
-      merge_tags(md5_post) if md5_post
+      if md5_post
+        merge_tags(md5_post) 
+        raise "duplicate: #{md5_post.id}"
+      end
     end
     
     def validate_file_exists
-      unless File.exists?(file_path)
+      unless file_path && File.exists?(file_path)
         raise "file does not exist"
       end
     end
@@ -106,7 +109,6 @@ class Upload < ActiveRecord::Base
     def merge_tags(post)
       post.tag_string += " #{tag_string}"
       post.save
-      update_attribute(:status, "duplicate: #{post.id}")
     end
   end
   
@@ -221,7 +223,7 @@ class Upload < ActiveRecord::Base
     
     def ssd_file_path
       prefix = Rails.env == "test" ? "test." : ""
-      "#{Rails.root}/public/ssd/data/preview/#{prefix}#{md5}.#{file_ext}"
+      "#{Danbooru.config.ssd_path}/public/data/preview/#{prefix}#{md5}.jpg"
     end
     
     def resized_file_path_for(width)
@@ -271,6 +273,7 @@ class Upload < ActiveRecord::Base
           out.write(file.read)
         end
       end
+      FileUtils.chmod(0664, file_path)
       self.content_type = file.content_type || file_ext_to_content_type(file.original_filename)
       self.file_ext = content_type_to_file_ext(content_type)
     end
@@ -291,6 +294,14 @@ class Upload < ActiveRecord::Base
     
     def is_completed?
       status == "completed"
+    end
+    
+    def is_duplicate?
+      status =~ /duplicate/
+    end
+    
+    def duplicate_post_id
+      @duplicate_post_id ||= status[/duplicate: (\d+)/, 1]
     end
   end
   

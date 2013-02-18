@@ -532,14 +532,14 @@ class Post < ActiveRecord::Base
     def add_pool!(pool)
       return if belongs_to_pool?(pool)
       self.pool_string = "#{pool_string} pool:#{pool.id}".strip
-      update_column(:pool_string, pool_string)
+      update_column(:pool_string, pool_string) unless new_record?
       pool.add!(self)
     end
     
     def remove_pool!(pool)
       return unless belongs_to_pool?(pool)
       self.pool_string = pool_string.gsub(/(?:\A| )pool:#{pool.id}(?:\Z| )/, " ").strip
-      update_column(:pool_string, pool_string)
+      update_column(:pool_string, pool_string) unless new_record?
       pool.remove!(self)
     end
   end
@@ -595,18 +595,14 @@ class Post < ActiveRecord::Base
     
     def fast_count(tags = "")
       tags = tags.to_s.strip
+      
       count = get_count_from_cache(tags)
       if count.nil?
         if tags.blank? && Danbooru.config.blank_tag_search_fast_count
           count = Danbooru.config.blank_tag_search_fast_count
         else
-          begin
-            ActiveRecord::Base.connection.execute("SET statement_timeout = 500")
-            count = Post.tag_match(tags).undeleted.count
-          rescue ActiveRecord::StatementInvalid
-            count = Danbooru.config.blank_tag_search_fast_count || 1_000_000
-          ensure
-            ActiveRecord::Base.connection.execute("SET statement_timeout = 3000")
+          count = Post.with_timeout(500, Danbooru.config.blank_tag_search_fast_count || 1_000_000) do
+            Post.tag_match(tags).undeleted.count
           end
         end
 
@@ -615,7 +611,7 @@ class Post < ActiveRecord::Base
         end
       end
 
-      count
+      count.to_i
     rescue SearchError
       0
     end
@@ -623,7 +619,7 @@ class Post < ActiveRecord::Base
   
   module CacheMethods
     def expire_cache(tag_name)
-      if Post.fast_count("") < 1000
+      if Post.fast_count("").to_i < 1000
         Cache.delete(Post.count_cache_key(""))
       end
       Cache.delete(Post.count_cache_key(tag_name))

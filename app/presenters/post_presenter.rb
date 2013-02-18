@@ -4,6 +4,10 @@ class PostPresenter < Presenter
       return ""
     end
     
+    unless Danbooru.config.can_user_see_post?(CurrentUser.user, post)
+      return ""
+    end
+    
     flags = []
     flags << "pending" if post.is_pending?
     flags << "flagged" if post.is_flagged?
@@ -11,7 +15,7 @@ class PostPresenter < Presenter
     
     path = options[:path_prefix] || "/posts"
     
-    html =  %{<article class="post-preview" id="post_#{post.id}" data-id="#{post.id}" data-tags="#{h(post.tag_string)}" data-uploader="#{h(post.uploader_name)}" data-rating="#{post.rating}" data-width="#{post.image_width}" data-height="#{post.image_height}" data-flags="#{flags.join(' ')}" data-parent-id="#{post.parent_id}" data-has-children="#{post.has_children?}">}
+    html =  %{<article class="post-preview" id="post_#{post.id}" data-id="#{post.id}" data-tags="#{h(post.tag_string)}" data-uploader="#{h(post.uploader_name)}" data-rating="#{post.rating}" data-width="#{post.image_width}" data-height="#{post.image_height}" data-flags="#{flags.join(' ')}" data-parent-id="#{post.parent_id}" data-has-children="#{post.has_children?}" data-score="#{post.score}">}
     html << %{<a href="#{path}/#{post.id}">}
     html << %{<img src="#{post.preview_file_url}" alt="#{h(post.tag_string)}">}
     html << %{</a>}
@@ -52,7 +56,7 @@ class PostPresenter < Presenter
   end
   
   def image_html(template)
-    return template.content_tag("p", "This image was deleted.") if @post.is_deleted? && !CurrentUser.user.is_janitor?
+    return template.content_tag("p", "This image was deleted.") if @post.is_deleted? && !CurrentUser.user.is_privileged?
     return template.content_tag("p", "You need a privileged account to see this image.") if !Danbooru.config.can_user_see_post?(CurrentUser.user, @post)
     
     if @post.is_flash?

@@ -104,9 +104,17 @@ class ForumPost < ActiveRecord::Base
     self.is_deleted = false if is_deleted.nil?
   end
   
+  def creator_name
+    User.id_to_name(creator_id)
+  end
+  
+  def quoted_response
+    "[quote]\n#{creator_name} said:\n#{body}\n[/quote]\n\n"
+  end
+  
   def build_response
     dup.tap do |x|
-      x.body = "[quote]\n#{x.body}\n[/quote]\n\n"
+      x.body = x.quoted_response
     end
   end
 end

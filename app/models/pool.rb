@@ -24,20 +24,27 @@ class Pool < ActiveRecord::Base
       q = scoped
       return q if params.blank?
       
-      if params[:name_matches]
-        q = q.where("name like ? escape E'\\\\'", params[:name_matches])
+      if params[:name_matches].present?
+        params[:name_matches] += "*" unless params[:name_matches] =~ /\*/
+        q = q.where("name ilike ? escape E'\\\\'", params[:name_matches].to_escaped_for_sql_like)
       end
       
-      if params[:description_matches]
-        q = q.where("description like ? escape E'\\\\'", params[:description_matches])
+      if params[:description_matches].present?
+        q = q.where("description like ? escape E'\\\\'", params[:description_matches].to_escaped_for_sql_like)
       end
       
-      if params[:creator_name]
+      if params[:creator_name].present?
         q = q.where("creator_id = (select _.id from users _ where lower(_.name) = ?)", params[:creator_name].downcase)
       end
       
-      if params[:creator_id]
+      if params[:creator_id].present?
         q = q.where("creator_id = ?", params[:creator_id].to_i)
+      end
+      
+      if params[:sort] == "updated_at"
+        q = q.order("updated_at desc")
+      else
+        q = q.order("name")
       end
       
       q
@@ -56,6 +63,10 @@ class Pool < ActiveRecord::Base
   
   def self.id_to_name(id)
     select_value_sql("SELECT name FROM pools WHERE id = ?", id)
+  end
+  
+  def self.options
+    select_all_sql("SELECT id, name FROM pools WHERE is_active = true AND is_deleted = false ORDER BY name LIMIT 100").map {|x| [x["name"], x["id"]]}
   end
   
   def self.create_anonymous

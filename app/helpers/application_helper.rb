@@ -48,7 +48,7 @@ module ApplicationHelper
   def error_messages_for(instance_name)
     instance = instance_variable_get("@#{instance_name}")
     
-    if instance.errors.any?
+    if instance && instance.errors.any?
       %{<div class="error-messages ui-state-error ui-corner-all"><span class="ui-icon ui-icon-alert"></span> <strong>Error</strong>: #{instance.__send__(:errors).full_messages.join(", ")}</div>}.html_safe
     else
       ""
@@ -113,7 +113,7 @@ module ApplicationHelper
   
   def search_field(method, options = {})
     name = options[:label] || method.titleize
-    raw '<div class="input"><label for="search_' + method + '">' + name + '</label><input type="text" name="search_' + method + '" id="search_'  + method + '"></div>'
+    raw '<div class="input"><label for="search_' + method + '">' + name + '</label><input type="text" name="search[' + method + ']" id="search_'  + method + '"></div>'
   end
   
 protected
