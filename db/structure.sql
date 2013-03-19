@@ -684,7 +684,9 @@ CREATE TABLE comments (
     body_index tsvector NOT NULL,
     score integer DEFAULT 0 NOT NULL,
     created_at timestamp without time zone NOT NULL,
-    updated_at timestamp without time zone NOT NULL
+    updated_at timestamp without time zone NOT NULL,
+    updater_id integer,
+    updater_ip_addr inet
 );
 
 
@@ -2248,8 +2250,6 @@ CREATE TABLE posts (
     id integer NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
-    up_score integer DEFAULT 0 NOT NULL,
-    down_score integer DEFAULT 0 NOT NULL,
     score integer DEFAULT 0 NOT NULL,
     source character varying(255),
     md5 character varying(255) NOT NULL,
@@ -2393,7 +2393,7 @@ CREATE TABLE tag_subscriptions (
     id integer NOT NULL,
     creator_id integer NOT NULL,
     name character varying(255) NOT NULL,
-    tag_query character varying(255) NOT NULL,
+    tag_query text NOT NULL,
     post_ids text NOT NULL,
     is_public boolean DEFAULT true NOT NULL,
     last_accessed_at timestamp without time zone,
@@ -2463,7 +2463,7 @@ ALTER SEQUENCE tags_id_seq OWNED BY tags.id;
 
 CREATE TABLE uploads (
     id integer NOT NULL,
-    source character varying(255),
+    source text,
     file_path character varying(255),
     content_type character varying(255),
     rating character(1) NOT NULL,
@@ -2476,7 +2476,8 @@ CREATE TABLE uploads (
     md5_confirmation character varying(255),
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
-    server text
+    server text,
+    parent_id integer
 );
 
 
@@ -2595,7 +2596,12 @@ CREATE TABLE users (
     default_image_size character varying(255) DEFAULT 'large'::character varying NOT NULL,
     favorite_tags text,
     blacklisted_tags text,
-    time_zone character varying(255) DEFAULT 'Eastern Time (US & Canada)'::character varying NOT NULL
+    time_zone character varying(255) DEFAULT 'Eastern Time (US & Canada)'::character varying NOT NULL,
+    bcrypt_password_hash text,
+    enable_post_navigation boolean DEFAULT true NOT NULL,
+    new_post_navigation_layout boolean DEFAULT true NOT NULL,
+    enable_privacy_mode boolean DEFAULT false NOT NULL,
+    enable_sequential_post_navigation boolean DEFAULT true NOT NULL
 );
 
 
@@ -5647,6 +5653,13 @@ CREATE INDEX index_pool_versions_on_pool_id ON pool_versions USING btree (pool_i
 
 
 --
+-- Name: index_pool_versions_on_updated_at; Type: INDEX; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE INDEX index_pool_versions_on_updated_at ON pool_versions USING btree (updated_at);
+
+
+--
 -- Name: index_pool_versions_on_updater_id; Type: INDEX; Schema: public; Owner: -; Tablespace: 
 --
 
@@ -5665,6 +5678,13 @@ CREATE INDEX index_pool_versions_on_updater_ip_addr ON pool_versions USING btree
 --
 
 CREATE INDEX index_pools_on_creator_id ON pools USING btree (creator_id);
+
+
+--
+-- Name: index_pools_on_lower_name; Type: INDEX; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE INDEX index_pools_on_lower_name ON pools USING btree (lower((name)::text));
 
 
 --
@@ -5735,6 +5755,13 @@ CREATE INDEX index_post_flags_on_post_id ON post_flags USING btree (post_id);
 --
 
 CREATE INDEX index_post_versions_on_post_id ON post_versions USING btree (post_id);
+
+
+--
+-- Name: index_post_versions_on_updated_at; Type: INDEX; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE INDEX index_post_versions_on_updated_at ON post_versions USING btree (updated_at);
 
 
 --
@@ -5833,6 +5860,20 @@ CREATE INDEX index_posts_on_mpixels ON posts USING btree (((((image_width * imag
 --
 
 CREATE INDEX index_posts_on_parent_id ON posts USING btree (parent_id);
+
+
+--
+-- Name: index_posts_on_pixiv_id; Type: INDEX; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE INDEX index_posts_on_pixiv_id ON posts USING btree ((("substring"((source)::text, 'pixiv.net/img.*/([0-9]+)[^/]*$'::text))::integer));
+
+
+--
+-- Name: index_posts_on_pixiv_suffix; Type: INDEX; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE INDEX index_posts_on_pixiv_suffix ON posts USING btree ("substring"((source)::text, 'pixiv.net/img.*/([^/]*/[^/]*)$'::text) text_pattern_ops);
 
 
 --
@@ -5941,6 +5982,13 @@ CREATE INDEX index_uploads_on_uploader_ip_addr ON uploads USING btree (uploader_
 
 
 --
+-- Name: index_user_feedback_on_created_at; Type: INDEX; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE INDEX index_user_feedback_on_created_at ON user_feedback USING btree (created_at);
+
+
+--
 -- Name: index_user_feedback_on_creator_id; Type: INDEX; Schema: public; Owner: -; Tablespace: 
 --
 
@@ -5994,6 +6042,13 @@ CREATE UNIQUE INDEX index_wiki_pages_on_title ON wiki_pages USING btree (title);
 --
 
 CREATE INDEX index_wiki_pages_on_title_pattern ON wiki_pages USING btree (title text_pattern_ops);
+
+
+--
+-- Name: index_wiki_pages_on_updated_at; Type: INDEX; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE INDEX index_wiki_pages_on_updated_at ON wiki_pages USING btree (updated_at);
 
 
 --
@@ -6176,3 +6231,31 @@ INSERT INTO schema_migrations (version) VALUES ('20111101212358');
 INSERT INTO schema_migrations (version) VALUES ('20130106210658');
 
 INSERT INTO schema_migrations (version) VALUES ('20130114154400');
+
+INSERT INTO schema_migrations (version) VALUES ('20130219171111');
+
+INSERT INTO schema_migrations (version) VALUES ('20130219184743');
+
+INSERT INTO schema_migrations (version) VALUES ('20130221032344');
+
+INSERT INTO schema_migrations (version) VALUES ('20130221035518');
+
+INSERT INTO schema_migrations (version) VALUES ('20130221214811');
+
+INSERT INTO schema_migrations (version) VALUES ('20130302214500');
+
+INSERT INTO schema_migrations (version) VALUES ('20130305005138');
+
+INSERT INTO schema_migrations (version) VALUES ('20130307225324');
+
+INSERT INTO schema_migrations (version) VALUES ('20130308204213');
+
+INSERT INTO schema_migrations (version) VALUES ('20130318002652');
+
+INSERT INTO schema_migrations (version) VALUES ('20130318012517');
+
+INSERT INTO schema_migrations (version) VALUES ('20130318030619');
+
+INSERT INTO schema_migrations (version) VALUES ('20130318031705');
+
+INSERT INTO schema_migrations (version) VALUES ('20130318231740');

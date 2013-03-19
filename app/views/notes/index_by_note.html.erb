@@ -1,7 +1,7 @@
 <div id="c-notes">
   <div id="a-index">
     <h1>Notes</h1>
-    
+
     <table width="100%" class="striped">
       <thead>
         <tr>
@@ -17,14 +17,14 @@
           <tr>
             <td><%= link_to note.post_id, post_path(note.post_id) %></td>
             <td><%= link_to note.creator.name, user_path(note.creator_id) %></td>
-            <td><%= time_ago_in_words_tagged(note.created_at) %> ago</td>
+            <td><%= compact_time(note.created_at) %></td>
             <td><%= note.is_active? %></td>
             <td><%= format_text(note.body) %></td>
           </tr>
         <% end %>
       </tbody>
     </table>
-    
+
     <%= sequential_paginator(@notes) %>
   </div>
 </div>

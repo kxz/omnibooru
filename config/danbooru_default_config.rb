@@ -4,104 +4,104 @@ module Danbooru
   class Configuration
     # The version of this Danbooru.
     def version
-      "2.0.0"
+      "2.1.0"
     end
-    
+
     # The name of this Danbooru.
     def app_name
       "Danbooru"
     end
-    
+
     # The hostname of the server.
     def hostname
       Socket.gethostname
     end
-    
+
     # Contact email address of the admin.
     def contact_email
       "webmaster@#{server_host}"
     end
-    
+
     def upgrade_account_email
       contact_email
     end
-    
+
     # Stripped of any special characters.
     def safe_app_name
       app_name.gsub(/[^a-zA-Z0-9_-]/, "_")
     end
-    
+
     # The default name to use for anyone who isn't logged in.
     def default_guest_name
       "Anonymous"
     end
-    
+
     # This is a salt used to make dictionary attacks on account passwords harder.
     def password_salt
       "choujin-steiner"
     end
-    
+
     # Set to true to allow new account signups.
     def enable_signups?
       true
     end
-    
+
     # Set to true to give all new users privileged access.
     def start_as_privileged?
       false
     end
-    
+
     # Set to true to give all new users contributor access.
     def start_as_contributor?
       false
     end
-    
+
     # What method to use to store images.
     # local_flat: Store every image in one directory.
     # local_hierarchy: Store every image in a hierarchical directory, based on the post's MD5 hash. On some file systems this may be faster.
     def image_store
       :local_flat
     end
-    
+
     # Thumbnail size
     def small_image_width
       150
     end
-    
+
     # Large resize image width. Set to nil to disable.
     def large_image_width
       850
     end
-    
+
     def large_image_prefix
       "sample-"
     end
-    
+
     # When calculating statistics based on the posts table, gather this many posts to sample from.
     def post_sample_size
       300
     end
-    
+
     # If a solid state drive is availble, cache the thumbnails on the SSD to reduce disk seek times.
     def ssd_path
       nil
     end
-    
+
     # Where the ad banners are stored in the file system
     def advertisement_path
       nil
     end
-    
+
     # List of memcached servers
     def memcached_servers
       %w(localhost:11211)
     end
-    
+
     # After a post receives this many comments, new comments will no longer bump the post in comment/index.
     def comment_threshold
       40
     end
-    
+
     # Members cannot post more than X comments in an hour.
     def member_comment_limit
       2
@@ -109,64 +109,67 @@ module Danbooru
 
     # Determines who can see ads.
     def can_see_ads?(user)
-      false
+      !user.is_privileged?
     end
-    
-    # This is required for Rails 2.0.
-    def session_secret_key
-      "This should be at least 30 characters long"
-    end
-    
+
     # Users cannot search for more than X regular tags at a time.
-    def tag_query_limit
+    def base_tag_query_limit
       6
     end
-    
+
+    def tag_query_limit
+      if CurrentUser.user.present?
+        CurrentUser.user.tag_query_limit
+      else
+        base_tag_query_limit * 2
+      end
+    end
+
     # Max number of posts to cache
     def tag_subscription_post_limit
       200
     end
-    
+
     # After this many pages, the paginator will switch to sequential mode.
     def max_numbered_pages
-      10
+      1_000
     end
-    
+
     # Max number of tag subscriptions per user
     def max_tag_subscriptions
       5
     end
-    
+
     # Maximum size of an upload.
     def max_file_size
-      10.megabytes
+      25.megabytes
     end
-    
+
     def member_comment_time_threshold
       1.week.ago
     end
-    
+
     # The name of the server the app is hosted on.
     def server_host
       Socket.gethostname
     end
-    
+
     # Names of all Danbooru servers which serve out of the same common database.
     # Used in conjunction with load balancing to distribute files from one server to
     # the others. This should match whatever gethostname returns on the other servers.
     def all_server_hosts
       [server_host]
     end
-    
+
     # Names of other Danbooru servers.
     def other_server_hosts
-      all_server_hosts.reject {|x| x == server_host}
+      @other_server_hosts ||= all_server_hosts.reject {|x| x == server_host}
     end
 
     def remote_server_login
       "albert"
     end
-    
+
     # Returns a hash mapping various tag categories to a numerical value.
     # Be sure to update the reverse_tag_category_mapping also.
     def tag_category_mapping
@@ -186,16 +189,16 @@ module Danbooru
         "ch" => 4
       }
     end
-    
+
     def canonical_tag_category_mapping
       @canonical_tag_category_mapping ||= {
         "General" => 0,
         "Artist" => 1,
-        "Copyright" => 2,
-        "Character" => 3
+        "Copyright" => 3,
+        "Character" => 4
       }
     end
-    
+
     # Returns a hash maping numerical category values to their
     # string equivalent. Be sure to update the tag_category_mapping also.
     def reverse_tag_category_mapping
@@ -206,18 +209,18 @@ module Danbooru
         4 => "Character"
       }
     end
-    
+
     # If enabled, users must verify their email addresses.
     def enable_email_verification?
       false
     end
-    
+
     # Any custom code you want to insert into the default layout without
     # having to modify the templates.
     def custom_html_header_content
       nil
     end
-    
+
     # The number of posts displayed per page.
     def posts_per_page
       20
@@ -226,15 +229,15 @@ module Danbooru
     def is_post_restricted?(post)
       false
     end
-    
+
     def is_user_restricted?(user)
       !user.is_privileged?
     end
-    
+
     def is_user_advertiser?(user)
       user.is_admin?
     end
-    
+
     def can_user_see_post?(user, post)
       if is_user_restricted?(user) && is_post_restricted?(post)
         false
@@ -242,52 +245,61 @@ module Danbooru
         true
       end
     end
-    
+
     def select_posts_visible_to_user(user, posts)
       posts.select {|x| can_user_see_post?(user, x)}
     end
-    
+
     def max_appeals_per_day
       1
     end
-    
+
     # Counting every post is typically expensive because it involves a sequential scan on
     # potentially millions of rows. If this method returns a value, then blank searches
     # will return that number for the fast_count call instead.
     def blank_tag_search_fast_count
       nil
     end
-    
+
     def pixiv_login
       nil
     end
-    
+
     def pixiv_password
       nil
     end
-    
+
     def tinami_login
       nil
     end
-    
+
     def tinami_password
       nil
     end
-    
+
     def nico_seiga_login
       nil
     end
-    
+
     def nico_seiga_password
       nil
     end
-    
+
     def pixa_login
       nil
     end
-    
+
     def pixa_password
       nil
+    end
+
+    def amazon_ses
+      # {:smtp_server_name => "smtp server", :user_name => "user name", :ses_smtp_user_name => "smtp user name", :ses_smtp_password => "smtp password"}
+      nil
+    end
+
+    def enable_dimension_autotagging
+      true
     end
   end
 end

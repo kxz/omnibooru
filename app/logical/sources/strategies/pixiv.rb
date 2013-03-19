@@ -4,16 +4,24 @@ module Sources
       def self.url_match?(url)
         url =~ /^https?:\/\/(?:\w+\.)?pixiv\.net/
       end
-      
+
+      def referer_url(template)
+        if template.params[:ref] =~ /pixiv\.net\/member_illust/ && template.params[:ref] !~ /mode=manga/
+          template.params[:ref]
+        else
+          template.params[:url]
+        end
+      end
+
       def site_name
         "Pixiv"
       end
-      
+
       def unique_id
         image_url =~ /\/img\/([^\/]+)/
         $1
       end
-      
+
       def get
         agent.get(URI.parse(normalized_url).request_uri) do |page|
           @artist_name, @profile_url = get_profile_from_page(page)
@@ -23,13 +31,13 @@ module Sources
       end
 
     protected
-    
+
       def get_profile_from_page(page)
         profile_url = page.search("a.user-link").first
         if profile_url
           profile_url = "http://www.pixiv.net" + profile_url["href"]
         end
-        
+
         artist_name = page.search("h1.user").first
         if artist_name
           artist_name = artist_name.inner_text
@@ -37,19 +45,19 @@ module Sources
 
         return [artist_name, profile_url]
       end
-      
+
       def get_image_url_from_page(page)
-        meta = page.search("meta[property=\"og:image\"]").first
-        if meta
-          meta.attr("content").sub(/_[ms]\./, ".")
+        element = page.search("div.works_display a img").first
+        if element
+          element.attr("src").sub(/_[ms]\./, ".")
         else
           nil
         end
       end
-      
+
       def get_tags_from_page(page)
         # puts page.root.to_xhtml
-        
+
         links = page.search("ul.tags a.text").find_all do |node|
           node["href"] =~ /search\.php/
         end
@@ -62,10 +70,10 @@ module Sources
           []
         end
       end
-      
+
       def normalized_url
         @normalized_url ||= begin
-          if url =~ /\/(\d+)(_m|_p\d+)?\.(jpg|jpeg|png|gif)/i
+          if url =~ /\/(\d+)(?:_big)?(?:_m|_p\d+)?\.(?:jpg|jpeg|png|gif)/i
             "http://www.pixiv.net/member_illust.php?mode=medium&illust_id=#{$1}"
           elsif url =~ /mode=big/
             url.sub(/mode=big/, "mode=medium")
@@ -76,7 +84,7 @@ module Sources
           end
         end
       end
-      
+
       def agent
         @agent ||= begin
           mech = Mechanize.new

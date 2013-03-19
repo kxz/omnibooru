@@ -1,21 +1,25 @@
 (function() {
   Danbooru.Paginator = {};
-  
+
   Danbooru.Paginator.next_page = function() {
-    if ($('.paginator li span').parent().next().length) {
-      window.location = $('.paginator li span').parent().next().find('a').attr('href');
+    var href = $(".paginator a[rel=next]").attr("href");
+    if (href) {
+      window.location = href;
     }
   }
 
   Danbooru.Paginator.prev_page = function() {
-    if ($('.paginator li span').parent().prev().length) {
-      window.location = $('.paginator li span').parent().prev().find('a').attr('href');
+    var href = $(".paginator a[rel=prev]").attr("href");
+    if (href) {
+      window.location = href;
     }
   }
 })();
 
 $(function() {
-  $(document).bind("keypress", 'right', function(){ Danbooru.Paginator.next_page() });
-  $(document).bind("keypress", 'left', function(){ Danbooru.Paginator.prev_page() });
+  if ($(".paginator").length && (Danbooru.meta("enable-js-navigation") === "true")) {
+    $(document).bind("keydown.d", Danbooru.Paginator.next_page);
+    $(document).bind("keydown.a", Danbooru.Paginator.prev_page);
+  }
 });
 

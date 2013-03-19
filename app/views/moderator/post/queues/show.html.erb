@@ -9,11 +9,11 @@
 
     <div>
       <h1>Moderation Queue</h1>
-      
+
       <div id="moderation-guideline">
         <h1>Deletion Guidelines</h1>
         <p>
-          As a general rule, you should only approve of posts that you personally like. Posts that are not approved in three days will be automatically deleted. Posts with score -3 or lower are marked red. Posts with score 3 or higher are marked green.
+          As a general rule, you should only approve of posts that you personally like. Posts that are not approved in three days will be automatically deleted. Posts with score -3 or lower are marked red. Posts with score 3 or higher are marked green. Posts with the duplicate tag are marked in yellow.
           <% if params[:hidden] %>
             <%= link_to "View pending posts", moderator_post_queue_path(:query => params[:query], :hidden => nil) %>.
           <% else %>
@@ -25,9 +25,9 @@
       </div>
 
       <% @posts.each do |post| %>
-        <article id="post-<%= post.id %>">
+        <article class="post" id="post-<%= post.id %>" data-score="<%= post.score %>" data-has-children="<%= post.has_children? %>" data-has-dup="<%= post.has_dup_tag? %>">
           <aside>
-            <%= link_to(image_tag(post.preview_file_url), post_path(post)) %>
+            <%= link_to(image_tag(post.preview_file_url), post_path(post), :target => "_blank") %>
           </aside>
 
           <section>
@@ -37,12 +37,12 @@
               <li><strong>Score</strong>: <%= post.score %></li>
               <li>
                 <strong>Size:</strong>
-                <%= number_to_human_size(post.file_size) %> 
+                <%= number_to_human_size(post.file_size) %>
                 <% if post.is_image? %>
                   (<%= post.image_width %>x<%= post.image_height %>)
                 <% end %>
               </li>
-              <li><strong>Uploader</strong>: <%= link_to(post.uploader.name, user_path(post.uploader_id)) %> <%= time_ago_in_words_tagged(post.created_at) %> ago</li>
+              <li><strong>Uploader</strong>: <%= link_to(post.uploader.name, user_path(post.uploader_id)) %> <%= time_ago_in_words_tagged(post.created_at) %></li>
               <% if post.is_flagged? %>
                 <li><strong>Flagged</strong>: <%= post_flag_reasons(post) %></li>
               <% end %>
@@ -56,7 +56,7 @@
         </article>
       <% end %>
     </div>
-    
+
     <%= numbered_paginator(@posts) %>
   </div>
 </div>

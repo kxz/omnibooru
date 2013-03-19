@@ -1,13 +1,13 @@
 <div id="c-users">
   <div id="a-index">
     <h1>Users</h1>
-    
+
     <% form_tag(users_path, :method => :get, :class => "simple_form") do %>
       <%= search_field "name_matches", :label => "Name" %>
       <%= submit_tag "Search" %>
     <% end %>
 
-    <table width="100%" class="striped"> 
+    <table width="100%" class="striped">
       <thead>
         <tr>
           <th></th>
@@ -35,7 +35,7 @@
                 &larr; <%= link_to user.inviter.name, user_path(user.inviter_id) %>
               <% end %>
             </td>
-            <td><%= link_to user.posts.count, posts_path(:tags => "uploader:#{user.name}") %></td>
+            <td><%= link_to user.posts.count, posts_path(:tags => "user:#{user.name}") %></td>
             <td><%= user.posts.deleted.count %></td>
             <% if user.posts.count > 100 %>
               <td><%= number_to_percentage(100 * user.posts.positive.count.to_f / user.posts.count, :precision => 0) %></td>
@@ -46,7 +46,7 @@
             <% end %>
             <td><%= link_to user.note_versions.count, note_versions_path(:search => {:updater_id => user.id}) %></td>
             <td><%= user.level_string %></td>
-            <td><span title="<%= user.created_at %>"><%= time_ago_in_words_tagged user.created_at %> ago</span></td>
+            <td><%= compact_time user.created_at %></td>
           </tr>
         <% end %>
       </tbody>

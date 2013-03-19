@@ -7,14 +7,19 @@ class IpBansController < ApplicationController
 
   def create
     @ip_ban = IpBan.create(params[:ip_ban])
-    redirect_to ip_bans_path
+
+    if @ip_ban.errors.any?
+      render :action => "new"
+    else
+      redirect_to ip_bans_path
+    end
   end
-  
+
   def index
     @search = IpBan.search(params[:search])
-    @ip_bans = @search.paginate(params[:page])
+    @ip_bans = @search.order("id desc").paginate(params[:page])
   end
-  
+
   def destroy
     @ip_ban = IpBan.find(params[:id])
     @ip_ban.destroy

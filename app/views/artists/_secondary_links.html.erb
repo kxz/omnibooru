@@ -1,5 +1,6 @@
 <% content_for(:secondary_links) do %>
   <menu>
+    <li><%= render "artists/quick_search" %></li>
     <li><%= link_to "Listing", artists_path %></li>
     <li><%= link_to "Banned", banned_artists_path %></li>
     <li><%= link_to "Search", search_artists_path %></li>
@@ -7,9 +8,13 @@
     <li><%= link_to "Recent changes", artist_versions_path %></li>
     <% if @artist && !@artist.new_record? %>
       <li>|</li>
+      <li><%= link_to "Posts", posts_path(:tags => @artist.name) %></li>
+      <li><%= link_to "Show", artist_path(@artist) %></li>
       <li><%= link_to "Edit", edit_artist_path(@artist) %></li>
       <li><%= link_to "History", artist_versions_path(:search => {:artist_id => @artist.id}) %></li>
-      <li><%= link_to "Show", artist_path(@artist) %></li>
+      <% if CurrentUser.is_admin? %>
+        <%= link_to "Ban", ban_artist_path(@artist), :method => :put %>
+      <% end %>
     <% end %>
   </menu>
 <% end %>

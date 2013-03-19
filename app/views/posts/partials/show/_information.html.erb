@@ -1,11 +1,12 @@
 <ul>
+  <li>ID: <%= post.id %></li>
   <li>Uploader: <%= link_to_unless(post.uploader.nil?, post.uploader_name, user_path(post.uploader)) %></li>
-  <li>Date: <time datetime="<%= post.created_at.iso8601 %>" title="<%= post.created_at.to_date %>"><%= raw time_ago_in_words_tagged(post.created_at).gsub(/about/, "") %> ago</time></li>
+  <li>Date: <%= link_to time_ago_in_words_tagged(post.created_at), posts_path(:tags => "date:#{post.created_at.to_date}") %></li>
   <% if post.approver %>
     <li>Approver: <%= link_to(post.approver.name, user_path(post.approver_id)) %></li>
   <% end %>
   <li>
-    Size: <%= number_to_human_size(post.file_size) %> 
+    Size: <%= link_to_if Danbooru.config.can_user_see_post?(CurrentUser.user, post), number_to_human_size(post.file_size), post.file_url %>
     <% if post.is_image? %>
       (<%= post.image_width %>x<%= post.image_height %>)
     <% end %>
@@ -13,21 +14,21 @@
   <li>Source: <%= post_source_tag(post) %></li>
   <li>Rating: <%= post.pretty_rating %></li>
   <li>Score: <span id="score-for-post-<%= post.id %>"><%= post.score %></span> <% if CurrentUser.is_privileged? %>(vote <%= link_to "up", post_votes_path(:post_id => post.id, :score => "up"), :remote => true, :method => :post %>/<%= link_to "down", post_votes_path(:post_id => post.id, :score => "down"), :remote => true, :method => :post %>)<% end %></li>
-  <li>ID: <%= post.id %></li>
+  <li>Favorites: <span id="favcount-for-post-<%= post.id %>"><%= post.fav_count %></span></li>
   <li>
     Status:
     <% if post.is_pending? %>
       Pending
     <% end %>
-    
+
     <% if post.is_deleted? %>
       Deleted
     <% end %>
-    
+
     <% if post.is_flagged? %>
       Flagged
     <% end %>
-    
+
     <% if !post.is_pending? && !post.is_deleted? %>
       Active
     <% end %>

@@ -1,0 +1,11 @@
+<% if (position == "bottom" && CurrentUser.user.new_post_navigation_layout) || (position == "top" && !CurrentUser.user.new_post_navigation_layout) %>
+  <div id="nav-links" class="ui-corner-all nav-notice">
+    <% if CurrentUser.user.enable_sequential_post_navigation && params[:tags].present? && params[:tags] !~ /order:/ %>
+      <%= render "posts/partials/show/search_seq", :post => post %>
+    <% end %>
+
+    <% if post.pools.active.any? %>
+      <%= render "posts/partials/show/pools", :post => post %>
+    <% end %>
+  </div>
+<% end %>

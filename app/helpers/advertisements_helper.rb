@@ -2,26 +2,27 @@ module AdvertisementsHelper
   def render_advertisement(ad_type)
 		if Danbooru.config.can_see_ads?(CurrentUser.user)
 	    @advertisement = Advertisement.find(:first, :conditions => ["ad_type = ? AND status = 'active'", ad_type], :order => "random()")
-	    content_tag(
-	      "div", 
-	      link_to(
-	        image_tag(
-	          @advertisement.image_url, 
-	          :alt => "Advertisement", 
-	          :width => @advertisement.width, 
-	          :height => @advertisement.height
-	        ), 
-	        advertisement_hits_path(:advertisement_id => @advertisement.id),
-	        :remote => true,
-	        :method => :post
-	      ),
-        :style => "margin-bottom: 1em;"
-	    )
+	    if @advertisement
+  	    content_tag(
+  	      "div",
+  	      link_to(
+  	        image_tag(
+  	          @advertisement.image_url,
+  	          :alt => "Advertisement",
+  	          :width => @advertisement.width,
+  	          :height => @advertisement.height
+  	        ),
+  	        advertisement_hits_path(:advertisement_id => @advertisement.id),
+  	        :method => :post
+  	      ),
+          :style => "margin-bottom: 1em;"
+  	    )
+	    end
 		else
 			""
 		end
   end
-  
+
   def render_rss_advertisement(short_or_long, safe)
     if Danbooru.config.can_see_ads?(CurrentUser.user)
       if safe

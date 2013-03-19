@@ -1,0 +1,5 @@
+<% if @error_message %>
+  <p><%= @error_message %></p>
+<% else %>
+  <p>Error: <%= @exception.to_s %></p>
+<% end %>

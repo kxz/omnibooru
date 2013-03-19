@@ -11,12 +11,11 @@
 
       <section id="blacklist-box">
         <h1>Blacklisted</h1>
-        <%= link_to "Hidden", "#" %>
-        <ul>
+        <ul id="blacklist-list">
         </ul>
       </section>
     </aside>
-      
+
     <section id="content">
       <h1>Favorites</h1>
 
@@ -24,12 +23,12 @@
 
       <%= sequential_paginator(@favorite_set.favorites) %>
     </section>
-    
+
     <% content_for(:page_title) do %>
       Favorites - <%= CurrentUser.name %> - <%= Danbooru.config.app_name %>
     <% end %>
 
-    <%= render "posts/partials/common/secondary_links" %>    
+    <%= render "posts/partials/common/secondary_links" %>
   </div>
 </div>
 

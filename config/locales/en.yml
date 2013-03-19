@@ -20,3 +20,12 @@ en:
       post_disapproval:
         post: "You"
         post_id: "You"
+      comment:
+        post: "You"
+        post_id: "You"
+      comment_vote:
+        comment: "You"
+        user_id: "You"
+      tag_subscription:
+        creator: "You"
+        creator_id: "You"

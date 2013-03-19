@@ -4,7 +4,7 @@ class Cache
     Cache.put(key, val.to_i + 1)
     ActiveRecord::Base.logger.debug('MemCache Incr %s' % [key])
   end
-  
+
   def self.decr(key, expiry = 0)
     val = Cache.get(key, expiry)
     if val.to_i > 0
@@ -12,7 +12,7 @@ class Cache
     end
     ActiveRecord::Base.logger.debug('MemCache Decr %s' % [key])
   end
-  
+
   def self.get_multi(keys, prefix, expiry = 0)
     key_to_sanitized_key_hash = keys.inject({}) do |hash, x|
       hash[x] = "#{prefix}:#{Cache.sanitize(x)}"
@@ -30,17 +30,17 @@ class Cache
           Cache.put(sanitized_key, result_hash[key], expiry)
         end
       end
-      
+
       ActiveRecord::Base.logger.debug('MemCache Multi-Get (%0.6f)  %s' % [elapsed, keys.join(",")])
     end
   end
-  
+
   def self.get(key, expiry = 0)
     begin
       start_time = Time.now
-      value = MEMCACHE.get key
+      value = MEMCACHE.get key.slice(0, 200)
       elapsed = Time.now - start_time
-      ActiveRecord::Base.logger.debug('MemCache Get (%0.6f)  %s' % [elapsed, key])
+      ActiveRecord::Base.logger.debug('MemCache Get (%0.6f)  %s -> %s' % [elapsed, key, value])
       if value.nil? and block_given? then
         value = yield
         MEMCACHE.set key, value, expiry
@@ -55,23 +55,23 @@ class Cache
       value
     end
   end
-  
+
   def self.put(key, value, expiry = 0)
     key.gsub!(/\s/, "_")
     key = key[0, 200]
-    
+
     begin
       start_time = Time.now
       MEMCACHE.set key, value, expiry
       elapsed = Time.now - start_time
-      ActiveRecord::Base.logger.debug('MemCache Set (%0.6f)  %s' % [elapsed, key])
+      ActiveRecord::Base.logger.debug('MemCache Set (%0.6f)  %s -> %s' % [elapsed, key, value])
       value
     rescue MemCache::MemCacheError => err
       ActiveRecord::Base.logger.debug "MemCache Error: #{err.message}"
       nil
     end
   end
-  
+
   def self.delete(key, delay = nil)
     begin
       start_time = Time.now
@@ -84,7 +84,7 @@ class Cache
       nil
     end
   end
-  
+
   def self.sanitize(key)
     key.gsub(/\W/) {|x| "%#{x.ord}"}.slice(0, 240)
   end

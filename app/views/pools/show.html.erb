@@ -1,11 +1,17 @@
 <div id="c-pools">
   <div id="a-show">
-    <h1>Pool: <%= @pool.name %></h1>
-    
+    <h1>
+      Pool:
+      <%= @pool.pretty_name %>
+      <% if @pool.is_deleted? %>
+        <span class="inactive">(deleted)</span>
+      <% end %>
+    </h1>
+
     <div id="description">
       <%= format_text(@pool.description) %>
     </div>
-    
+
     <section id="content">
       <%= @post_set.presenter.post_previews_html(self) %>
 
@@ -17,5 +23,5 @@
 <%= render "secondary_links" %>
 
 <% content_for(:page_title) do %>
-  Pool - <%= @pool.name %> - <%= Danbooru.config.app_name %>
+  Pool - <%= @pool.pretty_name %> - <%= Danbooru.config.app_name %>
 <% end %>

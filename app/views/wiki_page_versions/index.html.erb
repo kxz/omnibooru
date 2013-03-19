@@ -4,42 +4,60 @@
 
     <section id="content">
       <h1>Wiki Pages</h1>
-      
-      <table width="100%" class="striped">
-        <thead>
-          <tr>
-            <th width="60%">Title</th>
-            <th width="10%">IP Address</th>
-            <th width="30%">Last edited</th>
-          </tr>       
-        </thead>
-        <tbody>
-          <% @wiki_page_versions.each do |wiki_page_version| %>
+
+      <%= form_tag(diff_wiki_page_versions_path, :method => :get) do %>
+        <table width="100%" class="striped">
+          <thead>
             <tr>
-              <td><%= wiki_page_version.title %></td>
-              <td>
-                <% if CurrentUser.is_admin? %>
-                  <%= wiki_page_version.updater_ip_addr %>
-                <% end %>
-              </td>
-              <td>
-                <%= link_to wiki_page_version.updated_at.strftime("%m/%d/%Y %I:%M"), wiki_page_version_path(wiki_page_version) %>
-                <% if wiki_page_version.updater %>
-                  by
-                  <%= link_to wiki_page_version.updater_name, user_path(wiki_page_version.updater) %>
-                <% end %>
-              </td>
+              <th width="2%"></th>
+              <th width="2%"></th>
+              <th width="60%">Title</th>
+              <th width="10%">IP Address</th>
+              <th width="26%">Last edited</th>
             </tr>
-          <% end %>       
-        </tbody>
-      </table>
-      
+          </thead>
+          <tbody>
+            <% @wiki_page_versions.each do |wiki_page_version| %>
+              <tr>
+                <td>
+                  <% if params[:search] && params[:search][:wiki_page_id] %>
+                    <%= radio_button_tag "thispage", wiki_page_version.id %>
+                  <% end %>
+                </td>
+                <td>
+                  <% if params[:search] && params[:search][:wiki_page_id] %>
+                    <%= radio_button_tag "otherpage", wiki_page_version.id %>
+                  <% end %>
+                </td>
+                <td><%= link_to wiki_page_version.title, wiki_page_path(wiki_page_version.wiki_page_id) %></td>
+                <td>
+                  <% if CurrentUser.is_admin? %>
+                    <%= wiki_page_version.updater_ip_addr %>
+                  <% end %>
+                </td>
+                <td>
+                  <%= link_to wiki_page_version.updated_at.strftime("%Y-%m-%d %I:%M"), wiki_page_version_path(wiki_page_version) %>
+                  <% if wiki_page_version.updater %>
+                    by
+                    <%= link_to wiki_page_version.updater_name, user_path(wiki_page_version.updater) %>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+
+        <% if params[:search] && params[:search][:wiki_page_id] %>
+          <%= submit_tag "Diff" %>
+        <% end %>
+      <% end %>
+
       <%= numbered_paginator(@wiki_page_versions) %>
     </section>
   </div>
 </div>
 
-<%= render "wiki_pages/secondary_links" %>    
+<%= render "wiki_pages/secondary_links" %>
 
 <% content_for(:page_title) do %>
   Wiki Page Versions - <%= Danbooru.config.app_name %>

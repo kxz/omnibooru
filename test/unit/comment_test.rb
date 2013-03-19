@@ -8,29 +8,42 @@ class CommentTest < ActiveSupport::TestCase
       CurrentUser.ip_addr = "127.0.0.1"
       MEMCACHE.flush_all
     end
-    
+
     teardown do
       CurrentUser.user = nil
       CurrentUser.ip_addr = nil
     end
-    
+
     context "created by a limited user" do
       setup do
         Danbooru.config.stubs(:member_comment_limit).returns(5)
         Danbooru.config.stubs(:member_comment_time_threshold).returns(1.week.ago)
       end
-      
+
       should "fail creation" do
         comment = FactoryGirl.build(:comment)
         comment.save
         assert_equal(["Creator can not post comments within 1 week of sign up, and can only post 5 comments per hour after that"], comment.errors.full_messages)
       end
     end
-    
+
     context "created by an unlimited user" do
       setup do
         Danbooru.config.stubs(:member_comment_limit).returns(100)
         Danbooru.config.stubs(:member_comment_time_threshold).returns(1.week.from_now)
+      end
+
+      context "that is then deleted" do
+        setup do
+          @post = FactoryGirl.create(:post)
+          @comment = FactoryGirl.create(:comment, :post_id => @post.id)
+          @comment.destroy
+          @post.reload
+        end
+
+        should "nullify the last_commented_at field" do
+          assert_nil(@post.last_commented_at)
+        end
       end
 
       should "be created" do
@@ -60,6 +73,17 @@ class CommentTest < ActiveSupport::TestCase
         assert_equal(c1.created_at.to_s, p.last_commented_at.to_s)
       end
 
+      should "not record the user id of the voter" do
+        user = FactoryGirl.create(:user)
+        post = FactoryGirl.create(:post)
+        c1 = FactoryGirl.create(:comment, :post => post)
+        CurrentUser.scoped(user, "127.0.0.1") do
+          c1.vote!("up")
+          c1.reload
+          assert_not_equal(user.id, c1.updater_id)
+        end
+      end
+
       should "not allow duplicate votes" do
         user = FactoryGirl.create(:user)
         post = FactoryGirl.create(:post)
@@ -67,7 +91,7 @@ class CommentTest < ActiveSupport::TestCase
         comment_vote = c1.vote!("up")
         assert_equal([], comment_vote.errors.full_messages)
         comment_vote = c1.vote!("up")
-        assert_equal(["User has already voted for this comment"], comment_vote.errors.full_messages)
+        assert_equal(["You have already voted for this comment"], comment_vote.errors.full_messages)
         assert_equal(1, CommentVote.count)
         assert_equal(1, CommentVote.last.score)
 

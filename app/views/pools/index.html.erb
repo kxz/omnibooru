@@ -4,21 +4,25 @@
       <thead>
         <tr>
           <th width="5%"></th>
-          <th width="70%">Name</th>
+          <th width="60%">Name</th>
           <th width="25%">Creator</th>
+          <th width="10%">Count</th>
         </tr>
       </thead>
       <tbody>
         <% @pools.each do |pool| %>
           <%= content_tag(:tr, :id => "pool-#{pool.id}") do %>
             <td>
-              
+
             </td>
             <td>
-              <%= link_to h(pool.name), pool_path(pool) %>
+              <%= link_to h(pool.pretty_name), pool_path(pool) %>
             </td>
             <td>
               <%= link_to h(pool.creator.name), user_path(pool.creator) %>
+            </td>
+            <td>
+              <%= pool.post_count %>
             </td>
           <% end %>
         <% end %>

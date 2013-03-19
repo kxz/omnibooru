@@ -2,24 +2,26 @@
   <div class="author">
     <h1><%= link_to comment.creator_name, user_path(comment.creator_id) %></h1>
     <p>
-      <%= time_ago_in_words_tagged(comment.created_at) %> ago
+      <%= time_ago_in_words_tagged(comment.created_at) %>
     </p>
   </div>
   <div class="content">
     <div class="body prose">
       <%= format_text(comment.body) %>
-    </div>
-    <menu> 
-      <li><%= link_to "Reply", new_comment_path(:post_id => comment.post_id), :class => "reply-link", "data-comment-id" => comment.id %></li>
-      <% if comment.editable_by?(CurrentUser.user) %>
-        <li><%= link_to "Delete", comment_path(comment.id), :confirm => "Do you really want to delete this comment?", :method => :delete, :remote => true %></li>
-        <li><%= link_to "Edit", edit_comment_path(comment.id) %></li>
+
+      <% if comment.updater_id.present? && (comment.updater_id != comment.creator_id || comment.created_at != comment.updated_at) %>
+        <p class="info">Updated by <%= link_to comment.updater_name, user_path(comment.updater_id) %> <%= time_ago_in_words_tagged(comment.updated_at) %></p>
       <% end %>
-      <li><%= link_to "Vote up", comment_votes_path(:comment_id => comment.id, :score => "up"), :method => :post, :remote => true %></li>
-      <li><%= link_to "Vote down", comment_votes_path(:comment_id => comment.id, :score => "down"), :method => :post, :remote => true %></li>
-    
-      <% if @comment %>
-        <li><%= link_to "View post", post_path(post) %></li>
+    </div>
+    <menu>
+      <% if @post || @posts %>
+        <li><%= link_to "Reply", new_comment_path(:post_id => comment.post_id), :class => "reply-link", "data-comment-id" => comment.id %></li>
+        <% if comment.editable_by?(CurrentUser.user) %>
+          <li><%= link_to "Delete", comment_path(comment.id), :confirm => "Do you really want to delete this comment?", :method => :delete, :remote => true %></li>
+          <li><%= link_to "Edit", edit_comment_path(comment.id) %></li>
+        <% end %>
+        <li id="comment-vote-up-link-for-<%= comment.id %>"><%= link_to "Vote up", comment_votes_path(:comment_id => comment.id, :score => "up"), :method => :post, :remote => true %></li>
+        <li id="comment-vote-down-link-for-<%= comment.id %>"><%= link_to "Vote down", comment_votes_path(:comment_id => comment.id, :score => "down"), :method => :post, :remote => true %></li>
       <% end %>
     </menu>
   </div>

@@ -2,27 +2,58 @@
   Danbooru.meta = function(key) {
     return $("meta[name=" + key + "]").attr("content");
   }
-  
+
+  Danbooru.scroll_to = function(element) {
+    var top = null;
+    if (typeof(element) === "number") {
+      top = element;
+    } else {
+      top = element.offset().top - 10;
+    }
+    $('html, body').animate({
+        scrollTop: top
+    }, 0);
+  }
+
   Danbooru.notice = function(msg) {
     $('#notice').html(msg).addClass("ui-state-highlight").removeClass("ui-state-error").fadeIn("fast");
   }
-  
+
   Danbooru.error = function(msg) {
     $('#notice').html(msg).removeClass("ui-state-highlight").addClass("ui-state-error").fadeIn("fast");
+    Danbooru.scroll_to($("#notice"));
   }
-  
+
   Danbooru.is_subset = function(array, subarray) {
     var all = true;
-    
+
     $.each(subarray, function(i, val) {
       if ($.inArray(val, array) === -1) {
         all = false;
       }
     });
-    
+
     return all;
   }
-  
+
+  Danbooru.intersect = function(a, b) {
+    a = a.slice(0).sort();
+    b = b.slice(0).sort();
+    var result = [];
+    while (a.length > 0 && b.length > 0)
+    {
+      if (a[0] < b[0]) {
+        a.shift();
+      } else if (a[0] > b[0]) {
+        b.shift();
+      } else {
+        result.push(a.shift());
+        b.shift();
+      }
+    }
+    return result;
+  }
+
   Danbooru.without = function(array, element) {
     var temp = [];
     $.each(array, function(i, v) {
@@ -32,7 +63,7 @@
     });
     return temp;
   }
-  
+
   Danbooru.reject = function(array, f) {
     var filtered = [];
     $.each(array, function(i, x) {
@@ -41,5 +72,25 @@
       }
     });
     return filtered;
+  }
+
+  $.fn.selectRange = function(start, end) {
+    return this.each(function() {
+      if (this.setSelectionRange) {
+        this.focus();
+        this.setSelectionRange(start, end);
+      } else if (this.createTextRange) {
+        var range = this.createTextRange();
+        range.collapse(true);
+        range.moveEnd('character', end);
+        range.moveStart('character', start);
+        range.select();
+      }
+    });
+  };
+
+  $.fn.selectEnd = function(){
+    this.selectRange(this.val().length, this.val().length);
+    return this;
   }
 })();

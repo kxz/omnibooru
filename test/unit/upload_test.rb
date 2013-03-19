@@ -18,9 +18,34 @@ class UploadTest < ActiveSupport::TestCase
       @upload.delete_temp_file if @upload
     end
 
-    context "An upload" do    
+    context "An upload" do
       teardown do
         FileUtils.rm_f(Dir.glob("#{Rails.root}/tmp/test.*"))
+      end
+
+      context "that has incredibly absurd res dimensions" do
+        setup do
+          @upload = FactoryGirl.build(:jpg_upload, :tag_string => "")
+          @upload.image_width = 10_000
+          @upload.image_height = 10
+          @upload.add_dimension_tags!
+        end
+
+        should "have the incredibly_absurdres tag" do
+          assert_match(/incredibly_absurdres/, @upload.tag_string)
+        end
+      end
+
+      context "that has a large flie size" do
+        setup do
+          @upload = FactoryGirl.build(:jpg_upload, :tag_string => "")
+          @upload.file_size = 11.megabytes
+          @upload.add_file_size_tags!(@upload.file_path)
+        end
+
+        should "have the huge_filesize tag" do
+          assert_match(/huge_filesize/, @upload.tag_string)
+        end
       end
 
       context "image size calculator" do
@@ -79,6 +104,23 @@ class UploadTest < ActiveSupport::TestCase
         end
       end
 
+      context "determining if a file is downloadable" do
+        should "classify HTTP sources as downloadable" do
+          @upload = FactoryGirl.create(:source_upload, :source => "http://www.example.com/1.jpg")
+          assert_not_nil(@upload.is_downloadable?)
+        end
+
+        should "classify HTTPS sources as downloadable" do
+          @upload = FactoryGirl.create(:source_upload, :source => "https://www.example.com/1.jpg")
+          assert_not_nil(@upload.is_downloadable?)
+        end
+
+        should "classify non-HTTP/HTTPS sources as not downloadable" do
+          @upload = FactoryGirl.create(:source_upload, :source => "ftp://www.example.com/1.jpg")
+          assert_nil(@upload.is_downloadable?)
+        end
+      end
+
       context "file processor" do
         should "parse and process a cgi file representation" do
           FileUtils.cp("#{Rails.root}/test/files/test.jpg", "#{Rails.root}/tmp")
@@ -89,7 +131,7 @@ class UploadTest < ActiveSupport::TestCase
           assert_equal(28086, File.size(@upload.file_path))
           assert_equal("jpg", @upload.file_ext)
         end
-        
+
         should "process a transparent png" do
           FileUtils.cp("#{Rails.root}/test/files/alpha.png", "#{Rails.root}/tmp")
           @upload = Upload.new(:file => upload_file("#{Rails.root}/tmp/alpha.png", "image/png", "alpha.png"))
@@ -127,7 +169,7 @@ class UploadTest < ActiveSupport::TestCase
           assert_equal(108224, File.size(@upload.resized_file_path_for(Danbooru.config.large_image_width)))
         end
       end
-      
+
       should "increment the uploaders post_upload_count" do
         @upload = FactoryGirl.create(:source_upload)
         assert_difference("CurrentUser.post_upload_count", 1) do
@@ -147,7 +189,7 @@ class UploadTest < ActiveSupport::TestCase
         end
 
         post = Post.last
-        assert_equal("foo hoge", post.tag_string)
+        assert_equal("foo hoge lowres", post.tag_string)
         assert_equal("s", post.rating)
         assert_equal(@upload.uploader_id, post.uploader_id)
         assert_equal("127.0.0.1", post.uploader_ip_addr)
@@ -174,7 +216,7 @@ class UploadTest < ActiveSupport::TestCase
         assert_nothing_raised {@upload.process!}
       end
       post = Post.last
-      assert_equal("foo hoge", post.tag_string)
+      assert_equal("foo hoge lowres", post.tag_string)
       assert_equal("s", post.rating)
       assert_equal(@upload.uploader_id, post.uploader_id)
       assert_equal("127.0.0.1", post.uploader_ip_addr)
@@ -183,7 +225,7 @@ class UploadTest < ActiveSupport::TestCase
       assert(File.exists?(post.file_path))
       assert_equal(28086, File.size(post.file_path))
       assert_equal(post.id, @upload.post_id)
-      assert_equal("completed", @upload.status)    
+      assert_equal("completed", @upload.status)
     end
 
     should "delete the temporary file upon completion" do

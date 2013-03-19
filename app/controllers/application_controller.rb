@@ -3,20 +3,40 @@ class ApplicationController < ActionController::Base
   helper :pagination
   before_filter :set_current_user
   after_filter :reset_current_user
-  before_filter :initialize_cookies
   before_filter :set_title
   before_filter :set_started_at_session
   layout "default"
-  
+
   rescue_from User::PrivilegeError, :with => :access_denied
+  rescue_from Danbooru::Paginator::PaginationError, :with => :render_pagination_limit
 
 protected
+  def rescue_exception(exception)
+    @exception = exception
+
+    if exception.is_a?(::ActiveRecord::StatementInvalid) && exception.to_s =~ /statement timeout/
+      @exception = nil
+      @error_message = "The database timed out running your query."
+      render :template => "static/error", :status => 500
+    elsif exception.is_a?(::ActiveRecord::RecordNotFound)
+      @exception = nil
+      @error_message = "That record was not found"
+      render :template => "static/error", :status => 404
+    else
+      render :template => "static/error", :status => 500
+    end
+  end
+
+  def render_pagination_limit
+    @error_message = "You can only view up to #{Danbooru.config.max_numbered_pages} pages. Please narrow your search terms."
+    render :template => "static/error", :status => 410
+  end
 
   def access_denied
     previous_url = params[:url] || request.fullpath
 
     respond_to do |fmt|
-      fmt.html do 
+      fmt.html do
         if request.get?
           redirect_to new_session_path(:url => previous_url), :notice => "Access denied"
         else
@@ -36,19 +56,19 @@ protected
     session_loader = SessionLoader.new(session, cookies, request)
     session_loader.load
   end
-  
+
   def reset_current_user
     CurrentUser.user = nil
     CurrentUser.ip_addr = nil
   end
-  
+
   def set_started_at_session
     if session[:started_at].blank?
       session[:started_at] = Time.now
     end
   end
-  
-  %w(member banned privileged contributor janitor moderator admin).each do |level|
+
+  %w(member banned privileged platinum contributor janitor moderator admin).each do |level|
     define_method("#{level}_only") do
       if CurrentUser.user.__send__("is_#{level}?")
         true
@@ -59,14 +79,6 @@ protected
     end
   end
 
-  def initialize_cookies
-    if CurrentUser.user.is_anonymous?
-      cookies["blacklisted_tags"] = ""
-    else
-      cookies["blacklisted_tags"] = CurrentUser.user.blacklisted_tags
-    end
-  end
-  
   def set_title
     @page_title = Danbooru.config.app_name + "/#{params[:controller]}"
   end

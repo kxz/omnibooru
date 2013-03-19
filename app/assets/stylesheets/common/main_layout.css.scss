@@ -7,35 +7,35 @@ div#search {
 div#page {
   overflow: visible;
   margin: 0 30px;
-  
-  div#upgrade-account-notice, div#sign-up-notice {
+
+  div#upgrade-account-notice, div#sign-up-notice, div#tos-notice {
     margin: 1em 0;
     padding: 1em;
     text-align: center;
     position: relative;
-    
+
     h1 {
       font-size: $h2_size;
       font-weight: bold;
     }
-    
+
     p {
       margin: 0;
     }
   }
-  
+
   aside#sidebar {
     width: 15em;
     float: left;
-    
+
     h1 {
       font-size: $h3_size;
     }
-    
+
     ul {
       list-style-type: none;
     }
-    
+
     input[type=text] {
       width: 10em;
     }
@@ -45,16 +45,34 @@ div#page {
     margin-bottom: 1em;
   }
 
+  aside#sidebar > section#blacklist-box ul {
+    margin-left: 1em;
+
+    li {
+      list-style-type: disc;
+    }
+
+    a {
+      color: $link_color;
+      cursor: pointer;
+    }
+
+    span {
+      color: #AAA;
+    }
+  }
+
   section#content {
-    width: 70%;
-    float: left;
-    padding-left: 2em;
     overflow: visible;
+    margin-left: 15em;
+    padding-left: 1em;
   }
 }
 
 footer#page-footer {
+  float: left;
   clear: both;
+  width: 100%;
   margin: 1em;
   text-align: center;
   padding-top: 1em;
@@ -75,4 +93,4 @@ div#more-links {
   padding: 0.2em 0.6em;
   @include box-shadow(2px 2px 2px #ccc);
 }
- 
+

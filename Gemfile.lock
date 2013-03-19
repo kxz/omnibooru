@@ -55,6 +55,11 @@ GEM
       multi_json (~> 1.0)
     arel (3.0.2)
     awesome_print (1.1.0)
+    aws-s3 (0.6.3)
+      builder
+      mime-types
+      xml-simple
+    bcrypt-ruby (3.0.1)
     bourne (1.1.2)
       mocha (= 0.10.5)
     builder (3.0.4)
@@ -66,6 +71,7 @@ GEM
     delayed_job_active_record (0.4.1)
       activerecord (>= 2.1.0, < 4)
       delayed_job (~> 3.0)
+    diff-lcs (1.2.1)
     domain_name (0.5.7)
       unf (~> 0.0.3)
     erubis (2.7.0)
@@ -156,9 +162,7 @@ GEM
       multi_json (~> 1.0)
       rack (~> 1.0)
       tilt (~> 1.1, != 1.3.0)
-    super_exception_notifier (3.0.13)
-      actionmailer
-      rake
+    term-ansicolor (1.0.7)
     therubyracer (0.11.3)
       libv8 (~> 3.11.8.12)
       ref
@@ -178,15 +182,19 @@ GEM
     whenever (0.8.2)
       activesupport (>= 2.3.4)
       chronic (>= 0.6.3)
+    xml-simple (1.1.2)
 
 PLATFORMS
   ruby
 
 DEPENDENCIES
   awesome_print
+  aws-s3
+  bcrypt-ruby
   daemons
   delayed_job
   delayed_job_active_record
+  diff-lcs
   factory_girl
   ffaker!
   mechanize!
@@ -206,7 +214,7 @@ DEPENDENCIES
   shoulda
   simple_form
   simplecov
-  super_exception_notifier
+  term-ansicolor
   therubyracer
   uglifier (>= 1.0.3)
   whenever

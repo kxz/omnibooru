@@ -2,9 +2,23 @@ div#c-wiki-pages {
   span.version {
     color: #AAA;
   }
-  
-  div#form-content {
-    float: left;
-    width: 30em;
+
+  del {
+    background: #FCC;
+    text-decoration: none;
+  }
+
+  ins {
+    background: #CFC;
+    text-decoration: none;
+  }
+
+  table {
+    margin-bottom: 1em;
+  }
+
+  #content {
+    margin-left: 15em;
+    padding-left: 1em;
   }
 }
