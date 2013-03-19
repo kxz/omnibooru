@@ -3,7 +3,7 @@ class PostPresenter < Presenter
     if post.is_deleted? && options[:tags] !~ /status:(?:all|any|deleted|banned)/ && !options[:raw]
       return ""
     end
-    
+
     if post.is_banned? && !CurrentUser.is_gold?
       return ""
     end
@@ -12,7 +12,7 @@ class PostPresenter < Presenter
       return ""
     end
 
-    path = options[:path_prefix] || "/posts"
+    path = options[:path_prefix] || Danbooru::Application.routes.url_helpers.posts_path
 
     html =  %{<article class="#{preview_class(post)}" id="post_#{post.id}" data-id="#{post.id}" data-tags="#{h(post.tag_string)}" data-uploader="#{h(post.uploader_name)}" data-rating="#{post.rating}" data-width="#{post.image_width}" data-height="#{post.image_height}" data-flags="#{post.status_flags}" data-parent-id="#{post.parent_id}" data-has-children="#{post.has_children?}" data-score="#{post.score}" data-fav-count="#{post.fav_count}">}
     if options[:tags].present?

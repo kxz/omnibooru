@@ -93,25 +93,27 @@ private
   end
 
   def build_list_item(tag, template, options)
+    url = Danbooru::Application.routes.url_helpers
+
     html = ""
     html << %{<li class="category-#{categories[tag]}">}
     current_query = template.params[:tags] || ""
 
     unless options[:name_only]
       if categories[tag] == Tag.categories.artist
-        html << %{<a class="wiki-link" href="/artists/show_or_new?name=#{u(tag)}">?</a> }
+        html << %{<a class="wiki-link" href="#{url.show_or_new_artists_path :name => tag}">?</a> }
       else
-        html << %{<a class="wiki-link" href="/wiki_pages/show_or_new?title=#{u(tag)}">?</a> }
+        html << %{<a class="wiki-link" href="#{url.show_or_new_wiki_pages_path :name => tag}">?</a> }
       end
 
       if CurrentUser.user.is_gold? && current_query.present?
-        html << %{<a href="/posts?tags=#{u(current_query)}+#{u(tag)}" class="search-inc-tag">+</a> }
-        html << %{<a href="/posts?tags=#{u(current_query)}+-#{u(tag)}" class="search-exl-tag">&ndash;</a> }
+        html << %{<a href="#{url.posts_path :tags => current_query + ' ' + tag}" class="search-inc-tag">+</a> }
+        html << %{<a href="#{url.posts_path :tags => current_query + ' -' + tag}" class="search-exl-tag">&ndash;</a> }
       end
     end
 
     humanized_tag = tag.tr("_", " ")
-    path = options[:path_prefix] || "/posts"
+    path = options[:path_prefix] || url.posts_path
     html << %{<a class="search-tag" href="#{path}?tags=#{u(tag)}">#{h(humanized_tag)}</a> }
 
     unless options[:name_only]

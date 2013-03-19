@@ -90,7 +90,7 @@
   Danbooru.PostModeMenu.open_edit = function(post_id) {
     var $post = $("#post_" + post_id);
     $("#quick-edit-div").slideDown("fast");
-    $("#quick-edit-form").attr("action", "/posts/" + post_id + ".json");
+    $("#quick-edit-form").attr("action", "<%= Danbooru::Application.routes.url_helpers.posts_path %>/" + post_id + ".json");
     $("#post_tag_string").val($post.data("tags") + " ").focus().selectEnd().height($("#post_tag_string")[0].scrollHeight);
   }
 

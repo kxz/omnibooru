@@ -2,8 +2,8 @@
 <html xmlns:fb="http://ogp.me/ns/fb#">
 <head>
   <title><%= yield :page_title %></title>
-  <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
-  <link rel="top" title="<%= Danbooru.config.app_name %>" href="/">
+  <link rel="shortcut icon" href="<%= root_path %>favicon.ico" type="image/x-icon">
+  <link rel="top" title="<%= Danbooru.config.app_name %>" href="<%= root_path %>">
   <%= csrf_meta_tag %>
   <meta name="current-user-name" content="<%= CurrentUser.name %>">
   <meta name="current-user-id" content="<%= CurrentUser.id %>">
@@ -27,7 +27,7 @@
   <header id="top">
     <%= render "news_updates/listing" %>
 
-    <h1><%= link_to Danbooru.config.app_name, "/" %></h1>
+    <h1><%= link_to Danbooru.config.app_name, root_path %></h1>
     <nav>
       <%= render "layouts/main_links" %>
       <%= yield :secondary_links %>

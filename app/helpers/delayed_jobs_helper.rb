@@ -5,7 +5,7 @@ module DelayedJobsHelper
       "<strong>expire post count cache</strong>: " + h(job.payload_object.args.flatten.join(" "))
 
     when "Upload#process!"
-      '<strong>upload post</strong>: <a href="/uploads/' + job.payload_object.object.id.to_s + '">record</a>'
+      '<strong>upload post</strong>: <a href="' + Danbooru::Application.routes.url_helpers.upload_path(job.payload_object.object.id) + '">record</a>'
 
     when "Tag#update_related"
       "<strong>update related tags</strong>: " + h(job.payload_object.name)

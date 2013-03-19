@@ -6,7 +6,7 @@
       $("input[value=Test]").click(function(e) {
         $.ajax({
           type: "get",
-          url: "/janitor_trials/test.json",
+          url: "<%= Danbooru::Application.routes.url_helpers.test_janitor_trials_path :format => :json %>",
           data: {
             janitor_trial: {
               user_name: $("#janitor_trial_user_name").val()
