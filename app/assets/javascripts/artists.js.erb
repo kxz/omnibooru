@@ -18,7 +18,7 @@
       minLength: 1,
       source: function(req, resp) {
         $.ajax({
-          url: "/artists.json",
+          url: "<%= Danbooru::Application.routes.url_helpers.artists_path :format => :json %>",
           data: {
             "search[name]": "*" + req.term + "*",
             "limit": 10
@@ -54,7 +54,7 @@
         $("#check-name-result").html("OK");
       }
 
-      $.get("/artists.json?name=" + artist_name,
+      $.get("<%= Danbooru::Application.routes.url_helpers.artists_path :format => :json %>?name=" + artist_name,
         function(data) {
           if (data.length) {
             $("#check-name-result").html("Taken");

@@ -2,8 +2,8 @@
 <html>
 <head>
   <title><%= yield :page_title %></title>
-  <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
-  <link rel="top" title="<%= Danbooru.config.app_name %>" href="/">
+  <link rel="shortcut icon" href="<%= root_path %>favicon.ico" type="image/x-icon">
+  <link rel="top" title="<%= Danbooru.config.app_name %>" href="<%= root_path %>">
   <%= csrf_meta_tag %>
   <%= auto_discovery_link_tag :atom, posts_path(:format => "atom", :tags => params[:tags]) %>
   <%= stylesheet_link_tag "application", :media => "screen" %>

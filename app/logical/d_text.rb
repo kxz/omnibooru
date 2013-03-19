@@ -52,7 +52,7 @@ class DText
     str.gsub(/\[\[([^\|\]]+)\|([^\]]+)\]\]/m) do
       text = CGI.unescapeHTML($2)
       title = CGI.unescapeHTML($1).tr(" ", "_").downcase
-      %{<a href="/wiki_pages/show_or_new?title=#{u(title)}">#{h(text)}</a>}
+      %{<a href="#{Danbooru::Application.routes.url_helpers.show_or_new_wiki_pages_path(:title => title)}">#{h(text)}</a>}
     end
   end
 
@@ -60,25 +60,40 @@ class DText
     str.gsub(/\[\[([^\]]+)\]\]/) do
       text = CGI.unescapeHTML($1)
       title = text.tr(" ", "_").downcase
-      %{<a href="/wiki_pages/show_or_new?title=#{u(title)}">#{h(text)}</a>}
+      %{<a href="#{Danbooru::Application.routes.url_helpers.show_or_new_wiki_pages_path(:title => title)}">#{h(text)}</a>}
     end
   end
 
   def self.parse_post_links(str)
     str.gsub(/\{\{([^\}]+)\}\}/) do
       tags = CGI.unescapeHTML($1)
-      %{<a href="/posts?tags=#{u(tags)}">#{h(tags)}</a>}
+      %{<a href="#{Danbooru::Application.routes.url_helpers.posts_path(:tag => tags)}">#{h(tags)}</a>}
     end
   end
 
   def self.parse_id_links(str)
-    str = str.gsub(/\bpost #(\d+)/i, %{<a href="/posts/\\1">post #\\1</a>})
-    str = str.gsub(/\bforum #(\d+)/i, %{<a href="/forum_posts/\\1">forum #\\1</a>})
-    str = str.gsub(/\btopic #(\d+)/i, %{<a href="/forum_topics/\\1">topic #\\1</a>})
-    str = str.gsub(/\bcomment #(\d+)/i, %{<a href="/comments/\\1">comment #\\1</a>})
-    str = str.gsub(/\bpool #(\d+)/i, %{<a href="/pools/\\1">pool #\\1</a>})
-    str = str.gsub(/\buser #(\d+)/i, %{<a href="/users/\\1">user #\\1</a>})
-    str = str.gsub(/\bartist #(\d+)/i, %{<a href="/artists/\\1">artist #\\1</a>})
+    url = Danbooru::Application.routes.url_helpers
+    str = str.gsub(/\bpost #(\d+)/i) do
+      %{<a href="#{url.post_path($1)}">post \##{$1}</a>}
+    end
+    str = str.gsub(/\bforum #(\d+)/i) do
+      %{<a href="#{url.forum_post_path($1)}">forum \##{$1}</a>}
+    end
+    str = str.gsub(/\btopic #(\d+)/i) do
+      %{<a href="#{url.forum_topic_path($1)}">topic \##{$1}</a>}
+    end
+    str = str.gsub(/\bcomment #(\d+)/i) do
+      %{<a href="#{url.comment_path($1)}">comment \##{$1}</a>}
+    end
+    str = str.gsub(/\bpool #(\d+)/i) do
+      %{<a href="#{url.pool_path($1)}">pool \##{$1}</a>}
+    end
+    str = str.gsub(/\buser #(\d+)/i) do
+      %{<a href="#{url.user_path($1)}">user \##{$1}</a>}
+    end
+    str = str.gsub(/\bartist #(\d+)/i) do
+      %{<a href="#{url.artist_path($1)}">artist \##{$1}</a>}
+    end
     str = str.gsub(/\bissue #(\d+)/i, %{<a href="https://github.com/r888888888/danbooru/issues/\\1">issue #\\1</a>})
     str = str.gsub(/\bpixiv #(\d+)(?!\/p\d|\d)/i, %{<a href="http://www.pixiv.net/member_illust.php?mode=medium&illust_id=\\1">pixiv #\\1</a>})
     str = str.gsub(/\bpixiv #(\d+)\/p(\d+)/i, %{<a href="http://www.pixiv.net/member_illust.php?mode=manga_big&illust_id=\\1&page=\\2">pixiv #\\1/p\\2</a>})
@@ -187,7 +202,7 @@ class DText
         else
           ""
         end
-        
+
       when /\[code\](?!\])/
         flags[:code] = true
         '<pre>'
@@ -208,7 +223,7 @@ class DText
         if stack.last == "expandable"
           stack.pop
           '</div></div>'
-        end 
+        end
 
       else
         if flags[:code]

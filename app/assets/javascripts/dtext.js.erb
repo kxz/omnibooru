@@ -24,7 +24,7 @@
     $preview.text("Loading...").fadeIn("fast");
     $.ajax({
       type: "post",
-      url: "/dtext_preview",
+      url: "<%= Danbooru::Application.routes.url_helpers.dtext_preview_path %>",
       data: {
         body: $input.val()
       },

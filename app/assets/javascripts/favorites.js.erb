@@ -28,7 +28,7 @@
 
     $.ajax({
       type: "POST",
-      url: "/favorites",
+      url: "<%= Danbooru::Application.routes.url_helpers.favorites_path %>",
       data: {
         post_id: post_id
       },
@@ -46,7 +46,7 @@
 
     $.ajax({
       type: "DELETE",
-      url: "/favorites/" + post_id,
+      url: "<%= Danbooru::Application.routes.url_helpers.favorites_path %>/" + post_id,
       complete: function() {
         Danbooru.Post.notice_update("dec");
       }

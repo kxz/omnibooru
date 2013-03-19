@@ -23,7 +23,7 @@ class TagAliasCorrection
 
   def fill_hash!
     Net::HTTP.start(hostname, 80) do |http|
-      http.request_get("/tag_aliases/#{tag_alias_id}/correction.json") do |res|
+      http.request_get(Danbooru::Application.routes.url_helpers.tag_alias_correction_path tag_alias_id, :format => 'json') do |res|
         if res === Net::HTTPSuccess
           json = JSON.parse(res.body)
           statistics_hash["antecedent_cache"] = json["antecdent_cache"]

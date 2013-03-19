@@ -72,7 +72,7 @@
 
         var term = before_caret_text.match(/\S+/g).pop();
         $.ajax({
-          url: "/tags.json",
+          url: "<%= Danbooru::Application.routes.url_helpers.tags_path :format => :json %>",
           data: {
             "search[order]": "count",
             "search[name_matches]": term + "*",
@@ -193,7 +193,7 @@
       var other_post_id = prompt("Enter the ID of the post to copy all notes to:");
 
       if (other_post_id !== null) {
-        $.ajax("/posts/" + current_post_id + "/copy_notes", {
+        $.ajax("<%= Danbooru::Application.routes.url_helpers.posts_path %>/" + current_post_id + "/copy_notes", {
           type: "PUT",
           data: {
             other_post_id: other_post_id
@@ -433,7 +433,7 @@
   Danbooru.Post.vote = function(score, id) {
     Danbooru.notice("Voting...");
 
-    $.post("/posts/" + id + "/votes.js", {
+    $.post("<%= Danbooru::Application.routes.url_helpers.posts_path %>/" + id + "/votes.js", {
        score: score
     });
   }
@@ -443,7 +443,7 @@
 
     $.ajax({
       type: "PUT",
-      url: "/posts/" + post_id + ".json",
+      url: "<%= Danbooru::Application.routes.url_helpers.posts_path %>/" + post_id + ".json",
       data: params,
       complete: function() {
         Danbooru.Post.notice_update("dec");
@@ -461,7 +461,7 @@
   Danbooru.Post.approve = function(post_id) {
     $.ajax({
       type: "POST",
-      url: "/moderator/post/approval.json",
+      url: "<%= Danbooru::Application.routes.url_helpers.moderator_post_approval_path :format => :json %>",
       data: {"post_id": post_id},
       dataType: "json",
       success: function(data) {
