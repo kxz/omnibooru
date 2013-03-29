@@ -5,7 +5,7 @@ module PostSets
     def initialize(tags, page = 1, per_page = nil)
       @tag_array = Tag.scan_query(tags)
       @page = page
-      @per_page = (per_page || Danbooru.config.posts_per_page).to_i
+      @per_page = (per_page || CurrentUser.per_page).to_i
       @per_page = 200 if @per_page > 200
     end
 
@@ -38,10 +38,6 @@ module PostSets
     end
 
     def posts
-      if tag_array.size > 2 && !CurrentUser.is_privileged?
-        raise SearchError.new("Upgrade your account to search more than two tags at once")
-      end
-
       if tag_array.any? {|x| x =~ /^source:.*\*.*pixiv/} && !CurrentUser.user.is_builder?
         raise SearchError.new("Your search took too long to execute and was canceled")
       end

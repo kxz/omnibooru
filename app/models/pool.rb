@@ -35,7 +35,7 @@ class Pool < ActiveRecord::Base
       end
 
       if params[:creator_name].present?
-        q = q.where("creator_id = (select _.id from users _ where lower(_.name) = ?)", params[:creator_name].downcase)
+        q = q.where("creator_id = (select _.id from users _ where lower(_.name) = ?)", params[:creator_name].tr(" ", "_").mb_chars.downcase)
       end
 
       if params[:creator_id].present?
@@ -58,7 +58,7 @@ class Pool < ActiveRecord::Base
     if name =~ /^\d+$/
       name.to_i
     else
-      select_value_sql("SELECT id FROM pools WHERE lower(name) = ?", name.downcase.tr(" ", "_")).to_i
+      select_value_sql("SELECT id FROM pools WHERE lower(name) = ?", name.mb_chars.downcase.tr(" ", "_")).to_i
     end
   end
 
@@ -91,7 +91,7 @@ class Pool < ActiveRecord::Base
     if name =~ /^\d+$/
       where("id = ?", name.to_i).first
     elsif name
-      where("lower(name) = ?", normalize_name(name).downcase).first
+      where("lower(name) = ?", normalize_name(name).mb_chars.downcase).first
     else
       nil
     end
@@ -141,6 +141,7 @@ class Pool < ActiveRecord::Base
 
   def add!(post)
     return if contains?(post.id)
+    return if is_deleted?
 
     update_attributes(:post_ids => add_number_to_string(post.id, post_ids), :post_count => post_count + 1)
     post.add_pool!(self)
@@ -149,6 +150,7 @@ class Pool < ActiveRecord::Base
 
   def remove!(post)
     return unless contains?(post.id)
+    return if is_deleted?
 
     update_attributes(:post_ids => remove_number_from_string(post.id, post_ids), :post_count => post_count - 1)
     post.remove_pool!(self)

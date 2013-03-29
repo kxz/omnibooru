@@ -17,7 +17,7 @@ class User < ActiveRecord::Base
   end
 
   attr_accessor :password, :old_password
-  attr_accessible :enable_privacy_mode, :enable_post_navigation, :new_post_navigation_layout, :password, :old_password, :password_confirmation, :password_hash, :email, :last_logged_in_at, :last_forum_read_at, :has_mail, :receive_email_notifications, :comment_threshold, :always_resize_images, :favorite_tags, :blacklisted_tags, :name, :ip_addr, :time_zone, :default_image_size, :enable_sequential_post_navigation, :as => [:moderator, :janitor, :contributor, :privileged, :member, :anonymous, :default, :builder, :admin]
+  attr_accessible :enable_privacy_mode, :enable_post_navigation, :new_post_navigation_layout, :password, :old_password, :password_confirmation, :password_hash, :email, :last_logged_in_at, :last_forum_read_at, :has_mail, :receive_email_notifications, :comment_threshold, :always_resize_images, :favorite_tags, :blacklisted_tags, :name, :ip_addr, :time_zone, :default_image_size, :enable_sequential_post_navigation, :per_page, :hide_deleted_posts, :as => [:moderator, :janitor, :contributor, :privileged, :member, :anonymous, :default, :builder, :admin]
   attr_accessible :level, :as => :admin
   validates_length_of :name, :within => 2..100, :on => :create
   validates_format_of :name, :with => /\A[^\s:]+\Z/, :on => :create, :message => "cannot have whitespace or colons"
@@ -25,12 +25,13 @@ class User < ActiveRecord::Base
   validates_uniqueness_of :email, :case_sensitive => false, :if => lambda {|rec| rec.email.present?}
   validates_length_of :password, :minimum => 5, :if => lambda {|rec| rec.new_record? || rec.password.present?}
   validates_inclusion_of :default_image_size, :in => %w(large original)
+  validates_inclusion_of :per_page, :in => 1..100
   validates_confirmation_of :password
   validates_presence_of :email, :if => lambda {|rec| rec.new_record? && Danbooru.config.enable_email_verification?}
   validates_presence_of :comment_threshold
   validate :validate_ip_addr_is_not_banned, :on => :create
-  validate :validate_feedback_on_name_change, :on => :update
   before_validation :normalize_blacklisted_tags
+  before_validation :set_per_page
   before_create :encrypt_password_on_create
   before_update :encrypt_password_on_update
   after_save :update_cache
@@ -75,7 +76,7 @@ class User < ActiveRecord::Base
     module ClassMethods
       def name_to_id(name)
         Cache.get("uni:#{Cache.sanitize(name)}", 4.hours) do
-          select_value_sql("SELECT id FROM users WHERE lower(name) = ?", name.mb_chars.downcase)
+          select_value_sql("SELECT id FROM users WHERE lower(name) = ?", name.mb_chars.downcase.tr(" ", "_"))
         end
       end
 
@@ -110,13 +111,6 @@ class User < ActiveRecord::Base
       end
     rescue Exception
       # swallow, since it'll be expired eventually anyway
-    end
-
-    def validate_feedback_on_name_change
-      if feedback.negative.count > 0 && name_changed?
-        self.errors[:base] << "You can not change your name if you have any negative feedback"
-        return false
-      end
     end
   end
 
@@ -353,6 +347,14 @@ class User < ActiveRecord::Base
         ModAction.create(:description => "#{name} level changed #{level_string(level_was)} -> #{level_string} by #{CurrentUser.name}")
       end
     end
+    
+    def set_per_page
+      if per_page.nil? || !is_privileged?
+        self.per_page = Danbooru.config.posts_per_page
+      end
+      
+      return true
+    end
   end
 
   module EmailMethods
@@ -406,11 +408,9 @@ class User < ActiveRecord::Base
 
     def upload_limited_reason
       if created_at > 1.week.ago
-        "You cannot upload during your first week of registration"
-      elsif upload_limit <= 0
-        "You can only upload #{upload_limit} posts a day"
+        "cannot upload during your first week of registration"
       else
-        nil
+        "can not upload until your pending posts have been approved"
       end
     end
 
@@ -433,14 +433,14 @@ class User < ActiveRecord::Base
     end
 
     def upload_limit
-      deleted_count = Post.for_user(id).deleted.count
+      deleted_count = Post.for_user(id).deleted.where("is_banned = false").count
       pending_count = Post.for_user(id).pending.count
       approved_count = Post.where("is_flagged = false and is_pending = false and is_deleted = false and uploader_id = ?", id).count
 
-      if base_upload_limit
-        limit = base_upload_limit - pending_count
+      if base_upload_limit.to_i != 0
+        limit = [base_upload_limit - (deleted_count / 4), 4].max - pending_count
       else
-        limit = 10 + (approved_count / 10) - (deleted_count / 4) - pending_count
+        limit = [10 + (approved_count / 10) - (deleted_count / 4), 4].max - pending_count
       end
 
       if limit < 0
@@ -466,7 +466,27 @@ class User < ActiveRecord::Base
       elsif is_privileged?
         20_000
       else
-        4_000
+        10_000
+      end
+    end
+    
+    def api_hourly_limit
+      if is_platinum?
+        20_000
+      elsif is_privileged?
+        10_000
+      else
+        3_000
+      end
+    end
+    
+    def statement_timeout
+      if is_platinum?
+        9_000
+      elsif is_privileged?
+        6_000
+      else
+        3_000
       end
     end
   end
@@ -511,7 +531,7 @@ class User < ActiveRecord::Base
     end
 
     def admins
-      where("is_admin = TRUE")
+      where("level = ?", Levels::ADMIN)
     end
 
     def with_email(email)
@@ -535,11 +555,11 @@ class User < ActiveRecord::Base
       return q if params.blank?
 
       if params[:name].present?
-        q = q.name_matches(params[:name].mb_chars.downcase)
+        q = q.name_matches(params[:name].mb_chars.downcase.tr(" ", "_"))
       end
 
       if params[:name_matches].present?
-        q = q.name_matches(params[:name_matches].mb_chars.downcase)
+        q = q.name_matches(params[:name_matches].mb_chars.downcase.tr(" ", "_"))
       end
 
       if params[:min_level].present?
@@ -553,7 +573,7 @@ class User < ActiveRecord::Base
       if params[:id].present?
         q = q.where("id = ?", params[:id].to_i)
       end
-
+      
       case params[:order]
       when "name"
         q = q.order("name")

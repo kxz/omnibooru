@@ -1,7 +1,7 @@
 class UsersController < ApplicationController
   respond_to :html, :xml, :json
   before_filter :member_only, :only => [:edit, :update, :upgrade]
-  rescue_from User::PrivilegeError, :with => "static/access_denied"
+  rescue_from User::PrivilegeError, :with => :access_denied
 
   def new
     @user = User.new
@@ -16,7 +16,11 @@ class UsersController < ApplicationController
 
   def index
     @users = User.search(params[:search]).order("users.id desc").paginate(params[:page], :search_count => params[:search])
-    respond_with(@users)
+    respond_with(@users) do |format|
+      format.xml do
+        render :xml => @users.to_xml(:root => "users")
+      end
+    end
   end
 
   def search

@@ -29,3 +29,9 @@ en:
       tag_subscription:
         creator: "You"
         creator_id: "You"
+      upload:
+        uploader: "You"
+        uploader_id: "You"
+      user_feedback:
+        creator: "You"
+        creator_id: "You"

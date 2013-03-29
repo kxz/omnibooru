@@ -1,6 +1,7 @@
 class WikiPage < ActiveRecord::Base
   before_save :normalize_title
-  before_create :initialize_creator
+  before_validation :initialize_creator, :on => :create
+  before_validation :initialize_updater
   after_save :create_version
   belongs_to :creator, :class_name => "User"
   validates_uniqueness_of :title, :case_sensitive => false
@@ -13,7 +14,7 @@ class WikiPage < ActiveRecord::Base
 
   module SearchMethods
     def titled(title)
-      where("title = ?", title.downcase.tr(" ", "_"))
+      where("title = ?", title.mb_chars.downcase.tr(" ", "_"))
     end
 
     def recent
@@ -29,7 +30,7 @@ class WikiPage < ActiveRecord::Base
       params = {} if params.blank?
 
       if params[:title].present?
-        q = q.where("title LIKE ? ESCAPE E'\\\\'", params[:title].downcase.tr(" ", "_").to_escaped_for_sql_like)
+        q = q.where("title LIKE ? ESCAPE E'\\\\'", params[:title].mb_chars.downcase.tr(" ", "_").to_escaped_for_sql_like)
       end
 
       if params[:creator_id].present?
@@ -41,11 +42,13 @@ class WikiPage < ActiveRecord::Base
       end
 
       if params[:creator_name].present?
-        q = q.where("creator_id = (select _.id from users _ where lower(_.name) = ?)", params[:creator_name].downcase)
+        q = q.where("creator_id = (select _.id from users _ where lower(_.name) = ?)", params[:creator_name].tr(" ", "_").mb_chars.downcase)
       end
 
       if params[:sort] == "time" || params[:sort] == "Date"
         q = q.order("updated_at desc")
+      elsif params[:sort] == "title"
+        q = q.order("title")
       end
 
       q
@@ -99,7 +102,7 @@ class WikiPage < ActiveRecord::Base
   end
 
   def normalize_title
-    self.title = title.downcase.tr(" ", "_")
+    self.title = title.mb_chars.downcase.tr(" ", "_")
   end
 
   def creator_name
@@ -125,9 +128,17 @@ class WikiPage < ActiveRecord::Base
       )
     end
   end
+  
+  def updater_name
+    User.id_to_name(updater_id)
+  end
 
   def initialize_creator
     self.creator_id = CurrentUser.user.id
+  end
+  
+  def initialize_updater
+    self.updater_id = CurrentUser.user.id
   end
 
   def post_set
@@ -145,6 +156,6 @@ class WikiPage < ActiveRecord::Base
       else
         match
       end
-    end.map {|x| x.downcase.tr(" ", "_")}
+    end.map {|x| x.mb_chars.downcase.tr(" ", "_")}
   end
 end

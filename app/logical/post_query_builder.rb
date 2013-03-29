@@ -124,7 +124,7 @@ class PostQueryBuilder
     relation = add_range_relation(q[:copyright_tag_count], "posts.tag_count_copyright", relation)
     relation = add_range_relation(q[:character_tag_count], "posts.tag_count_character", relation)
     relation = add_range_relation(q[:post_tag_count], "posts.tag_count", relation)
-    relation = add_range_relation(q[:pixiv], "substring(posts.source, 'pixiv.net/img.*/([0-9]+)[^/]*$')::integer", relation)
+    # relation = add_range_relation(q[:pixiv_id], "substring(posts.source, 'pixiv.net/img.*/([0-9]+)[^/]*$')::integer", relation) 
 
     if q[:md5]
       relation = relation.where(["posts.md5 IN (?)", q[:md5]])
@@ -137,24 +137,31 @@ class PostQueryBuilder
       relation = relation.where("posts.is_flagged = TRUE")
     elsif q[:status] == "deleted"
       relation = relation.where("posts.is_deleted = TRUE")
+    elsif q[:status] == "banned"
+      relation = relation.where("posts.is_banned = TRUE")
     elsif q[:status] == "all" || q[:status] == "any"
       # do nothing
-    else
-      relation = relation.where("posts.is_deleted <> TRUE")
+    elsif q[:status_neg] == "pending"
+      relation = relation.where("posts.is_pending = FALSE")
+    elsif q[:status_neg] == "flagged"
+      relation = relation.where("posts.is_flagged = FALSE")
+    elsif q[:status_neg] == "deleted"
+      relation = relation.where("posts.is_deleted = FALSE")
+    elsif CurrentUser.user.hide_deleted_posts?
+      relation = relation.where("posts.is_deleted = FALSE")
     end
 
+    # The SourcePattern SQL function replaces Pixiv sources with "pixiv/[suffix]", where
+    # [suffix] is everything past the second-to-last slash in the URL.  It leaves non-Pixiv
+    # URLs unchanged.  This is to ease database load for Pixiv source searches.
     if q[:source]
       if q[:source] == "none%"
         relation = relation.where("(posts.source = '' OR posts.source IS NULL)")
-      elsif q[:source] =~ /^(pixiv\/|%\.?pixiv(\.net(\/img)?)?(%\/|(?=%$)))(.+)$/
-        if $5 == "%"
-          relation = relation.where("substring(posts.source, 'pixiv.net/img.*/([^/]*/[^/]*)$') IS NOT NULL")
-        else
-          relation = relation.where("substring(posts.source, 'pixiv.net/img.*/([^/]*/[^/]*)$') LIKE ? ESCAPE E'\\\\'", $5)
-        end
+      elsif q[:source] =~ /^%\.?pixiv(?:\.net(?:\/img)?)?(?:%\/|(?=%$))(.+)$/
+        relation = relation.where("SourcePattern(posts.source) LIKE ? ESCAPE E'\\\\'", "pixiv/" + $1)
         has_constraints!
       else
-        relation = relation.where("posts.source LIKE ? ESCAPE E'\\\\'", q[:source])
+        relation = relation.where("SourcePattern(posts.source) LIKE SourcePattern(?) ESCAPE E'\\\\'", q[:source])
         has_constraints!
       end
     end
@@ -227,6 +234,18 @@ class PostQueryBuilder
 
     when "favcount_asc"
       relation = relation.order("posts.fav_count ASC, posts.id DESC")
+
+    when "comment"
+      relation = relation.order("posts.last_commented_at DESC, posts.id DESC").where("posts.last_commented_at is not null")
+
+    when "comment_asc"
+      relation = relation.order("posts.last_commented_at ASC, posts.id DESC").where("posts.last_commented_at is not null")
+
+    when "note"
+      relation = relation.order("posts.last_noted_at DESC, posts.id DESC").where("posts.last_noted_at is not null")
+
+    when "note_asc"
+      relation = relation.order("posts.last_noted_at ASC, posts.id DESC").where("posts.last_noted_at is not null")
 
     when "mpixels", "mpixels_desc"
       # Use "w*h/1000000", even though "w*h" would give the same result, so this can use

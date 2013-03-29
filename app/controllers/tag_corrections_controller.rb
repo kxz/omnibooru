@@ -1,16 +1,18 @@
 class TagCorrectionsController < ApplicationController
-  before_filter :member_only
+  before_filter :builder_only
 
   def new
     @correction = TagCorrection.new(params[:tag_id])
   end
 
   def create
-    if params[:commit] == "Fix"
-      @correction = TagCorrection.new(params[:tag_id])
-      @correction.fix!
-    end
+    @correction = TagCorrection.new(params[:tag_id])
 
-    redirect_to tags_path(:search => {:name_matches => @correction.tag.name}), :notice => "Tag will be fixed in a few seconds"
+    if params[:commit] == "Fix"
+      @correction.fix!
+      redirect_to tags_path(:search => {:name_matches => @correction.tag.name}), :notice => "Tag will be fixed in a few seconds"
+    else
+      redirect_to tags_path(:search => {:name_matches => @correction.tag.name})
+    end
   end
 end

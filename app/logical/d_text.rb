@@ -17,6 +17,8 @@ class DText
     str.gsub!(/\n/m, "<br>")
     str.gsub!(/\[b\](.+?)\[\/b\]/i, '<strong>\1</strong>')
     str.gsub!(/\[i\](.+?)\[\/i\]/i, '<em>\1</em>')
+    str.gsub!(/\[s\](.+?)\[\/s\]/i, '<s>\1</s>')
+    str.gsub!(/\[u\](.+?)\[\/u\]/i, '<u>\1</u>')
 
     str = parse_links(str)
     str = parse_aliased_wiki_links(str)
@@ -72,9 +74,11 @@ class DText
   def self.parse_id_links(str)
     str = str.gsub(/\bpost #(\d+)/i, %{<a href="/posts/\\1">post #\\1</a>})
     str = str.gsub(/\bforum #(\d+)/i, %{<a href="/forum_posts/\\1">forum #\\1</a>})
+    str = str.gsub(/\btopic #(\d+)/i, %{<a href="/forum_topics/\\1">topic #\\1</a>})
     str = str.gsub(/\bcomment #(\d+)/i, %{<a href="/comments/\\1">comment #\\1</a>})
     str = str.gsub(/\bpool #(\d+)/i, %{<a href="/pools/\\1">pool #\\1</a>})
     str = str.gsub(/\buser #(\d+)/i, %{<a href="/users/\\1">user #\\1</a>})
+    str = str.gsub(/\bartist #(\d+)/i, %{<a href="/artists/\\1">artist #\\1</a>})
   end
 
   def self.parse_list(str, options = {})
@@ -121,6 +125,8 @@ class DText
     unless options[:inline]
       str.gsub!(/\s*\[quote\]\s*/m, "\n\n[quote]\n\n")
       str.gsub!(/\s*\[\/quote\]\s*/m, "\n\n[/quote]\n\n")
+      str.gsub!(/\s*\[code\]\s*/m, "\n\n[code]\n\n")
+      str.gsub!(/\s*\[\/code\]\s*/m, "\n\n[/code]\n\n")
       str.gsub!(/\s*\[spoilers?\](?!\])\s*/m, "\n\n[spoiler]\n\n")
       str.gsub!(/\s*\[\/spoilers?\]\s*/m, "\n\n[/spoiler]\n\n")
     end
@@ -129,6 +135,7 @@ class DText
     str.strip!
     blocks = str.split(/(?:\r?\n){2}/)
     stack = []
+    flags = {}
 
     html = blocks.map do |block|
       case block
@@ -162,6 +169,14 @@ class DText
         else
           ""
         end
+        
+      when /\[code\](?!\])/
+        flags[:code] = true
+        '<pre>'
+
+      when /\[\/code\](?!\])/
+        flags[:code] = false
+        '</pre>'
 
       when /\[spoilers?\](?!\])/
         stack << "div"
@@ -174,7 +189,11 @@ class DText
         end
 
       else
-        '<p>' + parse_inline(block) + "</p>"
+        if flags[:code]
+          block
+        else
+          '<p>' + parse_inline(block) + '</p>'
+        end
       end
     end
 
@@ -183,6 +202,8 @@ class DText
         html << "</blockquote>"
       elsif tag == "div"
         html << "</div>"
+      elsif tag == "pre"
+        html << "</pre>"
       end
     end
 
@@ -194,7 +215,7 @@ class DText
 
     Sanitize.clean(
       text,
-      :elements => %w(code center tn h1 h2 h3 h4 h5 h6 a span div blockquote br p ul li ol em strong small big b i font u s),
+      :elements => %w(code center tn h1 h2 h3 h4 h5 h6 a span div blockquote br p ul li ol em strong small big b i font u s pre),
       :attributes => {
         "a" => %w(href title style),
         "span" => %w(class style),

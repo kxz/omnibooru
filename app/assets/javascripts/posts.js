@@ -173,6 +173,7 @@
       Danbooru.Note.Box.scale_all();
       $("#image-resize-notice").hide();
       Danbooru.Post.place_jlist_ads();
+      $image.data("scale_factor", 1);
       e.preventDefault();
     });
   }
@@ -237,6 +238,7 @@
         $("#share").hide();
         $("#post_tag_string").focus();
         $("#related-tags-button").trigger("click");
+        $("#find-artist-button").trigger("click");
       } else {
         $("#edit").hide();
         $("#comments").hide();

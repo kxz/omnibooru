@@ -37,27 +37,18 @@ class UserPresenter
     if user.is_contributor?
       return "none"
     end
-
-    deleted_count = Post.for_user(user.id).deleted.count
+    
+    deleted_count = Post.for_user(user.id).deleted.where("is_banned = false").count
     pending_count = Post.for_user(user.id).pending.count
     approved_count = Post.where("is_flagged = false and is_pending = false and is_deleted = false and uploader_id = ?", user.id).count
 
-    if user.base_upload_limit
-      limit = user.base_upload_limit - pending_count
-      string = "base:#{user.base_upload_limit} - pending:#{pending_count}"
+    if user.base_upload_limit.to_i != 0
+      string = "max(base:#{user.base_upload_limit} - (deleted:#{deleted_count} / 4), 4) - pending:#{pending_count}"
     else
-      limit = 10 + (approved_count / 10) - (deleted_count / 4) - pending_count
-      string = "base:10 + approved:(#{approved_count} / 10) - deleted:(#{deleted_count}) / 4 - pending:#{pending_count}"
+      string = "max(10 + (approved:#{approved_count} / 10) - (deleted:#{deleted_count} / 4), 4) - pending:#{pending_count}"
     end
-
-    if limit < 0
-      limit = 0
-      string += " = 0"
-    else
-      string += " = #{limit}"
-    end
-
-    return string
+    
+    "#{string} = #{user.upload_limit}"
   end
 
   def uploads
@@ -138,5 +129,9 @@ class UserPresenter
     else
       user.subscriptions.select {|x| x.is_public?}
     end
+  end
+  
+  def previous_names
+    UserNameChangeRequest.approved.where("user_id = ?", user.id).map(&:original_name).join(", ")
   end
 end

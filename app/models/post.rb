@@ -426,7 +426,9 @@ class Post < ActiveRecord::Base
           self.parent_id = nil
 
         when /^parent:(\d+)$/
-          self.parent_id = $1.to_i
+          if Post.exists?(["id = ? and is_deleted = false", $1.to_i])
+            self.parent_id = $1.to_i
+          end
 
         when /^rating:([qse])/i
           self.rating = $1.downcase
@@ -551,6 +553,7 @@ class Post < ActiveRecord::Base
 
     def add_pool!(pool)
       return if belongs_to_pool?(pool)
+      return if pool.is_deleted?
       self.pool_string = "#{pool_string} pool:#{pool.id}".strip
       update_column(:pool_string, pool_string) unless new_record?
       pool.add!(self)
@@ -558,6 +561,7 @@ class Post < ActiveRecord::Base
 
     def remove_pool!(pool)
       return unless belongs_to_pool?(pool)
+      return if pool.is_deleted?
       self.pool_string = pool_string.gsub(/(?:\A| )pool:#{pool.id}(?:\Z| )/, " ").strip
       update_column(:pool_string, pool_string) unless new_record?
       pool.remove!(self)
@@ -666,10 +670,6 @@ class Post < ActiveRecord::Base
       tag_names.each do |tag_name|
         Cache.delete(Post.count_cache_key(tag_name))
       end
-
-      if Post.fast_count("").to_i < 1000
-        Cache.delete(Post.count_cache_key(""))
-      end
     end
   end
 
@@ -777,6 +777,7 @@ class Post < ActiveRecord::Base
         update_column(:is_deleted, true)
         update_column(:is_pending, false)
         update_column(:is_flagged, false)
+        update_column(:is_banned, true) if options[:ban]
         give_favorites_to_parent
         update_children_on_destroy
         update_parent_on_destroy
@@ -972,7 +973,7 @@ class Post < ActiveRecord::Base
     end
 
     def updater_name_matches(name)
-      where("updater_id = (select _.id from users _ where lower(_.name) = ?)", name.downcase)
+      where("updater_id = (select _.id from users _ where lower(_.name) = ?)", name.mb_chars.downcase)
     end
 
     def after_id(num)

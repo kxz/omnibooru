@@ -19,9 +19,12 @@ class WikiPagesController < ApplicationController
     @wiki_pages = WikiPage.search(params[:search]).order("updated_at desc").paginate(params[:page], :search_count => params[:search])
     respond_with(@wiki_pages) do |format|
       format.html do
-        if @wiki_pages.count == 1
+        if @wiki_pages.count == 1 && (params[:page].nil? || params[:page].to_i == 1)
           redirect_to(wiki_page_path(@wiki_pages.first))
         end
+      end
+      format.xml do
+        render :xml => @wiki_pages.to_xml(:root => "wiki-pages")
       end
     end
   end
@@ -32,6 +35,7 @@ class WikiPagesController < ApplicationController
     else
       @wiki_page = WikiPage.find_by_id(params[:id])
     end
+    
     respond_with(@wiki_page)
   end
 
@@ -56,6 +60,7 @@ class WikiPagesController < ApplicationController
     @wiki_page = WikiPage.find(params[:id])
     @version = WikiPageVersion.find(params[:version_id])
     @wiki_page.revert_to!(@version)
+    flash[:notice] = "Page was reverted"
     respond_with(@wiki_page)
   end
 

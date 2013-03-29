@@ -1,5 +1,5 @@
 class Tag < ActiveRecord::Base
-  METATAGS = "-user|user|-approver|approver|-pool|pool|-fav|fav|sub|md5|-rating|rating|width|height|mpixels|score|filesize|source|id|date|order|status|tagcount|gentags|arttags|chartags|copytags|parent|pixiv"
+  METATAGS = "-user|user|-approver|approver|-pool|pool|-fav|fav|sub|md5|-rating|rating|width|height|mpixels|score|filesize|source|id|date|order|-status|status|tagcount|gentags|arttags|chartags|copytags|parent|pixiv"
   attr_accessible :category
   has_one :wiki_page, :foreign_key => "name", :primary_key => "title"
 
@@ -121,7 +121,7 @@ class Tag < ActiveRecord::Base
 
   module NameMethods
     def normalize_name(name)
-      name.downcase.tr(" ", "_").gsub(/\A[-~]+/, "").gsub(/\*/, "")
+      name.mb_chars.downcase.tr(" ", "_").gsub(/\A[-~]+/, "").gsub(/\*/, "").to_s
     end
 
     def find_or_create_by_name(name, options = {})
@@ -139,7 +139,7 @@ class Tag < ActiveRecord::Base
         if category
           category_id = categories.value_for(category)
 
-          if category_id != tag.category
+          if category_id != tag.category && CurrentUser.is_builder?
             tag.update_column(:category, category_id)
             tag.update_category_cache_for_all
           end
@@ -233,10 +233,10 @@ class Tag < ActiveRecord::Base
 
     def parse_tag(tag, output)
       if tag[0] == "-" && tag.size > 1
-        output[:exclude] << tag[1..-1].downcase
+        output[:exclude] << tag[1..-1].mb_chars.downcase
 
       elsif tag[0] == "~" && tag.size > 1
-        output[:include] << tag[1..-1].downcase
+        output[:include] << tag[1..-1].mb_chars.downcase
 
       elsif tag =~ /\*/
         matches = Tag.name_matches(tag.downcase).all(:select => "name", :limit => Danbooru.config.tag_query_limit, :order => "post_count DESC").map(&:name)
@@ -244,7 +244,7 @@ class Tag < ActiveRecord::Base
         output[:include] += matches
 
       else
-        output[:related] << tag.downcase
+        output[:related] << tag.mb_chars.downcase
       end
     end
 
@@ -350,6 +350,9 @@ class Tag < ActiveRecord::Base
           when "order"
             q[:order] = $2.downcase
 
+          when "-status"
+            q[:status_neg] = $2.downcase
+
           when "status"
             q[:status] = $2.downcase
 
@@ -428,7 +431,7 @@ class Tag < ActiveRecord::Base
 
   module SearchMethods
     def name_matches(name)
-      where("name LIKE ? ESCAPE E'\\\\'", name.downcase.to_escaped_for_sql_like)
+      where("name LIKE ? ESCAPE E'\\\\'", name.mb_chars.downcase.to_escaped_for_sql_like)
     end
 
     def named(name)
@@ -440,7 +443,7 @@ class Tag < ActiveRecord::Base
       params = {} if params.blank?
 
       if params[:name_matches].present?
-        q = q.name_matches(params[:name_matches].strip)
+        q = q.name_matches(params[:name_matches].strip.tr(" ", "_"))
       end
 
       if params[:category].present?

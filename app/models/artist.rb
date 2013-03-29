@@ -25,9 +25,9 @@ class Artist < ActiveRecord::Base
         while artists.empty? && url.size > 10
           u = url.sub(/\/+$/, "") + "/"
           u = u.to_escaped_for_sql_like.gsub(/\*/, '%') + '%'
-          artists += Artist.joins(:urls).where(["artists.is_active = TRUE AND artist_urls.normalized_url LIKE ? ESCAPE E'\\\\'", u]).all(:order => "artists.name")
+          artists += Artist.joins(:urls).where(["artists.is_active = TRUE AND artist_urls.normalized_url LIKE ? ESCAPE E'\\\\'", u]).limit(10).order("artists.name").all
           url = File.dirname(url) + "/"
-          break if url =~ /\.(?:net|com|org)\/$/
+          break if url =~ /pixiv\.net\/$/
         end
 
         artists.uniq_by {|x| x.name}.slice(0, 20)
@@ -58,7 +58,7 @@ class Artist < ActiveRecord::Base
 
     module ClassMethods
       def normalize_name(name)
-        name.to_s.downcase.strip.gsub(/ /, '_')
+        name.to_s.mb_chars.downcase.strip.gsub(/ /, '_')
       end
     end
 
@@ -144,7 +144,7 @@ class Artist < ActiveRecord::Base
       if wiki_page
         wiki_page.title = name
         wiki_page.body = msg
-        wiki_page.save
+        wiki_page.save if wiki_page.body_changed?
       else
         if msg.present?
           self.wiki_page = WikiPage.new(:title => name, :body => msg)
@@ -173,7 +173,7 @@ class Artist < ActiveRecord::Base
             rescue PostFlag::Error
               # swallow
             end
-            post.delete!
+            post.delete!(:ban => true)
           end
         rescue Post::SearchError
           # swallow

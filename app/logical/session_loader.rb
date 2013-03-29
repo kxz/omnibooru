@@ -1,10 +1,11 @@
 class SessionLoader
-  attr_reader :session, :cookies, :request
+  attr_reader :session, :cookies, :request, :params
 
-  def initialize(session, cookies, request)
+  def initialize(session, cookies, request, params)
     @session = session
     @cookies = cookies
     @request = request
+    @params = params
   end
 
   def load
@@ -12,8 +13,10 @@ class SessionLoader
       load_session_user
     elsif cookie_password_hash_valid?
       load_cookie_user
+    else
+      load_session_for_api
     end
-
+    
     if CurrentUser.user
       CurrentUser.user.unban! if ban_expired?
     else
@@ -22,9 +25,43 @@ class SessionLoader
 
     update_last_logged_in_at
     set_time_zone
+    set_statement_timeout
   end
 
 private
+  
+  def set_statement_timeout
+    timeout = CurrentUser.user.statement_timeout
+    ActiveRecord::Base.connection.execute("set statement_timeout = #{timeout}")
+  end
+
+  def load_session_for_api
+    if request.authorization
+      authenticate_basic_auth
+      
+    elsif params[:login].present? && params[:api_key].present?
+      authenticate_api_key(params[:login], params[:api_key])
+      
+    elsif params[:login].present? && params[:password_hash].present?
+      authenticate_legacy_api_key(params[:login], params[:password_hash])
+    end
+  end
+  
+  def authenticate_basic_auth
+    credentials = ::Base64.decode64(request.authorization.split(' ', 2).last || '')
+    login, api_key = credentials.split(/:/, 2)
+    authenticate_api_key(login, api_key)
+  end
+  
+  def authenticate_api_key(name, api_key)
+    CurrentUser.user = User.authenticate_cookie_hash(name, api_key)
+    CurrentUser.ip_addr = request.remote_ip
+  end
+  
+  def authenticate_legacy_api_key(name, password_hash)
+    CurrentUser.user = User.authenticate_hash(name, password_hash)
+    CurrentUser.ip_addr = request.remote_ip
+  end
 
   def load_session_user
     CurrentUser.user = User.find_by_id(session[:user_id])

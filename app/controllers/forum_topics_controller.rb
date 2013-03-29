@@ -20,7 +20,11 @@ class ForumTopicsController < ApplicationController
   def index
     @search = ForumTopic.active.search(params[:search])
     @forum_topics = @search.order("is_sticky DESC, updated_at DESC").paginate(params[:page], :search_count => params[:search])
-    respond_with(@forum_topics)
+    respond_with(@forum_topics) do |format|
+      format.xml do
+        render :xml => @forum_topics.to_xml(:root => "forum-topics")
+      end
+    end
   end
 
   def show
@@ -45,14 +49,14 @@ class ForumTopicsController < ApplicationController
   def destroy
     @forum_topic = ForumTopic.find(params[:id])
     check_privilege(@forum_topic)
-    @forum_topic.update_attribute(:is_deleted, true)
+    @forum_topic.update_column(:is_deleted, true)
     respond_with(@forum_topic)
   end
 
   def undelete
     @forum_topic = ForumTopic.find(params[:id])
     check_privilege(@forum_topic)
-    @forum_topic.update_attribute(:is_deleted, false)
+    @forum_topic.update_column(:is_deleted, false)
     respond_with(@forum_topic)
   end
 

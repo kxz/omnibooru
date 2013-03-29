@@ -1,5 +1,5 @@
 class ForumPost < ActiveRecord::Base
-  attr_accessible :body, :topic_id, :as => [:member, :builder, :privileged, :platinum, :contributor, :admin, :moderator, :default]
+  attr_accessible :body, :topic_id, :as => [:member, :builder, :janitor, :privileged, :platinum, :contributor, :admin, :moderator, :default]
   attr_accessible :is_locked, :is_sticky, :is_deleted, :as => [:admin, :moderator, :janitor]
   belongs_to :creator, :class_name => "User"
   belongs_to :topic, :class_name => "ForumTopic"
@@ -22,7 +22,7 @@ class ForumPost < ActiveRecord::Base
     end
 
     def creator_name(name)
-      where("forum_posts.creator_id = (select _.id from users _ where lower(_.name) = ?)", name.downcase)
+      where("forum_posts.creator_id = (select _.id from users _ where lower(_.name) = ?)", name.mb_chars.downcase)
     end
 
     def active
@@ -50,7 +50,7 @@ class ForumPost < ActiveRecord::Base
       end
 
       if params[:creator_name].present?
-        q = q.creator_name(params[:creator_name])
+        q = q.creator_name(params[:creator_name].tr(" ", "_"))
       end
 
       q

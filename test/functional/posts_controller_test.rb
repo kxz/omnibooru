@@ -14,6 +14,64 @@ class PostsControllerTest < ActionController::TestCase
       CurrentUser.user = nil
       CurrentUser.ip_addr = nil
     end
+    
+    context "for api calls" do
+      context "passing the api limit" do
+        setup do
+          User.any_instance.stubs(:api_hourly_limit).returns(5)
+        end
+        
+        should "work" do
+          CurrentUser.user.api_hourly_limit.times do
+            get :index, {:format => "json", :login => @user.name, :api_key => @user.bcrypt_cookie_password_hash}
+            assert_response :success
+          end
+
+          get :index, {:format => "json", :login => @user.name, :api_key => @user.bcrypt_cookie_password_hash}
+          assert_response 421
+        end
+      end
+      
+      context "using http basic auth" do
+        should "succeed for password matches" do
+          @basic_auth_string = "Basic #{::Base64.encode64("#{@user.name}:#{@user.bcrypt_cookie_password_hash}")}"
+          @request.env['HTTP_AUTHORIZATION'] = @basic_auth_string
+          get :index, {:format => "json"}
+          assert_response :success
+        end
+        
+        should "fail for password mismatches" do
+          @basic_auth_string = "Basic #{::Base64.encode64("#{@user.name}:badpassword")}"
+          @request.env['HTTP_AUTHORIZATION'] = @basic_auth_string
+          get :index, {:format => "json"}
+          assert_response 401
+        end
+      end
+      
+      context "using the api_key parameter" do
+        should "succeed for password matches" do
+          get :index, {:format => "json", :login => @user.name, :api_key => @user.bcrypt_cookie_password_hash}
+          assert_response :success
+        end
+        
+        should "fail for password mismatches" do
+          get :index, {:format => "json", :login => @user.name, :api_key => "bad"}
+          assert_response 401
+        end
+      end
+      
+      context "using the password_hash parameter" do
+        should "succeed for password matches" do
+          get :index, {:format => "json", :login => @user.name, :password_hash => User.sha1("password")}
+          assert_response :success
+        end
+        
+        should "fail for password mismatches" do
+          get :index, {:format => "json", :login => @user.name, :password_hash => "bad"}
+          assert_response 401
+        end
+      end
+    end
 
     context "index action" do
       should "render" do

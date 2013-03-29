@@ -132,7 +132,7 @@ class AnonymousUser
 
   def decrement!(field)
   end
-
+  
   def role
     :anonymous
   end
@@ -163,6 +163,22 @@ class AnonymousUser
 
   def enable_sequential_post_navigation
     true
+  end
+  
+  def api_hourly_limit
+    500
+  end
+  
+  def statement_timeout
+    3_000
+  end
+  
+  def per_page
+    Danbooru.config.posts_per_page
+  end
+  
+  def hide_deleted_posts?
+    false
   end
 
   %w(member banned privileged builder platinum contributor janitor moderator admin).each do |name|

@@ -172,9 +172,11 @@ class Upload < ActiveRecord::Base
   module DimensionMethods
     # Figures out the dimensions of the image.
     def calculate_dimensions(file_path)
-      image_size = ImageSize.new(File.open(file_path, "rb"))
-      self.image_width = image_size.get_width
-      self.image_height = image_size.get_height
+      File.open(file_path, "rb") do |file|
+        image_size = ImageSize.new(file.read)
+        self.image_width = image_size.get_width
+        self.image_height = image_size.get_height
+      end
     end
 
     def add_dimension_tags!
@@ -357,7 +359,7 @@ class Upload < ActiveRecord::Base
       end
 
       if params[:uploader_name].present?
-        q = q.where("uploader_id = (select _.id from users _ where lower(_.name) = ?)", params[:uploader_name].downcase)
+        q = q.where("uploader_id = (select _.id from users _ where lower(_.name) = ?)", params[:uploader_name].mb_chars.downcase)
       end
 
       if params[:source].present?

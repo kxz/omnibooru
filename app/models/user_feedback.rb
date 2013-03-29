@@ -6,6 +6,7 @@ class UserFeedback < ActiveRecord::Base
   attr_accessible :body, :user_id, :category, :user_name
   validates_presence_of :user, :creator, :body, :category
   validate :creator_is_privileged
+  validate :user_is_not_creator
   after_create :create_dmail
 
   module SearchMethods
@@ -34,7 +35,7 @@ class UserFeedback < ActiveRecord::Base
       end
 
       if params[:user_name].present?
-        q = q.where("user_id = (select _.id from users _ where lower(_.name) = ?)", params[:user_name].downcase)
+        q = q.where("user_id = (select _.id from users _ where lower(_.name) = ?)", params[:user_name].mb_chars.downcase)
       end
 
       if params[:creator_id].present?
@@ -42,7 +43,7 @@ class UserFeedback < ActiveRecord::Base
       end
 
       if params[:creator_name].present?
-        q = q.where("creator_id = (select _.id from users _ where lower(_.name) = ?)", params[:creator_name].downcase)
+        q = q.where("creator_id = (select _.id from users _ where lower(_.name) = ?)", params[:creator_name].mb_chars.downcase)
       end
 
       q
@@ -75,6 +76,18 @@ class UserFeedback < ActiveRecord::Base
   def creator_is_privileged
     if !creator.is_privileged?
       errors[:creator] << "must be privileged"
+      return false
+    else
+      return true
+    end
+  end
+  
+  def user_is_not_creator
+    if user_id == creator_id
+      errors[:creator] << "cannot submit feedback for yourself"
+      return false
+    else
+      return true
     end
   end
 end

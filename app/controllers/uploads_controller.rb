@@ -19,7 +19,11 @@ class UploadsController < ApplicationController
   def index
     @search = Upload.search(params[:search])
     @uploads = @search.order("id desc").paginate(params[:page])
-    respond_with(@uploads)
+    respond_with(@uploads) do |format|
+      format.xml do
+        render :xml => @uploads.to_xml(:root => "uploads")
+      end
+    end
   end
 
   def show
@@ -35,7 +39,7 @@ class UploadsController < ApplicationController
 
   def create
   	@upload = Upload.create(params[:upload].merge(:server => Socket.gethostname))
-  	@upload.process! if @upload.errors.empty?
+    @upload.process! if @upload.errors.empty?
     respond_with(@upload)
   end
 

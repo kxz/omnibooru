@@ -5,12 +5,29 @@ class ApplicationController < ActionController::Base
   after_filter :reset_current_user
   before_filter :set_title
   before_filter :set_started_at_session
+  before_filter :api_check
   layout "default"
 
   rescue_from User::PrivilegeError, :with => :access_denied
   rescue_from Danbooru::Paginator::PaginationError, :with => :render_pagination_limit
 
 protected
+  def api_check
+    if request.format.to_s =~ /\/json|\/xml/
+      if CurrentUser.is_anonymous?
+        render :text => "401 Not Authorized\n", :layout => false, :status => 401
+        return false
+      end
+
+      if ApiLimiter.throttled?(request.remote_ip)
+        render :text => "421 User Throttled\n", :layout => false, :status => 421
+        return false
+      end
+    end
+    
+    return true
+  end
+
   def rescue_exception(exception)
     @exception = exception
 
@@ -53,7 +70,7 @@ protected
   end
 
   def set_current_user
-    session_loader = SessionLoader.new(session, cookies, request)
+    session_loader = SessionLoader.new(session, cookies, request, params)
     session_loader.load
   end
 
@@ -68,7 +85,7 @@ protected
     end
   end
 
-  %w(member banned privileged platinum contributor janitor moderator admin).each do |level|
+  %w(member banned builder privileged platinum contributor janitor moderator admin).each do |level|
     define_method("#{level}_only") do
       if CurrentUser.user.__send__("is_#{level}?")
         true

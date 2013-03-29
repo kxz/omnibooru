@@ -1,8 +1,9 @@
 class TagAlias < ActiveRecord::Base
+  before_save :ensure_tags_exist
   after_save :clear_all_cache
-  after_save :ensure_category_consistency
   after_destroy :clear_all_cache
   before_validation :initialize_creator, :on => :create
+  before_validation :normalize_names
   validates_presence_of :creator_id, :antecedent_name, :consequent_name
   validates_uniqueness_of :antecedent_name
   validate :absence_of_transitive_relation
@@ -11,7 +12,11 @@ class TagAlias < ActiveRecord::Base
 
   module SearchMethods
     def name_matches(name)
-      where("(antecedent_name like ? escape E'\\\\' or consequent_name like ? escape E'\\\\')", name.downcase.to_escaped_for_sql_like, name.downcase.to_escaped_for_sql_like)
+      where("(antecedent_name like ? escape E'\\\\' or consequent_name like ? escape E'\\\\')", name.mb_chars.downcase.to_escaped_for_sql_like, name.downcase.to_escaped_for_sql_like)
+    end
+    
+    def active
+      where("status = ?", "active")
     end
 
     def search(params)
@@ -70,6 +75,7 @@ class TagAlias < ActiveRecord::Base
   def process!
     update_column(:status, "processing")
     clear_all_cache
+    ensure_category_consistency
     update_posts
     update_column(:status, "active")
   rescue Exception => e
@@ -82,6 +88,11 @@ class TagAlias < ActiveRecord::Base
 
   def is_active?
     status == "active"
+  end
+  
+  def normalize_names
+    self.antecedent_name = antecedent_name.mb_chars.downcase.tr(" ", "_")
+    self.consequent_name = consequent_name.downcase.tr(" ", "_")
   end
 
   def initialize_creator
@@ -105,8 +116,13 @@ class TagAlias < ActiveRecord::Base
     end
   end
 
+  def ensure_tags_exist
+    Tag.find_or_create_by_name(antecedent_name)
+    Tag.find_or_create_by_name(consequent_name)
+  end
+
   def ensure_category_consistency
-    if antecedent_tag && consequent_tag && antecedent_tag.category != consequent_tag.category
+    if antecedent_tag.category != consequent_tag.category
       consequent_tag.update_attribute(:category, antecedent_tag.category)
     end
 

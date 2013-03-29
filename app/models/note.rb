@@ -27,7 +27,7 @@ class Note < ActiveRecord::Base
     end
 
     def creator_name(name)
-      where("creator_id = (select _.id from users _ where lower(_.name) = ?)", name.downcase)
+      where("creator_id = (select _.id from users _ where lower(_.name) = ?)", name.mb_chars.downcase)
     end
 
     def search(params)
@@ -47,7 +47,7 @@ class Note < ActiveRecord::Base
       end
 
       if params[:creator_name].present?
-        q = q.creator_name(params[:creator_name])
+        q = q.creator_name(params[:creator_name].tr(" ", "_"))
       end
 
       if params[:creator_id].present?
@@ -123,7 +123,8 @@ class Note < ActiveRecord::Base
   end
 
   def create_version
-    CurrentUser.increment!(:note_update_count)
+    CurrentUser.user.increment!(:note_update_count)
+    update_column(:version, version.to_i + 1)
 
     versions.create(
       :updater_id => updater_id,
@@ -134,7 +135,8 @@ class Note < ActiveRecord::Base
       :width => width,
       :height => height,
       :is_active => is_active,
-      :body => body
+      :body => body,
+      :version => version
     )
   end
 

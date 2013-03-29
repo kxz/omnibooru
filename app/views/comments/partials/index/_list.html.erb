@@ -5,7 +5,7 @@
 
   <div class="row notices">
     <% if post.comments.hidden(CurrentUser.user).count > 0 || (params[:controller] == "comments" && post.comments.count > 6) %>
-      <span class="info" id="threshold-comments-notice-for-<%= post.id %>"%>
+      <span class="info" id="threshold-comments-notice-for-<%= post.id %>">
         <%= link_to "Show all comments", comments_path(:post_id => post.id, :include_below_threshold => true), :remote => true %>
       </span>
     <% end %>
@@ -21,8 +21,10 @@
 
   <div class="clearfix"></div>
 
-  <div class="new-comment">
-    <p><%= link_to "Post comment", new_comment_path, :class => "expand-comment-response" %></p>
-    <%= render "comments/partials/new/form", :post => post %>
-  </div>
+  <% if CurrentUser.is_member? %>
+    <div class="new-comment">
+      <p><%= link_to "Post comment", new_comment_path, :class => "expand-comment-response" %></p>
+      <%= render "comments/partials/new/form", :post => post %>
+    </div>
+  <% end %>
 </div>

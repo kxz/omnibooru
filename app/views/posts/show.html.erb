@@ -14,10 +14,12 @@
         <%= render "posts/partials/show/information", :post => @post %>
       </section>
 
-      <section>
-        <h1>Options</h1>
-        <%= render "posts/partials/show/options", :post => @post %>
-      </section>
+      <% if CurrentUser.is_member? %>
+        <section>
+          <h1>Options</h1>
+          <%= render "posts/partials/show/options", :post => @post %>
+        </section>
+      <% end %>
 
       <section>
         <h1>History</h1>
@@ -49,7 +51,7 @@
 
       <menu id="post-sections">
         <li><a href="#comments">Comments</a></li>
-        <% if Danbooru.config.can_user_see_post?(CurrentUser.user, @post) %>
+        <% if CurrentUser.is_member? && Danbooru.config.can_user_see_post?(CurrentUser.user, @post) %>
           <li><a href="#edit" id="post-edit-link">Edit</a></li>
         <% end %>
         <li><a href="#share">Share</a></li>
@@ -63,7 +65,7 @@
         <%= render :partial => "notes/note", :collection => @post.notes.active %>
       </section>
 
-      <% if Danbooru.config.can_user_see_post?(CurrentUser.user, @post) %>
+      <% if CurrentUser.is_member? && Danbooru.config.can_user_see_post?(CurrentUser.user, @post) %>
         <section id="edit" style="display: none;">
           <%= render "posts/partials/show/edit", :post => @post %>
         </section>
