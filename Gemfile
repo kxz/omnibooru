@@ -3,7 +3,7 @@ source 'http://gemcutter.org'
 group :test do
   gem "shoulda"
   gem "factory_girl"
-  gem "mocha"
+  gem "mocha", :require => "mocha/setup"
   gem "ffaker", :git => "http://github.com/EmmanuelOga/ffaker.git"
   gem "simplecov", :require => false
 end
@@ -11,7 +11,7 @@ end
 group :assets do
   gem "sass-rails"
   gem "uglifier", ">= 1.0.3"
-  gem "therubyracer"
+  gem "therubyracer", :platforms => :ruby
 end
 
 gem "rails", "3.2.12"

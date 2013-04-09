@@ -15,7 +15,14 @@ class ArtistsController < ApplicationController
 
   def banned
     @artists = Artist.where("is_banned = ?", true).order("name")
-    respond_with(@artists)
+    respond_with(@artists) do |format|
+      format.xml do
+        render :xml => @artists.to_xml(:include => [:urls], :root => "artists")
+      end
+      format.json do
+        render :json => @artists.to_json(:include => [:urls])
+      end
+    end
   end
 
   def ban
@@ -42,7 +49,14 @@ class ArtistsController < ApplicationController
   def show
     @artist = Artist.find(params[:id])
     @post_set = PostSets::Artist.new(@artist)
-    respond_with(@artist)
+    respond_with(@artist) do |format|
+      format.xml do
+        render :xml => @artist.to_xml(:include => [:urls])
+      end
+      format.json do
+        render :json => @artist.to_json(:include => [:urls])
+      end
+    end
   end
 
   def create

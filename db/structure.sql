@@ -1870,6 +1870,38 @@ ALTER SEQUENCE janitor_trials_id_seq OWNED BY janitor_trials.id;
 
 
 --
+-- Name: key_values; Type: TABLE; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE TABLE key_values (
+    id integer NOT NULL,
+    key character varying(255) NOT NULL,
+    value text,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL
+);
+
+
+--
+-- Name: key_values_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE key_values_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MAXVALUE
+    NO MINVALUE
+    CACHE 1;
+
+
+--
+-- Name: key_values_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE key_values_id_seq OWNED BY key_values.id;
+
+
+--
 -- Name: mod_actions; Type: TABLE; Schema: public; Owner: -; Tablespace: 
 --
 
@@ -2298,7 +2330,8 @@ CREATE TABLE posts (
     has_children boolean DEFAULT false NOT NULL,
     is_banned boolean DEFAULT false NOT NULL,
     up_score integer,
-    down_score integer
+    down_score integer,
+    pixiv_id integer
 );
 
 
@@ -3569,6 +3602,13 @@ ALTER TABLE ONLY janitor_trials ALTER COLUMN id SET DEFAULT nextval('janitor_tri
 -- Name: id; Type: DEFAULT; Schema: public; Owner: -
 --
 
+ALTER TABLE ONLY key_values ALTER COLUMN id SET DEFAULT nextval('key_values_id_seq'::regclass);
+
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: -
+--
+
 ALTER TABLE ONLY mod_actions ALTER COLUMN id SET DEFAULT nextval('mod_actions_id_seq'::regclass);
 
 
@@ -3852,6 +3892,14 @@ ALTER TABLE ONLY ip_bans
 
 ALTER TABLE ONLY janitor_trials
     ADD CONSTRAINT janitor_trials_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: key_values_pkey; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace: 
+--
+
+ALTER TABLE ONLY key_values
+    ADD CONSTRAINT key_values_pkey PRIMARY KEY (id);
 
 
 --
@@ -5663,6 +5711,13 @@ CREATE INDEX index_janitor_trials_on_user_id ON janitor_trials USING btree (user
 
 
 --
+-- Name: index_key_values_on_key; Type: INDEX; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE UNIQUE INDEX index_key_values_on_key ON key_values USING btree (key);
+
+
+--
 -- Name: index_news_updates_on_created_at; Type: INDEX; Schema: public; Owner: -; Tablespace: 
 --
 
@@ -5873,13 +5928,6 @@ CREATE INDEX index_posts_on_created_at ON posts USING btree (created_at);
 
 
 --
--- Name: index_posts_on_created_at_date; Type: INDEX; Schema: public; Owner: -; Tablespace: 
---
-
-CREATE INDEX index_posts_on_created_at_date ON posts USING btree (date(created_at));
-
-
---
 -- Name: index_posts_on_file_size; Type: INDEX; Schema: public; Owner: -; Tablespace: 
 --
 
@@ -5939,7 +5987,7 @@ CREATE INDEX index_posts_on_parent_id ON posts USING btree (parent_id);
 -- Name: index_posts_on_pixiv_id; Type: INDEX; Schema: public; Owner: -; Tablespace: 
 --
 
-CREATE INDEX index_posts_on_pixiv_id ON posts USING btree ((("substring"((source)::text, 'pixiv.net/img.*/([0-9]+)[^/]*$'::text))::integer));
+CREATE INDEX index_posts_on_pixiv_id ON posts USING btree (pixiv_id) WHERE (pixiv_id IS NOT NULL);
 
 
 --
@@ -6355,3 +6403,9 @@ INSERT INTO schema_migrations (version) VALUES ('20130323160259');
 INSERT INTO schema_migrations (version) VALUES ('20130326035904');
 
 INSERT INTO schema_migrations (version) VALUES ('20130328092739');
+
+INSERT INTO schema_migrations (version) VALUES ('20130331180246');
+
+INSERT INTO schema_migrations (version) VALUES ('20130331182719');
+
+INSERT INTO schema_migrations (version) VALUES ('20130401013601');

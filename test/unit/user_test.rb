@@ -81,10 +81,11 @@ class UserTest < ActiveSupport::TestCase
       @user.update_column(:level, User::Levels::MEMBER)
       @user.update_column(:created_at, 1.year.ago)
       assert(@user.can_comment?)
+      assert(!@user.is_comment_limited?)
       (Danbooru.config.member_comment_limit).times do
         FactoryGirl.create(:comment)
       end
-      assert(!@user.can_comment?)
+      assert(@user.is_comment_limited?)
     end
 
     should "verify" do
@@ -195,6 +196,7 @@ class UserTest < ActiveSupport::TestCase
 
       should "match the confirmation" do
         @user = FactoryGirl.create(:user)
+        @user.old_password = "password"
         @user.password = "zugzug5"
         @user.password_confirmation = "zugzug5"
         @user.save
@@ -202,7 +204,7 @@ class UserTest < ActiveSupport::TestCase
         assert(User.authenticate(@user.name, "zugzug5"), "Authentication should have succeeded")
       end
 
-      should "match the confirmation" do
+      should "fail if the confirmation does not match" do
         @user = FactoryGirl.create(:user)
         @user.password = "zugzug6"
         @user.password_confirmation = "zugzug5"

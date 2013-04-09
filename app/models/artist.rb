@@ -58,7 +58,7 @@ class Artist < ActiveRecord::Base
 
     module ClassMethods
       def normalize_name(name)
-        name.to_s.mb_chars.downcase.strip.gsub(/ /, '_')
+        name.to_s.mb_chars.downcase.strip.gsub(/ /, '_').to_s
       end
     end
 
@@ -67,7 +67,7 @@ class Artist < ActiveRecord::Base
     end
 
     def other_names_array
-      other_names.try(:split, / /)
+      other_names.try(:split, /\s/)
     end
 
     def other_names_comma
@@ -114,7 +114,7 @@ class Artist < ActiveRecord::Base
       Artist.new.tap do |artist|
         if params[:name]
           artist.name = params[:name]
-          post = Post.tag_match("source:http* #{artist.name}").first
+          post = Post.tag_match("source:http #{artist.name}").first
           unless post.nil? || post.source.blank?
             artist.url_string = post.source
           end
@@ -231,7 +231,7 @@ class Artist < ActiveRecord::Base
     end
 
     def search(params)
-      q = active
+      q = scoped
       params = {} if params.blank?
 
       case params[:name]

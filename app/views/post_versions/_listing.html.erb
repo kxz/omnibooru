@@ -10,8 +10,10 @@
         <% if CurrentUser.is_admin? %>
           <th width="10%">IP Address</th>
         <% end %>
-        <th width="45%">Tags</th>
-        <th width="5%"></th>
+        <th>Tags</th>
+        <% if CurrentUser.is_member? %>
+          <th width="5%"></th>
+        <% end %>
       </tr>
     </thead>
     <tbody>
@@ -21,7 +23,7 @@
           <td><%= compact_time(post_version.updated_at) %></td>
           <td>
             <% if post_version.updater %>
-              <%= link_to(post_version.updater.name, user_path(post_version.updater_id)) %>
+              <%= link_to_user(post_version.updater) %>
             <% end %>
           </td>
           <td><%= post_version.rating %></td>
@@ -32,9 +34,11 @@
             </td>
           <% end %>
           <td><%= post_version_diff(post_version) %></td>
-          <td>
-            <%= link_to "Revert", revert_post_path(post_version.post_id, :version_id => post_version.id), :method => :put, :remote => true %>
-          </td>
+          <% if CurrentUser.is_member? %>
+            <td>
+              <%= link_to "Revert", revert_post_path(post_version.post_id, :version_id => post_version.id), :method => :put, :remote => true %>
+            </td>
+          <% end %>
         </tr>
       <% end %>
     </tbody>

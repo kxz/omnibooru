@@ -117,14 +117,15 @@ class PostQueryBuilder
     relation = add_range_relation(q[:width], "posts.image_width", relation)
     relation = add_range_relation(q[:height], "posts.image_height", relation)
     relation = add_range_relation(q[:score], "posts.score", relation)
+    relation = add_range_relation(q[:fav_count], "posts.fav_count", relation)
     relation = add_range_relation(q[:filesize], "posts.file_size", relation)
-    relation = add_range_relation(q[:date], "date(posts.created_at)", relation)
+    relation = add_range_relation(q[:date], "posts.created_at", relation)
     relation = add_range_relation(q[:general_tag_count], "posts.tag_count_general", relation)
     relation = add_range_relation(q[:artist_tag_count], "posts.tag_count_artist", relation)
     relation = add_range_relation(q[:copyright_tag_count], "posts.tag_count_copyright", relation)
     relation = add_range_relation(q[:character_tag_count], "posts.tag_count_character", relation)
     relation = add_range_relation(q[:post_tag_count], "posts.tag_count", relation)
-    # relation = add_range_relation(q[:pixiv_id], "substring(posts.source, 'pixiv.net/img.*/([0-9]+)[^/]*$')::integer", relation) 
+    relation = add_range_relation(q[:pixiv_id], "posts.pixiv_id", relation) 
 
     if q[:md5]
       relation = relation.where(["posts.md5 IN (?)", q[:md5]])
@@ -141,7 +142,7 @@ class PostQueryBuilder
       relation = relation.where("posts.is_banned = TRUE")
     elsif q[:status] == "all" || q[:status] == "any"
       # do nothing
-    elsif q[:status_neg] == "pending"
+    elsif q[:status_neg] == "pending" || q[:status] == "active"
       relation = relation.where("posts.is_pending = FALSE")
     elsif q[:status_neg] == "flagged"
       relation = relation.where("posts.is_flagged = FALSE")
@@ -157,6 +158,8 @@ class PostQueryBuilder
     if q[:source]
       if q[:source] == "none%"
         relation = relation.where("(posts.source = '' OR posts.source IS NULL)")
+      elsif q[:source] == "http%"
+        relation = relation.where("(posts.source like ?)", "http%")
       elsif q[:source] =~ /^%\.?pixiv(?:\.net(?:\/img)?)?(?:%\/|(?=%$))(.+)$/
         relation = relation.where("SourcePattern(posts.source) LIKE ? ESCAPE E'\\\\'", "pixiv/" + $1)
         has_constraints!
@@ -189,6 +192,16 @@ class PostQueryBuilder
       has_constraints!
     end
 
+    if q[:commenter_id]
+      relation = relation.where(:id => Comment.where("creator_id = ?", q[:commenter_id]).select("post_id").uniq)
+      has_constraints!
+    end
+
+    if q[:noter_id]
+      relation = relation.where(:id => Note.where("creator_id = ?", q[:noter_id]).select("post_id").uniq)
+      has_constraints!
+    end
+
     if q[:parent_id]
       relation = relation.where("(posts.id = ? or posts.parent_id = ?)", q[:parent_id], q[:parent_id])
       has_constraints!
@@ -208,6 +221,22 @@ class PostQueryBuilder
       relation = relation.where("posts.rating <> 's'")
     elsif q[:rating_negated] =~ /^e/
       relation = relation.where("posts.rating <> 'e'")
+    end
+
+    if q[:locked] == "rating"
+      relation = relation.where("posts.is_rating_locked = TRUE")
+    elsif q[:locked] == "note" || q[:locked] == "notes"
+      relation = relation.where("posts.is_note_locked = TRUE")
+    elsif q[:locked] == "status"
+      relation = relation.where("posts.is_status_locked = TRUE")
+    end
+
+    if q[:locked_negated] == "rating"
+      relation = relation.where("posts.is_rating_locked = FALSE")
+    elsif q[:locked_negated] == "note" || q[:locked_negated] == "notes"
+      relation = relation.where("posts.is_note_locked = FALSE")
+    elsif q[:locked_negated] == "status"
+      relation = relation.where("posts.is_status_locked = FALSE")
     end
 
     relation = add_tag_string_search_relation(q[:tags], relation)
@@ -235,10 +264,10 @@ class PostQueryBuilder
     when "favcount_asc"
       relation = relation.order("posts.fav_count ASC, posts.id DESC")
 
-    when "comment"
+    when "comment", "comm"
       relation = relation.order("posts.last_commented_at DESC, posts.id DESC").where("posts.last_commented_at is not null")
 
-    when "comment_asc"
+    when "comment_asc", "comm_asc"
       relation = relation.order("posts.last_commented_at ASC, posts.id DESC").where("posts.last_commented_at is not null")
 
     when "note"

@@ -1,5 +1,5 @@
 class Tag < ActiveRecord::Base
-  METATAGS = "-user|user|-approver|approver|-pool|pool|-fav|fav|sub|md5|-rating|rating|width|height|mpixels|score|filesize|source|id|date|order|-status|status|tagcount|gentags|arttags|chartags|copytags|parent|pixiv"
+  METATAGS = "-user|user|-approver|approver|commenter|comm|noter|-pool|pool|-fav|fav|sub|md5|-rating|rating|-locked|locked|width|height|mpixels|score|favcount|filesize|source|id|date|order|-status|status|tagcount|gentags|arttags|chartags|copytags|parent|pixiv_id|pixiv"
   attr_accessible :category
   has_one :wiki_page, :foreign_key => "name", :primary_key => "title"
 
@@ -100,11 +100,13 @@ class Tag < ActiveRecord::Base
       Post.raw_tag_match(name).find_each do |post|
         post.reload
         post.set_tag_counts
-        post.update_column(:tag_count, post.tag_count)
-        post.update_column(:tag_count_general, post.tag_count_general)
-        post.update_column(:tag_count_artist, post.tag_count_artist)
-        post.update_column(:tag_count_copyright, post.tag_count_copyright)
-        post.update_column(:tag_count_character, post.tag_count_character)
+        Post.with_timeout(10_000, nil) do
+          post.update_column(:tag_count, post.tag_count)
+          post.update_column(:tag_count_general, post.tag_count_general)
+          post.update_column(:tag_count_artist, post.tag_count_artist)
+          post.update_column(:tag_count_copyright, post.tag_count_copyright)
+          post.update_column(:tag_count_character, post.tag_count_character)
+        end
       end
     end
 
@@ -139,7 +141,7 @@ class Tag < ActiveRecord::Base
         if category
           category_id = categories.value_for(category)
 
-          if category_id != tag.category && CurrentUser.is_builder?
+          if category_id != tag.category && (CurrentUser.is_builder? || tag.post_count <= 50)
             tag.update_column(:category, category_id)
             tag.update_category_cache_for_all
           end
@@ -266,19 +268,29 @@ class Tag < ActiveRecord::Base
           case $1
           when "-user"
             q[:uploader_id_neg] ||= []
-            q[:uploader_id_neg] << User.name_to_id($2)
+            user_id = User.name_to_id($2)
+            q[:uploader_id_neg] << user_id unless user_id.blank?
 
           when "user"
             q[:uploader_id] = User.name_to_id($2)
-            q[:uploader_id] = -1 if q[:uploader_id].nil?
+            q[:uploader_id] = -1 if q[:uploader_id].blank?
 
           when "-approver"
             q[:approver_id_neg] ||= []
-            q[:approver_id_neg] << User.name_to_id($2)
+            user_id = User.name_to_id($2)
+            q[:approver_id_neg] << user_id unless user_id.blank?
 
           when "approver"
             q[:approver_id] = User.name_to_id($2)
-            q[:approver_id] = -1 if q[:approver_id].nil?
+            q[:approver_id] = -1 if q[:approver_id].blank?
+
+          when "commenter", "comm"
+            q[:commenter_id] = User.name_to_id($2)
+            q[:commenter_id] = -1 if q[:commenter_id].blank?
+
+          when "noter"
+            q[:noter_id] = User.name_to_id($2)
+            q[:noter_id] = -1 if q[:noter_id].blank?
 
           when "-pool"
             q[:tags][:exclude] << "pool:#{Pool.name_to_id($2)}"
@@ -305,6 +317,12 @@ class Tag < ActiveRecord::Base
           when "rating"
             q[:rating] = $2
 
+          when "-locked"
+            q[:locked_negated] = $2
+
+          when "locked"
+            q[:locked] = $2
+
           when "id"
             q[:post_id] = parse_helper($2)
 
@@ -319,6 +337,9 @@ class Tag < ActiveRecord::Base
 
           when "score"
             q[:score] = parse_helper($2)
+
+          when "favcount"
+            q[:fav_count] = parse_helper($2)
 
           when "filesize"
       	    q[:filesize] = parse_helper($2, :filesize)
@@ -356,8 +377,8 @@ class Tag < ActiveRecord::Base
           when "status"
             q[:status] = $2.downcase
 
-          when "pixiv"
-            q[:pixiv] = parse_helper($2)
+          when "pixiv_id", "pixiv"
+            q[:pixiv_id] = parse_helper($2)
 
           end
 
@@ -386,6 +407,7 @@ class Tag < ActiveRecord::Base
       end
       self.related_tags_updated_at = Time.now
       save
+    rescue ActiveRecord::StatementInvalid
     end
 
     def update_related_if_outdated

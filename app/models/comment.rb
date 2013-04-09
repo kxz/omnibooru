@@ -1,13 +1,14 @@
 class Comment < ActiveRecord::Base
-  validate :validate_creator_is_not_limited
+  validate :validate_creator_is_not_limited, :on => :create
   validates_format_of :body, :with => /\S/, :message => 'has no content'
   belongs_to :post
   belongs_to :creator, :class_name => "User"
+  belongs_to :updater, :class_name => "User"
   has_many :votes, :class_name => "CommentVote", :dependent => :destroy
   before_validation :initialize_creator, :on => :create
   before_validation :initialize_updater
-  after_save :update_last_commented_at
-  after_destroy :update_last_commented_at
+  after_create :update_last_commented_at_on_create
+  after_destroy :update_last_commented_at_on_destroy
   attr_accessible :body, :post_id, :do_not_bump_post
   attr_accessor :do_not_bump_post
 
@@ -48,6 +49,10 @@ class Comment < ActiveRecord::Base
         q = q.body_matches(params[:body_matches])
       end
 
+      if params[:post_id].present?
+        q = q.where("post_id = ?", params[:post_id].to_i)
+      end
+
       if params[:post_tags_match].present?
         q = q.post_tags_match(params[:post_tags_match])
       end
@@ -85,20 +90,32 @@ class Comment < ActiveRecord::Base
   end
 
   def validate_creator_is_not_limited
-    if creator.can_comment?
+    if creator.is_comment_limited? && !do_not_bump_post?
+      errors.add(:base, "You can only post #{Danbooru.config.member_comment_limit} comments per hour")
+      false
+    elsif creator.can_comment?
       true
     else
-      errors.add(:creator, "can not post comments within 1 week of sign up, and can only post #{Danbooru.config.member_comment_limit} comments per hour after that")
+      errors.add(:base, "You can not post comments within 1 week of sign up")
       false
     end
   end
 
-  def update_last_commented_at
-    if Comment.where("post_id = ?", post_id).count == 0
-      Post.update_all("last_commented_at = NULL", ["id = ?", post_id])
-    elsif Comment.where("post_id = ?", post_id).count <= Danbooru.config.comment_threshold && !do_not_bump_post?
+  def update_last_commented_at_on_create
+    if Comment.where("post_id = ?", post_id).count <= Danbooru.config.comment_threshold && !do_not_bump_post?
       Post.update_all(["last_commented_at = ?", created_at], ["id = ?", post_id])
     end
+    true
+  end
+
+  def update_last_commented_at_on_destroy
+    other_comments = Comment.where("post_id = ? and id <> ?", post_id, id).order("id DESC")
+    if other_comments.count == 0
+      Post.update_all("last_commented_at = NULL", ["id = ?", post_id])
+    else
+      Post.update_all(["last_commented_at = ?", other_comments.first.created_at], ["id = ?", post_id])
+    end
+    true
   end
 
   def do_not_bump_post?

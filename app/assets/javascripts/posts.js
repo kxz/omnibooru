@@ -110,6 +110,11 @@
         Danbooru.Post.nav_next();
         e.preventDefault();
       });
+
+      $(document).bind("keydown.f", function(e) {
+        $("#add-to-favorites").filter(":visible").trigger("click");
+        e.preventDefault();
+      });
     }
 
     $(document).bind("keydown.s", function(e) {
@@ -236,7 +241,7 @@
         $("#edit").show();
         $("#comments").hide();
         $("#share").hide();
-        $("#post_tag_string").focus();
+        $("#post_tag_string").focus().selectEnd();
         $("#related-tags-button").trigger("click");
         $("#find-artist-button").trigger("click");
       } else {
