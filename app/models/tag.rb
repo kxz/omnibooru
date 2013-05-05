@@ -1,5 +1,5 @@
 class Tag < ActiveRecord::Base
-  METATAGS = "-user|user|-approver|approver|commenter|comm|noter|-pool|pool|-fav|fav|sub|md5|-rating|rating|-locked|locked|width|height|mpixels|score|favcount|filesize|source|id|date|order|-status|status|tagcount|gentags|arttags|chartags|copytags|parent|pixiv_id|pixiv"
+  METATAGS = "-user|user|-approver|approver|commenter|comm|noter|-pool|pool|-fav|fav|sub|md5|-rating|rating|-locked|locked|width|height|mpixels|score|favcount|filesize|source|id|-id|date|age|order|-status|status|tagcount|gentags|arttags|chartags|copytags|parent|-parent|pixiv_id|pixiv"
   attr_accessible :category
   has_one :wiki_page, :foreign_key => "name", :primary_key => "title"
 
@@ -73,9 +73,13 @@ class Tag < ActiveRecord::Base
       end
 
       def categories_for(tag_names)
-        Cache.get_multi(tag_names, "tc") do |name|
-          select_category_for(name)
+        Array(tag_names).inject({}) do |hash, tag_name|
+          hash[tag_name] = category_for(tag_name)
+          hash
         end
+        # Cache.get_multi(tag_names, "tc") do |name|
+        #   select_category_for(name)
+        # end
       end
     end
 
@@ -92,15 +96,14 @@ class Tag < ActiveRecord::Base
       Danbooru.config.other_server_hosts.each do |host|
         delay(:queue => host).update_category_cache
       end
-
       delay(:queue => "default").update_category_post_counts
     end
 
     def update_category_post_counts
-      Post.raw_tag_match(name).find_each do |post|
-        post.reload
-        post.set_tag_counts
-        Post.with_timeout(10_000, nil) do
+      Post.with_timeout(30_000, nil) do
+        Post.raw_tag_match(name).find_each do |post|
+          post.reload
+          post.set_tag_counts
           post.update_column(:tag_count, post.tag_count)
           post.update_column(:tag_count_general, post.tag_count_general)
           post.update_column(:tag_count_artist, post.tag_count_artist)
@@ -186,6 +189,31 @@ class Tag < ActiveRecord::Base
           nil
         end
 
+      when :age
+        object =~ /(\d+)(s(econds?)?|mi(nutes?)?|h(ours?)?|d(ays?)?|w(eeks?)?|mo(nths?)?|y(ears?)?)?/i
+
+        size = $1.to_i
+        unit = $2
+
+        case unit
+        when /^s/i
+          size.seconds.ago
+        when /^mi/i
+          size.minutes.ago
+        when /^h/i
+          size.hours.ago
+        when /^d/i
+          size.days.ago
+        when /^w/i
+          size.weeks.ago
+        when /^mo/i
+          size.months.ago
+        when /^y/i
+          size.years.ago
+        else
+          size.seconds.ago
+        end
+
       when :filesize
         object =~ /\A(\d+(?:\.\d*)?|\d*\.\d+)([kKmM]?)[bB]?\Z/
 
@@ -225,11 +253,33 @@ class Tag < ActiveRecord::Base
         return [:gt, parse_cast($1, type)]
 
       when /,/
-        return [:in, range.split(/,/)]
+        return [:in, range.split(/,/).map {|x| parse_cast(x, type)}]
 
       else
         return [:eq, parse_cast(range, type)]
 
+      end
+    end
+
+    def reverse_parse_helper(array)
+      case array[0]
+      when :between
+        [:between, *array[1..-1].reverse]
+
+      when :lte
+        [:gte, *array[1..-1]]
+
+      when :lt
+        [:gt, *array[1..-1]]
+
+      when :gte
+        [:lte, *array[1..-1]]
+
+      when :gt
+        [:lt, *array[1..-1]]
+
+      else
+        array
       end
     end
 
@@ -272,8 +322,8 @@ class Tag < ActiveRecord::Base
             q[:uploader_id_neg] << user_id unless user_id.blank?
 
           when "user"
-            q[:uploader_id] = User.name_to_id($2)
-            q[:uploader_id] = -1 if q[:uploader_id].blank?
+            user_id = User.name_to_id($2)
+            q[:uploader_id] = user_id unless user_id.blank?
 
           when "-approver"
             q[:approver_id_neg] ||= []
@@ -281,16 +331,18 @@ class Tag < ActiveRecord::Base
             q[:approver_id_neg] << user_id unless user_id.blank?
 
           when "approver"
-            q[:approver_id] = User.name_to_id($2)
-            q[:approver_id] = -1 if q[:approver_id].blank?
+            user_id = User.name_to_id($2)
+            q[:approver_id] = user_id unless user_id.blank?
 
           when "commenter", "comm"
-            q[:commenter_id] = User.name_to_id($2)
-            q[:commenter_id] = -1 if q[:commenter_id].blank?
+            q[:commenter_ids] ||= []
+            user_id = User.name_to_id($2)
+            q[:commenter_ids] << user_id unless user_id.blank?
 
           when "noter"
-            q[:noter_id] = User.name_to_id($2)
-            q[:noter_id] = -1 if q[:noter_id].blank?
+            q[:noter_ids] ||= []
+            user_id = User.name_to_id($2)
+            q[:noter_ids] << user_id unless user_id.blank?
 
           when "-pool"
             q[:tags][:exclude] << "pool:#{Pool.name_to_id($2)}"
@@ -326,6 +378,9 @@ class Tag < ActiveRecord::Base
           when "id"
             q[:post_id] = parse_helper($2)
 
+          when "-id"
+            q[:post_id_negated] = $2.to_i
+
           when "width"
             q[:width] = parse_helper($2)
 
@@ -350,6 +405,9 @@ class Tag < ActiveRecord::Base
           when "date"
             q[:date] = parse_helper($2, :date)
 
+          when "age"
+            q[:age] = reverse_parse_helper(parse_helper($2, :age))
+
           when "tagcount"
             q[:post_tag_count] = parse_helper($2)
 
@@ -366,7 +424,10 @@ class Tag < ActiveRecord::Base
             q[:copyright_tag_count] = parse_helper($2)
 
           when "parent"
-            q[:parent_id] = $2.to_i
+            q[:parent] = $2.downcase
+
+          when "-parent"
+            q[:parent_neg] = $2.downcase
 
           when "order"
             q[:order] = $2.downcase
@@ -493,11 +554,15 @@ class Tag < ActiveRecord::Base
         q = q.reorder("name")
 
       else
-        q = q.reorder("post_count desc")
+        q = q.reorder("id desc")
       end
 
       q
     end
+  end
+
+  def editable_by?(user)
+    user.is_builder? || (user.is_member? && post_count <= 50)
   end
 
   include ApiMethods

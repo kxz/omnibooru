@@ -19,6 +19,8 @@ set :scm, :git
 set :user, "albert"
 set :deploy_to, "/var/www/danbooru2"
 
+require 'capistrano-unicorn'
+
 default_run_options[:pty] = true
 
 namespace :local_config do
@@ -57,6 +59,11 @@ namespace :data do
 
     run "rm -f #{release_path}/public/images/advertisements"
     run "ln -s #{deploy_to}/shared/advertisements #{release_path}/public/images/advertisements"
+
+    run "mkdir -p #{release_path}/public/cache"
+    run "mkdir -p #{deploy_to}/shared/system/cache"
+    run "touch #{deploy_to}/shared/system/cache/tags.json"
+    run "ln -s #{deploy_to}/shared/system/cache/tags.json #{release_path}/public/cache/tags.json"
   end
 end
 
@@ -96,11 +103,6 @@ namespace :deploy do
   task :precompile_assets do
     run "cd #{current_path}; bundle exec rake assets:precompile"
   end
-
-  desc "Restart the application"
-  task :restart do
-    run "touch #{current_path}/tmp/restart.txt"
-  end
 end
 
 namespace :delayed_job do
@@ -137,10 +139,11 @@ after "deploy:create_symlink", "local_config:link_local_files"
 after "deploy:create_symlink", "data:link_directories"
 after "deploy:start", "delayed_job:start"
 after "deploy:stop", "delayed_job:stop"
-after "deploy:restart", "delayed_job:restart"
 before "deploy:update", "deploy:web:disable"
+after "deploy:update", "delayed_job:restart"
 after "deploy:update", "deploy:migrate"
-after "deploy:update", "deploy:restart"
-after "deploy:restart", "deploy:precompile_assets"
-after "deploy:restart", "deploy:web:enable"
+after "deploy:update", "unicorn:reload"
+after "deploy:update", "unicorn:restart"
+after "deploy:update", "deploy:precompile_assets"
+after "deploy:update", "deploy:web:enable"
 after "delayed_job:stop", "delayed_job:kill"

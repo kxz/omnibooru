@@ -92,10 +92,10 @@ Danbooru.Note = {
       var ratio = $image.width() / parseFloat($("#image").data("original-width"));
       var $note = $("#notes > article[data-id=" + $note_box.data("id") + "]");
       $note_box.css({
-        top: parseFloat($note.data("y")) * ratio,
-        left: parseFloat($note.data("x")) * ratio,
-        width: parseFloat($note.data("width")) * ratio,
-        height: parseFloat($note.data("height")) * ratio
+        top: Math.ceil(parseFloat($note.data("y")) * ratio),
+        left: Math.ceil(parseFloat($note.data("x")) * ratio),
+        width: Math.ceil(parseFloat($note.data("width")) * ratio),
+        height: Math.ceil(parseFloat($note.data("height")) * ratio)
       });
       Danbooru.Note.Box.resize_inner_border($note_box);
     },
@@ -281,11 +281,12 @@ Danbooru.Note = {
       $dialog.append($textarea);
       $dialog.data("id", $note_body.data("id"));
       $dialog.dialog({
-        width: 350,
+        width: 360,
         dialogClass: "note-edit-dialog",
         title: "Edit note",
         buttons: {
           "Save": Danbooru.Note.Edit.save,
+          "Preview": Danbooru.Note.Edit.preview,
           "Cancel": Danbooru.Note.Edit.cancel,
           "Delete": Danbooru.Note.Edit.delete,
           "History": Danbooru.Note.Edit.history
@@ -364,6 +365,16 @@ Danbooru.Note = {
       }
     },
 
+    preview: function() {
+      var $this = $(this);
+      var $textarea = $this.find("textarea");
+      var id = $this.data("id");
+      var $note_body = Danbooru.Note.Body.find(id);
+      var text = $textarea.val();
+      Danbooru.Note.Body.set_text($note_body, text);
+      $note_body.show();
+    },
+
     cancel: function() {
       $(this).dialog("close");
     },
@@ -408,22 +419,120 @@ Danbooru.Note = {
 
       Danbooru.Note.TranslationMode.active = true;
       $("#original-file-link").click();
-      $("#image").one("click", Danbooru.Note.TranslationMode.create_note);
-      Danbooru.notice('Click on the image to create a note (shortcut is <span class="key">n</span>)');
+      $("#image").one("click", function() { $(".note-box").show() }); /* override the 'hide all note boxes' click event */
+      $("#image").one("mousedown", Danbooru.Note.TranslationMode.Drag.start);
+      $(window).bind("mouseup", Danbooru.Note.TranslationMode.Drag.stop);
+      Danbooru.notice('Click or drag on the image to create a note (shortcut is <span class="key">n</span>)');
     },
 
     stop: function() {
       Danbooru.Note.TranslationMode.active = false;
     },
 
-    create_note: function(e) {
+    create_note: function(e,dragged,x,y,w,h) {
       Danbooru.Note.TranslationMode.active = false;
       var offset = $("#image").offset();
-      Danbooru.Note.new(e.pageX - offset.left, e.pageY - offset.top);
+      
+      if(dragged) {
+        if(w > 9 && h > 9) { /* minimum note size: 10px */
+          Danbooru.Note.new(x-offset.left,y-offset.top,w,h);
+        }
+      } else {
+        Danbooru.Note.new(e.pageX - offset.left, e.pageY - offset.top);
+      }
       Danbooru.Note.TranslationMode.stop();
       $(".note-box").show();
       e.stopPropagation();
       e.preventDefault();
+    },
+    
+    Drag: {
+      dragging: false,
+      dragStartX: 0,
+      dragStartY: 0,
+      dragDistanceY: 0,
+      dragDistanceY: 0,
+      x: 0,
+      y: 0,
+      w: 0,
+      h: 0,
+      
+      start: function (e) {
+        e.preventDefault(); /* don't drag the image */
+        $(window).mousemove(Danbooru.Note.TranslationMode.Drag.drag);
+        Danbooru.Note.TranslationMode.Drag.dragStartX = e.pageX;
+        Danbooru.Note.TranslationMode.Drag.dragStartY = e.pageY;
+      },
+      
+      drag: function (e) {
+        Danbooru.Note.TranslationMode.Drag.dragDistanceX = e.pageX - Danbooru.Note.TranslationMode.Drag.dragStartX;
+        Danbooru.Note.TranslationMode.Drag.dragDistanceY = e.pageY - Danbooru.Note.TranslationMode.Drag.dragStartY;
+        var $image = $("#image");
+        var offset = $image.offset();
+        var limitX1 = $image.width() - Danbooru.Note.TranslationMode.Drag.dragStartX + offset.left - 1;
+        var limitX2 = offset.left - Danbooru.Note.TranslationMode.Drag.dragStartX;
+        var limitY1 = $image.height()- Danbooru.Note.TranslationMode.Drag.dragStartY + offset.top - 1;
+        var limitY2 = offset.top - Danbooru.Note.TranslationMode.Drag.dragStartY;
+
+        if(Danbooru.Note.TranslationMode.Drag.dragDistanceX > limitX1) {
+          Danbooru.Note.TranslationMode.Drag.dragDistanceX = limitX1;
+        } else if(Danbooru.Note.TranslationMode.Drag.dragDistanceX < limitX2) {
+          Danbooru.Note.TranslationMode.Drag.dragDistanceX = limitX2;
+        }
+
+        if(Danbooru.Note.TranslationMode.Drag.dragDistanceY > limitY1) {
+          Danbooru.Note.TranslationMode.Drag.dragDistanceY = limitY1;
+        } else if(Danbooru.Note.TranslationMode.Drag.dragDistanceY < limitY2) {
+          Danbooru.Note.TranslationMode.Drag.dragDistanceY = limitY2;
+        }
+
+        if (Math.abs(Danbooru.Note.TranslationMode.Drag.dragDistanceX) > 9 && Math.abs(Danbooru.Note.TranslationMode.Drag.dragDistanceY) > 9) {
+          Danbooru.Note.TranslationMode.Drag.dragging = true; /* must drag at least 10pixels (minimum note size) in both dimensions. */
+        }
+        if (Danbooru.Note.TranslationMode.Drag.dragging) {
+          if (Danbooru.Note.TranslationMode.Drag.dragDistanceX >= 0) {
+            Danbooru.Note.TranslationMode.Drag.x = Danbooru.Note.TranslationMode.Drag.dragStartX;
+            Danbooru.Note.TranslationMode.Drag.w = Danbooru.Note.TranslationMode.Drag.dragDistanceX;
+          } else {
+            Danbooru.Note.TranslationMode.Drag.x = Danbooru.Note.TranslationMode.Drag.dragStartX + Danbooru.Note.TranslationMode.Drag.dragDistanceX;
+            Danbooru.Note.TranslationMode.Drag.w = -Danbooru.Note.TranslationMode.Drag.dragDistanceX;
+          }
+
+          if (Danbooru.Note.TranslationMode.Drag.dragDistanceY >= 0) {
+            Danbooru.Note.TranslationMode.Drag.y = Danbooru.Note.TranslationMode.Drag.dragStartY;
+            Danbooru.Note.TranslationMode.Drag.h = Danbooru.Note.TranslationMode.Drag.dragDistanceY;
+          } else {
+            Danbooru.Note.TranslationMode.Drag.y = Danbooru.Note.TranslationMode.Drag.dragStartY + Danbooru.Note.TranslationMode.Drag.dragDistanceY;
+            Danbooru.Note.TranslationMode.Drag.h = -Danbooru.Note.TranslationMode.Drag.dragDistanceY;
+          }
+
+          $('#note-helper').css({ /* preview of the note you are dragging */
+            display: 'block',
+            left: (Danbooru.Note.TranslationMode.Drag.x - offset.left + 1),
+            top: (Danbooru.Note.TranslationMode.Drag.y - offset.top + 1),
+            width: (Danbooru.Note.TranslationMode.Drag.w - 3),
+            height: (Danbooru.Note.TranslationMode.Drag.h - 3)
+          });
+        }
+      },
+
+      stop: function (e) {
+        if(Danbooru.Note.TranslationMode.Drag.dragStartX === 0) {
+          return; /* 'stop' is bound to window, don't create note if start wasn't triggered */
+        }
+        $(window).unbind("mousemove");
+
+        if(Danbooru.Note.TranslationMode.Drag.dragging) {
+          $('#note-helper').css({display:'none'});
+          Danbooru.Note.TranslationMode.create_note(e, true, Danbooru.Note.TranslationMode.Drag.x, Danbooru.Note.TranslationMode.Drag.y, Danbooru.Note.TranslationMode.Drag.w-1, Danbooru.Note.TranslationMode.Drag.h-1);
+          Danbooru.Note.TranslationMode.Drag.dragging = false; /* border of the note is pixel-perfect on the preview border */
+        } else { /* no dragging -> create a normal note */
+          Danbooru.Note.TranslationMode.create_note(e);
+        }
+        $(window).unbind("mouseup", Danbooru.Note.TranslationMode.Drag.stop);
+        Danbooru.Note.TranslationMode.Drag.dragStartX = 0;
+        Danbooru.Note.TranslationMode.Drag.dragStartY = 0;
+      }
     }
   },
 
@@ -441,23 +550,25 @@ Danbooru.Note = {
       left: x,
       top: y,
       width: w,
-      height: h
+      height: h,
+      display: 'none'
     });
 
     $("#note-container").append($note_box);
     $("#note-container").append($note_body);
     $note_body.data("original-body", text);
     Danbooru.Note.Box.scale($note_box);
-    Danbooru.Note.Box.resize_inner_border($note_box);
     Danbooru.Note.Body.set_text($note_body, text);
   },
 
-  new: function(x, y) {
+  new: function(x, y, w, h) {
     var $note_box = Danbooru.Note.Box.create(Danbooru.Note.id);
     var $note_body = Danbooru.Note.Body.create(Danbooru.Note.id);
     $note_box.css({
       top: y,
-      left: x
+      left: x,
+      width: w,
+      height: h
     });
     $note_box.find(".note-box-inner-border").addClass("unsaved");
     $note_body.html("<em>Click to edit</em>");
@@ -488,6 +599,12 @@ Danbooru.Note = {
         $article.html()
       );
     });
+    
+    $('#note-container').css('display','none');
+    $('.note-box').each(function(i, v) {
+      $(v).css('display','block')
+    });
+    $('#note-container').css('display','block');
   }
 }
 

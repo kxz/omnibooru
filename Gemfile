@@ -6,6 +6,9 @@ group :test do
   gem "mocha", :require => "mocha/setup"
   gem "ffaker", :git => "http://github.com/EmmanuelOga/ffaker.git"
   gem "simplecov", :require => false
+  gem "pry"
+  gem "vcr"
+  gem "fakeweb"
 end
 
 group :assets do
@@ -35,7 +38,13 @@ gem 'bcrypt-ruby', :require => "bcrypt"
 gem 'aws-s3', :require => "aws/s3"
 gem 'awesome_print'
 
+group :production do
+  gem 'unicorn', :platforms => :ruby
+  gem 'capistrano-unicorn', :require => false
+end
+
 group :development do
   gem 'ruby-prof'
   gem 'pry'
 end
+

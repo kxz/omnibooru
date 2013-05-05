@@ -14,6 +14,19 @@ class UserTest < ActiveSupport::TestCase
       CurrentUser.ip_addr = nil
     end
 
+    context "favoriting a post" do
+      setup do
+        @user.update_column(:favorite_count, 999)
+        @user.stubs(:clean_favorite_count?).returns(true)
+        @post = FactoryGirl.create(:post)
+      end
+
+      should "periodically clean the favorite_count" do
+        @user.add_favorite!(@post)
+        assert_equal(1, @user.favorite_count)
+      end
+    end
+
     context "that has been invited by a mod" do
       setup do
         @mod = FactoryGirl.create(:moderator_user)
@@ -35,7 +48,7 @@ class UserTest < ActiveSupport::TestCase
         assert_difference("ModAction.count") do
           @user.invite!(User::Levels::CONTRIBUTOR)
         end
-        assert_equal("#{@user.name} level changed Member -> Contributor by #{CurrentUser.name}", ModAction.last.description)
+        assert_equal(%{"#{@user.name}":/users/#{@user.id} level changed Member -> Contributor}, ModAction.last.description)
       end
     end
 
@@ -76,7 +89,7 @@ class UserTest < ActiveSupport::TestCase
 
     should "limit comments" do
       assert(!@user.can_comment?)
-      @user.update_column(:level, User::Levels::PRIVILEGED)
+      @user.update_column(:level, User::Levels::GOLD)
       assert(@user.can_comment?)
       @user.update_column(:level, User::Levels::MEMBER)
       @user.update_column(:created_at, 1.year.ago)
@@ -111,47 +124,65 @@ class UserTest < ActiveSupport::TestCase
       assert(user.is_moderator?)
       assert(user.is_janitor?)
       assert(user.is_contributor?)
-      assert(user.is_privileged?)
+      assert(user.is_gold?)
 
       user = FactoryGirl.create(:user, :level => User::Levels::MODERATOR)
       assert(!user.is_admin?)
       assert(user.is_moderator?)
       assert(user.is_janitor?)
       assert(user.is_contributor?)
-      assert(user.is_privileged?)
+      assert(user.is_gold?)
 
       user = FactoryGirl.create(:user, :level => User::Levels::JANITOR)
       assert(!user.is_admin?)
       assert(!user.is_moderator?)
       assert(user.is_janitor?)
       assert(user.is_contributor?)
-      assert(user.is_privileged?)
+      assert(user.is_gold?)
 
       user = FactoryGirl.create(:user, :level => User::Levels::CONTRIBUTOR)
       assert(!user.is_admin?)
       assert(!user.is_moderator?)
       assert(!user.is_janitor?)
       assert(user.is_contributor?)
-      assert(user.is_privileged?)
+      assert(user.is_gold?)
 
-      user = FactoryGirl.create(:user, :level => User::Levels::PRIVILEGED)
+      user = FactoryGirl.create(:user, :level => User::Levels::GOLD)
       assert(!user.is_admin?)
       assert(!user.is_moderator?)
       assert(!user.is_janitor?)
       assert(!user.is_contributor?)
-      assert(user.is_privileged?)
+      assert(user.is_gold?)
 
       user = FactoryGirl.create(:user)
       assert(!user.is_admin?)
       assert(!user.is_moderator?)
       assert(!user.is_janitor?)
       assert(!user.is_contributor?)
-      assert(!user.is_privileged?)
+      assert(!user.is_gold?)
     end
 
     context "name" do
       should "be #{Danbooru.config.default_guest_name} given an invalid user id" do
         assert_equal(Danbooru.config.default_guest_name, User.id_to_name(-1))
+      end
+
+      should "not contain a colon" do
+        user = FactoryGirl.build(:user, :name => "a:b")
+        user.save
+        assert_equal(["Name cannot have whitespace or colons"], user.errors.full_messages)
+      end
+
+      should "not begin with an underscore" do
+        user = FactoryGirl.build(:user, :name => "_x")
+        user.save
+        assert_equal(["Name cannot begin or end with an underscore"], user.errors.full_messages)
+      end
+
+      should "not end with an underscore" do
+        user = FactoryGirl.build(:user, :name => "x_")
+        user.save
+        assert_equal(["Name cannot begin or end with an underscore"], user.errors.full_messages)
       end
 
       should "be fetched given a user id" do

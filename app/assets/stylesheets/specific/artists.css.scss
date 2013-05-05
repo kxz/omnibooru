@@ -21,6 +21,10 @@ div#c-artists {
     textarea {
       height: 5em;
     }
+
+    .hint {
+      display: block;
+    } 
   }
 
   div.recent-posts {
@@ -30,9 +34,5 @@ div#c-artists {
       font-size: $h2_size;
       margin: 0;
     }
-  }
-
-  .hint {
-    display: block;
   }
 }

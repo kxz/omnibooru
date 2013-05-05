@@ -1,6 +1,6 @@
 <ul>
   <li>ID: <%= post.id %></li>
-  <li>Uploader: <%= link_to_user_unless(post.uploader.nil?, post.uploader) + " " + link_to("&raquo;".html_safe, posts_path(:tags => "user:#{post.uploader.name}")) %></li>
+  <li>Uploader: <%= link_to_user(post.uploader) + "&nbsp;".html_safe + link_to("&raquo;".html_safe, posts_path(:tags => "user:#{post.uploader.name}")) %></li>
   <li>Date: <%= link_to time_ago_in_words_tagged(post.created_at), posts_path(:tags => "date:#{post.created_at.to_date}") %></li>
   <% if post.approver %>
     <li>Approver: <%= link_to_user(post.approver) %></li>
@@ -13,8 +13,13 @@
   </li>
   <li>Source: <%= post_source_tag(post) %></li>
   <li>Rating: <%= post.pretty_rating %></li>
-  <li>Score: <span id="score-for-post-<%= post.id %>"><%= post.score %></span> <% if CurrentUser.is_privileged? %>(vote <%= link_to "up", post_votes_path(:post_id => post.id, :score => "up"), :remote => true, :method => :post %>/<%= link_to "down", post_votes_path(:post_id => post.id, :score => "down"), :remote => true, :method => :post %>)<% end %></li>
-  <li>Favorites: <span id="favcount-for-post-<%= post.id %>"><%= post.fav_count %></span></li>
+  <li>Score: <span id="score-for-post-<%= post.id %>"><%= post.score %></span> <% if CurrentUser.is_gold? %>(vote <%= link_to "up", post_votes_path(:post_id => post.id, :score => "up"), :remote => true, :method => :post %>/<%= link_to "down", post_votes_path(:post_id => post.id, :score => "down"), :remote => true, :method => :post %>)<% end %></li>
+  <li>Favorites: <span id="favcount-for-post-<%= post.id %>"><%= post.fav_count %></span>
+  <% if CurrentUser.is_gold? && post.fav_count > 0 %>
+    <%= link_to "&raquo;".html_safe, "#", :id => "show-favlist-link" %>
+    <%= link_to "&laquo;".html_safe, "#", :id => "hide-favlist-link" %>
+    <div id="favlist"><%= post_favlist(post) %></div>
+  <% end %></li>
   <li>
     Status:
     <% if post.is_pending? %>
@@ -29,7 +34,11 @@
       Flagged
     <% end %>
 
-    <% if !post.is_pending? && !post.is_deleted? %>
+    <% if post.is_banned? %>
+      Banned
+    <% end %>
+
+    <% if !post.is_pending? && !post.is_deleted? && !post.is_banned? %>
       Active
     <% end %>
   </li>

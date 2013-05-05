@@ -55,25 +55,25 @@
     var a = $field.get(0).selectionStart;
     var b = $field.get(0).selectionStart;
 
-    if ((a > 0) && (a < (n - 1)) && (string[a] !== " ") && (string[a - 1] === " ")) {
+    if ((a > 0) && (a < (n - 1)) && (!/\s/.test(string[a])) && (/\s/.test(string[a - 1]))) {
       // 4 is the only case where we need to scan forward. in all other cases we
       // can drag a backwards, and then drag b forwards.
 
-      while ((b < n) && (string[b] !== " ")) {
+      while ((b < n) && (!/\s/.test(string[b]))) {
         b++;
       }
     } else {
-      while ((a > 0) && ((string[a] === " ") || (string[a] === undefined))) {
+      while ((a > 0) && ((/\s/.test(string[a])) || (string[a] === undefined))) {
         a--;
         b--;
       }
 
-      while ((a > 0) && (string[a - 1] !== " ")) {
+      while ((a > 0) && (!/\s/.test(string[a - 1]))) {
         a--;
         b--;
       }
 
-      while ((b < (n - 1)) && (string[b] !== " ")) {
+      while ((b < (n - 1)) && (!/\s/.test(string[b]))) {
         b++;
       }
     }
@@ -104,7 +104,7 @@
       $dest.append(Danbooru.RelatedTag.build_html("recent", Danbooru.RelatedTag.recent_tags()));
     }
     if (Danbooru.RelatedTag.favorite_tags().length) {
-      $dest.append(Danbooru.RelatedTag.build_html("favorite", Danbooru.RelatedTag.favorite_tags()));
+      $dest.append(Danbooru.RelatedTag.build_html("frequent", Danbooru.RelatedTag.favorite_tags()));
     }
     $dest.append(Danbooru.RelatedTag.build_html(query, related_tags));
     if (wiki_page_tags.length) {
@@ -112,12 +112,16 @@
     }
     if (Danbooru.RelatedTag.recent_artists) {
       var tags = [];
-      if (Danbooru.RelatedTag.recent_artists.length !== 1) {
+      if (Danbooru.RelatedTag.recent_artists.length === 0) {
         tags.push([" none", 0]);
-      } else {
+      } else if (Danbooru.RelatedTag.recent_artists.length === 1) {
         tags.push([Danbooru.RelatedTag.recent_artists[0].name, 1]);
         $.each(Danbooru.RelatedTag.recent_artists[0].urls, function(i, url) {
           tags.push([" " + url.url, 0]);
+        });
+      } else {
+        $.each(Danbooru.RelatedTag.recent_artists, function(i, artist) {
+          tags.push([artist.name, 1]);
         });
       }
      $dest.append(Danbooru.RelatedTag.build_html("artist", tags, true));
@@ -194,10 +198,12 @@
     var tag = $(e.target).html().replace(/ /g, "_").replace(/&gt;/g, ">").replace(/&lt;/g, "<").replace(/&amp;/g, "&");
 
     if ($.inArray(tag, tags) > -1) {
-      $field.val(Danbooru.without(tags, tag).join(" ") + " ");
+      var escaped_tag = Danbooru.regexp_escape(tag);
+      $field.val($field.val().replace(new RegExp("(^|\\s)" + escaped_tag + "($|\\s)", "gi"), "$1$2"));
     } else {
-      $field.val(tags.concat([tag]).join(" ") + " ");
+      $field.val($field.val() + " " + tag);
     }
+    $field.val($field.val().trim().replace(/ +/g, " ") + " ");
 
     $field[0].selectionStart = $field.val().length;
     Danbooru.RelatedTag.build_all();
@@ -210,7 +216,7 @@
   Danbooru.RelatedTag.find_artist = function(e) {
     $("#artist-tags").html("<em>Loading...</em>");
     var url = $("#upload_source,#post_source");
-    $.get("/artists.json", {"limit": 2, "search[name]": url.val()}).success(Danbooru.RelatedTag.process_artist);
+    $.get("/artists.json", {"limit": 20, "search[name]": url.val()}).success(Danbooru.RelatedTag.process_artist);
     e.preventDefault();
   }
 

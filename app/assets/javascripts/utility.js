@@ -3,24 +3,30 @@
     return $("meta[name=" + key + "]").attr("content");
   }
 
+  Danbooru.scrolling = false;
+
   Danbooru.scroll_to = function(element) {
+    if (Danbooru.scrolling) {
+      return;
+    } else {
+      Danbooru.scrolling = true;
+    }
+
     var top = null;
     if (typeof(element) === "number") {
       top = element;
     } else {
       top = element.offset().top - 10;
     }
-    $('html, body').animate({
-        scrollTop: top
-    }, 300);
+    $('html, body').animate({scrollTop: top}, 300, "linear", function() {Danbooru.scrolling = false;});
   }
 
   Danbooru.notice = function(msg) {
-    $('#notice').html(msg).addClass("ui-state-highlight").removeClass("ui-state-error").fadeIn("fast");
+    $('#notice').addClass("ui-state-highlight").removeClass("ui-state-error").fadeIn("fast").children("span").html(msg);
   }
 
   Danbooru.error = function(msg) {
-    $('#notice').html(msg).removeClass("ui-state-highlight").addClass("ui-state-error").fadeIn("fast");
+    $('#notice').removeClass("ui-state-highlight").addClass("ui-state-error").fadeIn("fast").children("span").html(msg);
     Danbooru.scroll_to($("#notice"));
   }
 
@@ -72,6 +78,10 @@
       }
     });
     return filtered;
+  }
+
+  Danbooru.regexp_escape = function(string) {
+    return string.replace(/([.?*+^$[\]\\(){}|-])/g, "\\$1");
   }
 
   $.fn.selectRange = function(start, end) {

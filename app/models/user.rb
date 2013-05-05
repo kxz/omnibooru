@@ -7,7 +7,7 @@ class User < ActiveRecord::Base
   module Levels
     BLOCKED = 10
     MEMBER = 20
-    PRIVILEGED = 30
+    GOLD = 30
     PLATINUM = 31
     BUILDER = 32
     CONTRIBUTOR = 33
@@ -17,10 +17,11 @@ class User < ActiveRecord::Base
   end
 
   attr_accessor :password, :old_password
-  attr_accessible :enable_privacy_mode, :enable_post_navigation, :new_post_navigation_layout, :password, :old_password, :password_confirmation, :password_hash, :email, :last_logged_in_at, :last_forum_read_at, :has_mail, :receive_email_notifications, :comment_threshold, :always_resize_images, :favorite_tags, :blacklisted_tags, :name, :ip_addr, :time_zone, :default_image_size, :enable_sequential_post_navigation, :per_page, :hide_deleted_posts, :as => [:moderator, :janitor, :contributor, :privileged, :member, :anonymous, :default, :builder, :admin]
+  attr_accessible :enable_privacy_mode, :enable_post_navigation, :new_post_navigation_layout, :password, :old_password, :password_confirmation, :password_hash, :email, :last_logged_in_at, :last_forum_read_at, :has_mail, :receive_email_notifications, :comment_threshold, :always_resize_images, :favorite_tags, :blacklisted_tags, :name, :ip_addr, :time_zone, :default_image_size, :enable_sequential_post_navigation, :per_page, :hide_deleted_posts, :style_usernames, :as => [:moderator, :janitor, :contributor, :gold, :member, :anonymous, :default, :builder, :admin]
   attr_accessible :level, :as => :admin
   validates_length_of :name, :within => 2..100, :on => :create
   validates_format_of :name, :with => /\A[^\s:]+\Z/, :on => :create, :message => "cannot have whitespace or colons"
+  validates_format_of :name, :with => /\A[^_].*[^_]\Z/, :on => :create, :message => "cannot begin or end with an underscore"
   validates_uniqueness_of :name, :case_sensitive => false
   validates_uniqueness_of :email, :case_sensitive => false, :if => lambda {|rec| rec.email.present?}
   validates_length_of :password, :minimum => 5, :if => lambda {|rec| rec.new_record? || rec.password.present?}
@@ -91,12 +92,12 @@ class User < ActiveRecord::Base
       end
 
       def id_to_pretty_name(user_id)
-        id_to_name(user_id).tr("_", " ")
+        id_to_name(user_id).gsub(/([^_])_+(?=[^_])/, "\\1 \\2")
       end
     end
 
     def pretty_name
-      name.tr("_", " ")
+      name.gsub(/([^_])_+(?=[^_])/, "\\1 \\2")
     end
 
     def update_cache
@@ -203,18 +204,21 @@ class User < ActiveRecord::Base
       Favorite.where("user_id % 100 = #{id % 100} and user_id = #{id}").order("id desc")
     end
 
+    def clean_favorite_count?
+      favorite_count < 0 || rand(100) < [Math.log(favorite_count, 2), 5].min
+    end
+
+    def clean_favorite_count!
+      update_column(:favorite_count, Favorite.for_user(id).count)
+    end
+
     def add_favorite!(post)
-      return if Favorite.for_user(id).exists?(:user_id => id, :post_id => post.id)
-      Favorite.create(:user_id => id, :post_id => post.id)
-      increment!(:favorite_count)
-      post.add_favorite!(self)
+      Favorite.add(post, self)
+      clean_favorite_count! if clean_favorite_count?
     end
 
     def remove_favorite!(post)
-      return unless Favorite.for_user(id).exists?(:user_id => id, :post_id => post.id)
-      Favorite.destroy_all(:user_id => id, :post_id => post.id)
-      decrement!(:favorite_count)
-      post.remove_favorite!(self)
+      Favorite.remove(post, self)
     end
   end
 
@@ -225,7 +229,7 @@ class User < ActiveRecord::Base
       def level_hash
         return {
           "Member" => Levels::MEMBER,
-          "Gold" => Levels::PRIVILEGED,
+          "Gold" => Levels::GOLD,
           "Platinum" => Levels::PLATINUM,
           "Builder" => Levels::BUILDER,
           "Contributor" => Levels::CONTRIBUTOR,
@@ -251,8 +255,8 @@ class User < ActiveRecord::Base
       when Levels::MEMBER
         :member
 
-      when Levels::PRIVILEGED
-        :privileged
+      when Levels::GOLD
+        :gold
 
       when Levels::BUILDER
         :builder
@@ -282,7 +286,7 @@ class User < ActiveRecord::Base
       when Levels::BUILDER
         "Builder"
 
-      when Levels::PRIVILEGED
+      when Levels::GOLD
         "Gold"
 
       when Levels::PLATINUM
@@ -317,8 +321,8 @@ class User < ActiveRecord::Base
       level >= Levels::BUILDER
     end
 
-    def is_privileged?
-      level >= Levels::PRIVILEGED
+    def is_gold?
+      level >= Levels::GOLD
     end
 
     def is_platinum?
@@ -347,12 +351,12 @@ class User < ActiveRecord::Base
 
     def create_mod_action
       if level_changed?
-        ModAction.create(:description => "#{name} level changed #{level_string(level_was)} -> #{level_string} by #{CurrentUser.name}")
+        ModAction.create(:description => %{"#{name}":/users/#{id} level changed #{level_string(level_was)} -> #{level_string}})
       end
     end
     
     def set_per_page
-      if per_page.nil? || !is_privileged?
+      if per_page.nil? || !is_gold?
         self.per_page = Danbooru.config.posts_per_page
       end
       
@@ -394,7 +398,7 @@ class User < ActiveRecord::Base
 
   module ForumMethods
     def has_forum_been_updated?
-      return false unless is_privileged?
+      return false unless is_gold?
       newest_topic = ForumTopic.order("updated_at desc").first
       return false if newest_topic.nil?
       return true if last_forum_read_at.nil?
@@ -422,7 +426,7 @@ class User < ActiveRecord::Base
     end
 
     def can_comment?
-      if is_privileged?
+      if is_gold?
         true
       else
         created_at <= Danbooru.config.member_comment_time_threshold
@@ -430,7 +434,7 @@ class User < ActiveRecord::Base
     end
 
     def is_comment_limited?
-      if is_privileged?
+      if is_gold?
         false
       else
         Comment.where("creator_id = ? and created_at > ?", id, 1.hour.ago).count >= Danbooru.config.member_comment_limit
@@ -466,7 +470,7 @@ class User < ActiveRecord::Base
     def tag_query_limit
       if is_platinum?
         Danbooru.config.base_tag_query_limit * 2
-      elsif is_privileged?
+      elsif is_gold?
         Danbooru.config.base_tag_query_limit
       else
         2
@@ -476,7 +480,7 @@ class User < ActiveRecord::Base
     def favorite_limit
       if is_platinum?
         nil
-      elsif is_privileged?
+      elsif is_gold?
         20_000
       else
         10_000
@@ -486,7 +490,7 @@ class User < ActiveRecord::Base
     def api_hourly_limit
       if is_platinum?
         20_000
-      elsif is_privileged?
+      elsif is_gold?
         10_000
       else
         3_000
@@ -496,7 +500,7 @@ class User < ActiveRecord::Base
     def statement_timeout
       if is_platinum?
         9_000
-      elsif is_privileged?
+      elsif is_gold?
         6_000
       else
         3_000
@@ -506,7 +510,7 @@ class User < ActiveRecord::Base
 
   module ApiMethods
     def hidden_attributes
-      super + [:password_hash, :bcrypt_password_hash, :email, :email_verification_key, :time_zone, :created_at, :updated_at, :receive_email_notifications, :last_logged_in_at, :last_forum_read_at, :has_mail, :default_image_size, :comment_threshold, :always_resize_images, :favorite_tags, :blacklisted_tags, :base_upload_limit, :recent_tags, :enable_privacy_mode, :enable_post_navigation, :new_post_navigation_layout]
+      super + [:password_hash, :bcrypt_password_hash, :email, :email_verification_key, :time_zone, :updated_at, :receive_email_notifications, :last_logged_in_at, :last_forum_read_at, :has_mail, :default_image_size, :comment_threshold, :always_resize_images, :favorite_tags, :blacklisted_tags, :recent_tags, :enable_privacy_mode, :enable_post_navigation, :new_post_navigation_layout, :enable_sequential_post_navigation, :hide_deleted_posts, :per_page, :style_usernames]
     end
 
     def serializable_hash(options = {})
@@ -579,12 +583,16 @@ class User < ActiveRecord::Base
         q = q.where("level >= ?", params[:min_level].to_i)
       end
 
+      if params[:max_level].present?
+        q = q.where("level <= ?", params[:max_level].to_i)
+      end
+
       if params[:level].present?
         q = q.where("level = ?", params[:level].to_i)
       end
 
       if params[:id].present?
-        q = q.where("id = ?", params[:id].to_i)
+        q = q.where("id in (?)", params[:id].split(",").map(&:to_i))
       end
       
       case params[:order]

@@ -108,7 +108,7 @@ private
         html << %{<a class="wiki-link" href="/wiki_pages/show_or_new?title=#{u(tag)}">?</a> }
       end
 
-      if CurrentUser.user.is_privileged? && is_index?(template) && current_query.present?
+      if CurrentUser.user.is_gold? && is_index?(template) && current_query.present?
         html << %{<a href="/posts?tags=#{u(current_query)}+#{u(tag)}" class="search-inc-tag">+</a> }
         html << %{<a href="/posts?tags=#{u(current_query)}+-#{u(tag)}" class="search-exl-tag">&ndash;</a> }
       end
@@ -126,7 +126,10 @@ private
       end
 
       is_underused_tag = counts[tag].to_i <= 1 && categories[tag] == Tag.categories.general
-      html << %{<span class="post-count#{is_underused_tag ? " low-post-count" : ""}">#{post_count}</span>}
+      klass = "post-count#{is_underused_tag ? " low-post-count" : ""}"
+      title = "New general tag detected. Check the spelling or populate it now."
+
+      html << %{<span class="#{klass}"#{is_underused_tag ? " title='#{title}'" : ""}>#{post_count}</span>}
     end
 
     html << "</li>"

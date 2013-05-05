@@ -3,7 +3,7 @@ require 'test_helper'
 class UserNameChangeRequestsControllerTest < ActionController::TestCase
   context "The user name change requests controller" do
     setup do
-      @user = FactoryGirl.create(:privileged_user)
+      @user = FactoryGirl.create(:gold_user)
       @admin = FactoryGirl.create(:admin_user)
       CurrentUser.user = @user
       CurrentUser.ip_addr = "127.0.0.1"
@@ -26,6 +26,17 @@ class UserNameChangeRequestsControllerTest < ActionController::TestCase
       should "render" do
         get :show, {:id => @change_request.id}, {:user_id => @user.id}
         assert_response :success
+      end
+
+      context "when the current user is not an admin and does not own the request" do
+        setup do
+          CurrentUser.user = FactoryGirl.create(:user)
+        end
+
+        should "fail" do
+          get :show, {:id => @change_request.id}
+          assert_redirected_to(new_session_path(:url => user_name_change_request_path(@change_request)))
+        end
       end
     end
     

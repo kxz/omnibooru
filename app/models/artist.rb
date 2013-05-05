@@ -11,7 +11,8 @@ class Artist < ActiveRecord::Base
   has_one :wiki_page, :foreign_key => "title", :primary_key => "name"
   has_one :tag_alias, :foreign_key => "antecedent_name", :primary_key => "name"
   accepts_nested_attributes_for :wiki_page
-  attr_accessible :body, :name, :url_string, :other_names, :other_names_comma, :group_name, :wiki_page_attributes, :notes, :is_active, :as => [:member, :privileged, :builder, :platinum, :contributor, :janitor, :moderator, :default, :admin]
+  attr_accessible :body, :name, :url_string, :other_names, :other_names_comma, :group_name, :wiki_page_attributes, :notes, :as => [:member, :gold, :builder, :platinum, :contributor, :janitor, :moderator, :default, :admin]
+  attr_accessible :is_active, :as => [:builder, :contributor, :janitor, :moderator, :default, :admin]
   attr_accessible :is_banned, :as => :admin
 
   module UrlMethods
@@ -94,6 +95,7 @@ class Artist < ActiveRecord::Base
         :updater_ip_addr => CurrentUser.ip_addr,
         :url_string => url_string,
         :is_active => is_active,
+        :is_banned => is_banned,
         :other_names => other_names,
         :group_name => group_name
       )
@@ -114,7 +116,12 @@ class Artist < ActiveRecord::Base
       Artist.new.tap do |artist|
         if params[:name]
           artist.name = params[:name]
-          post = Post.tag_match("source:http #{artist.name}").first
+          if CurrentUser.user.is_gold?
+            # below gold users are limited to two tags
+            post = Post.tag_match("source:http #{artist.name} status:any").first
+          else
+            post = Post.tag_match("source:http #{artist.name}").first
+          end
           unless post.nil? || post.source.blank?
             artist.url_string = post.source
           end
@@ -250,18 +257,41 @@ class Artist < ActiveRecord::Base
       when /status:banned/
         q = q.banned
 
+      when /status:active/
+        q = q.where("is_banned = false and is_deleted = false")
+
       when /./
         q = q.any_name_matches(params[:name])
       end
 
-      if params[:sort] == "Name"
+      if params[:sort] == "name"
         q = q.reorder("name")
       else
         q = q.reorder("id desc")
       end
 
+      if params[:is_active] == "true"
+        q = q.active
+      elsif params[:is_active] == "false"
+        q = q.where("is_active = false")
+      end
+
+      if params[:is_banned] == "true"
+        q = q.banned
+      elsif params[:is_banned] == "false"
+        q = q.where("is_banned = false")
+      end
+
       if params[:id].present?
         q = q.where("id = ?", params[:id])
+      end
+
+      if params[:creator_name].present?
+        q = q.where("creator_id = (select _.id from users _ where lower(_.name) = ?)", params[:creator_name].tr(" ", "_").mb_chars.downcase)
+      end
+
+      if params[:creator_id].present?
+        q = q.where("creator_id = ?", params[:creator_id].to_i)
       end
 
       q

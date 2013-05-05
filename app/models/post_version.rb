@@ -28,6 +28,10 @@ class PostVersion < ActiveRecord::Base
         q = q.where("post_id = ?", params[:post_id].to_i)
       end
 
+      if params[:start_id].present?
+        q = q.where("id <= ?", params[:start_id].to_i)
+      end
+
       q
     end
   end
@@ -93,8 +97,8 @@ class PostVersion < ActiveRecord::Base
     removed_tags = old_tags - new_tags
 
     return {
-      :added_tags => added_tags & latest_tags,
-      :removed_tags => removed_tags - latest_tags,
+      :added_tags => added_tags,
+      :removed_tags => removed_tags,
       :obsolete_added_tags => added_tags - latest_tags,
       :obsolete_removed_tags => removed_tags & latest_tags,
       :unchanged_tags => new_tags & old_tags,

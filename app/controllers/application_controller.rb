@@ -1,9 +1,11 @@
 class ApplicationController < ActionController::Base
   protect_from_forgery
   helper :pagination
+  before_filter :reset_current_user
   before_filter :set_current_user
   after_filter :reset_current_user
   before_filter :set_title
+  before_filter :normalize_search
   before_filter :set_started_at_session
   before_filter :api_check
   layout "default"
@@ -85,9 +87,9 @@ protected
     end
   end
 
-  %w(member banned builder privileged platinum contributor janitor moderator admin).each do |level|
+  %w(member banned builder gold platinum contributor janitor moderator admin).each do |level|
     define_method("#{level}_only") do
-      if CurrentUser.user.__send__("is_#{level}?")
+      if !CurrentUser.user.is_banned? && CurrentUser.user.__send__("is_#{level}?")
         true
       else
         access_denied()
@@ -98,5 +100,9 @@ protected
 
   def set_title
     @page_title = Danbooru.config.app_name + "/#{params[:controller]}"
+  end
+
+  def normalize_search
+    params[:search] ||= {}
   end
 end

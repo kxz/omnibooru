@@ -56,6 +56,15 @@ class PostTest < ActiveSupport::TestCase
         end
       end
 
+      context "with the banned_artist tag" do
+        should "also ban the post" do
+          post = FactoryGirl.create(:post, :tag_string => "banned_artist")
+          post.delete!
+          post.reload
+          assert(post.is_banned?)
+        end
+      end
+
       should "update the fast count" do
         post = FactoryGirl.create(:post, :tag_string => "aaa")
         assert_equal(1, Post.fast_count)
@@ -695,7 +704,7 @@ class PostTest < ActiveSupport::TestCase
         end
       end
 
-      should "decrement the post's score for privileged users" do
+      should "decrement the post's score for gold users" do
         @post.remove_favorite!(@user)
         @post.reload
         assert_equal(0, @post.score)
@@ -704,7 +713,7 @@ class PostTest < ActiveSupport::TestCase
       should "not decrement the post's score for basic users" do
         @member = FactoryGirl.create(:user)
         CurrentUser.scoped(@member, "127.0.0.1") do
-          @post.remove_favorite!(@user)
+          @post.remove_favorite!(@member)
         end
         @post.reload
         assert_equal(1, @post.score)
@@ -732,6 +741,15 @@ class PostTest < ActiveSupport::TestCase
         CurrentUser.ip_addr = nil
       end
 
+      should "periodically clean the fav_string" do
+        @post.update_column(:fav_string, "fav:1 fav:1 fav:1")
+        @post.update_column(:fav_count, 3)
+        @post.stubs(:clean_fav_string?).returns(true)
+        @post.append_user_to_fav_string(2)
+        assert_equal("fav:1 fav:2", @post.fav_string)
+        assert_equal(2, @post.fav_count)
+      end
+
       should "increment the user's favorite_count" do
         assert_difference("CurrentUser.favorite_count", 1) do
           @post.add_favorite!(@user)
@@ -739,7 +757,7 @@ class PostTest < ActiveSupport::TestCase
         end
       end
 
-      should "increment the post's score for privileged users" do
+      should "increment the post's score for gold users" do
         @post.add_favorite!(@user)
         @post.reload
         assert_equal(1, @post.score)
@@ -748,7 +766,7 @@ class PostTest < ActiveSupport::TestCase
       should "not increment the post's score for basic users" do
         @member = FactoryGirl.create(:user)
         CurrentUser.scoped(@member, "127.0.0.1") do
-          @post.add_favorite!(@user)
+          @post.add_favorite!(@member)
         end
         @post.reload
         assert_equal(0, @post.score)
@@ -830,6 +848,28 @@ class PostTest < ActiveSupport::TestCase
   end
 
   context "Searching:" do
+    should "return posts for the age:<1m tag" do
+      post1 = FactoryGirl.create(:post, :tag_string => "aaa")
+      count = Post.tag_match("age:<1m").count
+      assert_equal(1, count)
+    end
+
+    should "return posts for the age:<1m tag when the user is in Pacific time zone" do
+      post1 = FactoryGirl.create(:post, :tag_string => "aaa")
+      Time.zone = "Pacific Time (US & Canada)"
+      count = Post.tag_match("age:<1m").count
+      assert_equal(1, count)
+      Time.zone = "Eastern Time (US & Canada)"
+    end
+
+    should "return posts for the age:<1m tag when the user is in Tokyo time zone" do
+      post1 = FactoryGirl.create(:post, :tag_string => "aaa")
+      Time.zone = "Asia/Tokyo"
+      count = Post.tag_match("age:<1m").count
+      assert_equal(1, count)
+      Time.zone = "Eastern Time (US & Canada)"
+    end
+
     should "return posts for the ' tag" do
       post1 = FactoryGirl.create(:post, :tag_string => "'")
       post2 = FactoryGirl.create(:post, :tag_string => "aaa bbb")

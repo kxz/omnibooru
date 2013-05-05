@@ -76,11 +76,15 @@ class UserPresenter
   end
 
   def favorite_count(template)
-    template.link_to(user.favorite_count, template.posts_path(:tags => "fav:#{user.name}"))
+    template.link_to(user.favorite_count, template.favorites_path(:user_id => user.id))
   end
 
   def comment_count(template)
     template.link_to(Comment.for_creator(user.id).count, template.comments_path(:search => {:creator_id => user.id}, :group_by => "comment"))
+  end
+
+  def commented_posts_count(template)
+    template.link_to(Post.fast_count("commenter:#{user.name}"), template.posts_path(:tags => "commenter:#{user.name}"))
   end
 
   def post_version_count(template)
@@ -91,8 +95,16 @@ class UserPresenter
     template.link_to(user.note_update_count, template.note_versions_path(:search => {:updater_id => user.id}))
   end
 
+  def noted_posts_count(template)
+    template.link_to(Post.fast_count("noter:#{user.name}"), template.posts_path(:tags => "noter:#{user.name}"))
+  end
+
   def wiki_page_version_count(template)
     template.link_to(WikiPageVersion.for_user(user.id).count, template.wiki_page_versions_path(:search => {:updater_id => user.id}))
+  end
+
+  def artist_version_count(template)
+    template.link_to(ArtistVersion.for_user(user.id).count, template.artist_versions_path(:search => {:updater_id => user.id}))
   end
 
   def forum_post_count(template)

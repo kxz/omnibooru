@@ -22,6 +22,9 @@ Danbooru::Application.routes.draw do
           post :expunge
           post :delete
           post :undelete
+          get :confirm_ban
+          post :ban
+          post :unban
         end
       end
     end
@@ -57,7 +60,6 @@ Danbooru::Application.routes.draw do
     end
     collection do
       get :show_or_new
-      get :search
       get :banned
     end
   end
@@ -119,9 +121,6 @@ Danbooru::Application.routes.draw do
   end
   resources :note_versions, :only => [:index]
   resources :pools do
-    collection do
-      get :search
-    end
     member do
       put :revert
       post :undelete
@@ -141,8 +140,8 @@ Danbooru::Application.routes.draw do
       get :show_seq
     end
   end
-  resources :post_appeals, :only => [:new, :index, :create]
-  resources :post_flags, :only => [:new, :index, :create]
+  resources :post_appeals
+  resources :post_flags
   resources :post_versions, :only => [:index, :search] do
     collection do
       get :search
@@ -157,9 +156,6 @@ Danbooru::Application.routes.draw do
   resource :source, :only => [:show]
   resources :tags do
     resource :correction, :only => [:new, :create, :show], :controller => "TagCorrections"
-    collection do
-      get :search
-    end
   end
   resources :tag_aliases do
     resource :correction, :only => [:create, :new, :show], :controller => "TagAliasCorrections"
@@ -194,7 +190,11 @@ Danbooru::Application.routes.draw do
       post :upgrade
     end
   end
-  resources :user_feedbacks
+  resources :user_feedbacks do
+    collection do
+      get :search
+    end
+  end
   resources :user_name_change_requests do
     member do
       post :approve

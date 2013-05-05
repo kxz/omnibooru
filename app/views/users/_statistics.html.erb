@@ -51,12 +51,21 @@
 
       <tr>
         <th>Note Changes</th>
-        <td><%= presenter.note_version_count(self) %></td>
+        <td><%= presenter.note_version_count(self) %>
+        <% if CurrentUser.user.id == user.id %>
+          in <%= presenter.noted_posts_count(self) %> posts
+        <% end %>
+        </td>
       </tr>
 
       <tr>
         <th>Wiki Page Changes</th>
         <td><%= presenter.wiki_page_version_count(self) %></td>
+      </tr>
+
+      <tr>
+        <th>Artist Changes</th>
+        <td><%= presenter.artist_version_count(self) %></td>
       </tr>
 
       <tr>
@@ -76,7 +85,11 @@
 
       <tr>
         <th>Comments</th>
-        <td><%= presenter.comment_count(self) %></td>
+        <td><%= presenter.comment_count(self) %>
+        <% if CurrentUser.user.id == user.id %>
+          in <%= presenter.commented_posts_count(self) %> posts
+        <% end %>
+        </td>
       </tr>
 
       <tr>

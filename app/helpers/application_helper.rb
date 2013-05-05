@@ -71,11 +71,8 @@ module ApplicationHelper
   end
 
   def link_to_user(user)
-    link_to(user.pretty_name, user_path(user), :class => user.level_class)
-  end
-
-  def link_to_user_unless(condition, user)
-    link_to_unless(condition, user.pretty_name, user_path(user), :class => user.level_class)
+    user_class = CurrentUser.user.style_usernames? ? "#{user.level_class} with-style" : user.level_class
+    link_to(user.pretty_name, user_path(user), :class => user_class)
   end
 
   def mod_link_to_user(user, positive_or_negative)
@@ -85,7 +82,7 @@ module ApplicationHelper
     if positive_or_negative == :positive
       html << " [" + link_to("+", new_user_feedback_path(:user_feedback => {:category => "positive", :user_id => user.id})) + "]"
 
-      unless user.is_privileged?
+      unless user.is_gold?
         html << " [" + link_to("invite", new_moderator_invitation_path(:invitation => {:name => user.name, :level => User::Levels::CONTRIBUTOR})) + "]"
       end
     else

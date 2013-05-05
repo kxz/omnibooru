@@ -1,10 +1,10 @@
 class PostPresenter < Presenter
   def self.preview(post, options = {})
-    if post.is_deleted? && options[:tags] !~ /status:(?:all|any|deleted)/
+    if post.is_deleted? && options[:tags] !~ /status:(?:all|any|deleted|banned)/
       return ""
     end
     
-    if post.is_banned? && !CurrentUser.is_privileged?
+    if post.is_banned? && !CurrentUser.is_gold?
       return ""
     end
 
@@ -12,15 +12,9 @@ class PostPresenter < Presenter
       return ""
     end
 
-    flags = []
-    flags << "pending" if post.is_pending?
-    flags << "flagged" if post.is_flagged?
-    flags << "deleted" if post.is_deleted?
-    flags << "banned" if post.is_banned?
-
     path = options[:path_prefix] || "/posts"
 
-    html =  %{<article class="post-preview" id="post_#{post.id}" data-id="#{post.id}" data-tags="#{h(post.tag_string)}" data-uploader="#{h(post.uploader_name)}" data-rating="#{post.rating}" data-width="#{post.image_width}" data-height="#{post.image_height}" data-flags="#{flags.join(' ')}" data-parent-id="#{post.parent_id}" data-has-children="#{post.has_children?}" data-score="#{post.score}">}
+    html =  %{<article class="#{preview_class(post)}" id="post_#{post.id}" data-id="#{post.id}" data-tags="#{h(post.tag_string)}" data-uploader="#{h(post.uploader_name)}" data-rating="#{post.rating}" data-width="#{post.image_width}" data-height="#{post.image_height}" data-flags="#{post.status_flags}" data-parent-id="#{post.parent_id}" data-has-children="#{post.has_children?}" data-score="#{post.score}" data-fav-count="#{post.fav_count}">}
     if options[:tags].present?
       tag_param = "?tags=#{CGI::escape(options[:tags])}"
     elsif options[:pool_id]
@@ -33,6 +27,16 @@ class PostPresenter < Presenter
     html << %{</a>}
     html << %{</article>}
     html.html_safe
+  end
+
+  def self.preview_class(post)
+    klass = "post-preview"
+    klass << " post-status-pending" if post.is_pending?
+    klass << " post-status-flagged" if post.is_flagged?
+    klass << " post-status-deleted" if post.is_deleted?
+    klass << " post-status-has-parent" if post.parent_id
+    klass << " post-status-has-children" if post.has_children?
+    klass
   end
 
   def initialize(post)
@@ -59,9 +63,9 @@ class PostPresenter < Presenter
       string << (@post.character_tags.any? ? "(#{copytags})" : copytags)
     end
 
-    if @post.artist_tags.any?
+    if @post.artist_tags_excluding_hidden.any?
       string << "drawn by"
-      string << @post.artist_tags.to_sentence
+      string << @post.artist_tags_excluding_hidden.to_sentence
     end
 
     string.empty? ? "##{@post.id}" : string.join(" ").tr("_", " ")
@@ -86,7 +90,7 @@ class PostPresenter < Presenter
       string << @post.general_tags.join(" ")
     end
 
-    string.join("\n")
+    string.join(" \n")
   end
 
   def humanized_categorized_tag_string
@@ -112,8 +116,8 @@ class PostPresenter < Presenter
   end
 
   def image_html(template)
-    return template.content_tag("p", "The artist requested removal of this image") if @post.is_banned? && !CurrentUser.user.is_privileged?
-    return template.content_tag("p", template.link_to("You need a privileged account to see this image.", template.upgrade_information_users_path)) if !Danbooru.config.can_user_see_post?(CurrentUser.user, @post)
+    return template.content_tag("p", "The artist requested removal of this image") if @post.is_banned? && !CurrentUser.user.is_gold?
+    return template.content_tag("p", template.link_to("You need a gold account to see this image.", template.upgrade_information_users_path)) if !Danbooru.config.can_user_see_post?(CurrentUser.user, @post)
 
     if @post.is_flash?
       template.render("posts/partials/show/flash", :post => @post)
@@ -126,12 +130,12 @@ class PostPresenter < Presenter
 
   def tag_list_html(template, options = {})
     @tag_set_presenter ||= TagSetPresenter.new(@post.tag_array)
-    @tag_set_presenter.tag_list_html(template, options.merge(:show_extra_links => CurrentUser.user.is_privileged?))
+    @tag_set_presenter.tag_list_html(template, options.merge(:show_extra_links => CurrentUser.user.is_gold?))
   end
 
   def split_tag_list_html(template, options = {})
     @tag_set_presenter ||= TagSetPresenter.new(@post.tag_array)
-    @tag_set_presenter.split_tag_list_html(template, options.merge(:show_extra_links => CurrentUser.user.is_privileged?))
+    @tag_set_presenter.split_tag_list_html(template, options.merge(:show_extra_links => CurrentUser.user.is_gold?))
   end
 
   def has_nav_links?(template)
@@ -152,7 +156,7 @@ class PostPresenter < Presenter
   def pool_html(template)
     html = ["<ul>"]
 
-    if template.params[:pool_id].present?
+    if template.params[:pool_id].present? && @post.belongs_to_pool_with_id?(template.params[:pool_id])
       pool = Pool.where(:id => template.params[:pool_id]).first
       return if pool.nil?
       html += pool_link_html(template, pool, :include_rel => true)
@@ -177,7 +181,7 @@ class PostPresenter < Presenter
   end
 
   def pool_link_html(template, pool, options = {})
-    pool_html = ["<li>"]
+    pool_html = ["<li id='nav-link-for-pool-#{pool.id}'>"]
     match_found = false
 
     if options[:include_rel]

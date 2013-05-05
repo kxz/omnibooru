@@ -22,6 +22,8 @@ class PostsController < ApplicationController
     @post = Post.find(params[:id])
     @post_flag = PostFlag.new(:post_id => @post.id)
     @post_appeal = PostAppeal.new(:post_id => @post.id)
+    @parent_post_set = PostSets::PostRelationship.new(@post.parent_id, :include_deleted => @post.is_deleted?)
+    @children_post_set = PostSets::PostRelationship.new(@post.id, :include_deleted => @post.is_deleted?)
     respond_with(@post)
   end
 
@@ -46,8 +48,12 @@ class PostsController < ApplicationController
         if @post.errors.any?
           @error_message = @post.errors.full_messages.join("; ")
           render :template => "static/error", :status => 500
-        elsif params[:tags].present? || params[:pool_id].present?
+        elsif params[:tags].present? && params[:pool_id].present?
           redirect_to post_path(@post, :tags => params[:tags], :pool_id => params[:pool_id])
+        elsif params[:tags].present?
+          redirect_to post_path(@post, :tags => params[:tags])
+        elsif params[:pool_id].present?
+          redirect_to post_path(@post, :pool_id => params[:pool_id])
         else
           redirect_to post_path(@post)
         end

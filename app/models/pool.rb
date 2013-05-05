@@ -12,7 +12,7 @@ class Pool < ActiveRecord::Base
   before_validation :initialize_creator, :on => :create
   after_save :create_version
   before_destroy :create_mod_action_for_destroy
-  attr_accessible :name, :description, :post_ids, :post_id_array, :post_count, :is_active, :as => [:member, :privileged, :platinum, :contributor, :janitor, :moderator, :admin, :default]
+  attr_accessible :name, :description, :post_ids, :post_id_array, :post_count, :is_active, :as => [:member, :gold, :platinum, :contributor, :janitor, :moderator, :admin, :default]
   attr_accessible :is_deleted, :as => [:janitor, :moderator, :admin]
 
   module SearchMethods
@@ -25,9 +25,9 @@ class Pool < ActiveRecord::Base
       params = {} if params.blank?
 
       if params[:name_matches].present?
-        params[:name_matches] = params[:name_matches].tr(" ", "_")
-        params[:name_matches] = "*#{params[:name_matches]}*" unless params[:name_matches] =~ /\*/
-        q = q.where("name ilike ? escape E'\\\\'", params[:name_matches].to_escaped_for_sql_like)
+        name_matches = params[:name_matches].tr(" ", "_")
+        name_matches = "*#{name_matches}*" unless name_matches =~ /\*/
+        q = q.where("name ilike ? escape E'\\\\'", name_matches.to_escaped_for_sql_like)
       end
 
       if params[:description_matches].present?
@@ -40,6 +40,12 @@ class Pool < ActiveRecord::Base
 
       if params[:creator_id].present?
         q = q.where("creator_id = ?", params[:creator_id].to_i)
+      end
+
+      if params[:is_active] == "true"
+        q = q.where("is_active = true")
+      elsif params[:is_active] == "false"
+        q = q.where("is_active = false")
       end
 
       if params[:sort] == "name"
@@ -124,6 +130,7 @@ class Pool < ActiveRecord::Base
 
   def revert_to!(version)
     self.post_ids = version.post_ids
+    self.name = version.name
     synchronize!
   end
 
@@ -229,12 +236,15 @@ class Pool < ActiveRecord::Base
   end
 
   def create_version
-    last_version = versions.last
+    if post_ids_changed? || name_changed? || description_changed? || is_active_changed? || is_deleted_changed?
+      last_version = versions.last
 
-    if last_version && CurrentUser.ip_addr == last_version.updater_ip_addr && CurrentUser.id == last_version.updater_id
-      last_version.update_column(:post_ids, post_ids)
-    else
-      versions.create(:post_ids => post_ids)
+      if last_version && CurrentUser.ip_addr == last_version.updater_ip_addr && CurrentUser.id == last_version.updater_id
+        last_version.update_column(:post_ids, post_ids)
+        last_version.update_column(:name, name)
+      else
+        versions.create(:post_ids => post_ids, :name => name)
+      end
     end
   end
 

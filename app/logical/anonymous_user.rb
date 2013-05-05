@@ -32,6 +32,10 @@ class AnonymousUser
     true
   end
 
+  def is_banned?
+    false
+  end
+
   def has_mail?
     false
   end
@@ -185,7 +189,15 @@ class AnonymousUser
     false
   end
 
-  %w(member banned privileged builder platinum contributor janitor moderator admin).each do |name|
+  def style_usernames?
+    false
+  end
+
+  def dmail_count
+    ""
+  end
+
+  %w(member banned gold builder platinum contributor janitor moderator admin).each do |name|
     define_method("is_#{name}?") do
       false
     end

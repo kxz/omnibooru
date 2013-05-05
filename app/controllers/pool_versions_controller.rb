@@ -1,8 +1,8 @@
 class PoolVersionsController < ApplicationController
-  respond_to :html, :xml, :js
+  respond_to :html, :xml, :json
 
   def index
-    if params[:search] && params[:search][:pool_id]
+    if params[:search] && params[:search][:pool_id].present?
       @pool = Pool.find(params[:search][:pool_id])
     end
 

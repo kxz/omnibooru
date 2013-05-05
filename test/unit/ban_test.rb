@@ -15,6 +15,14 @@ class BanTest < ActiveSupport::TestCase
         CurrentUser.ip_addr = nil
       end
 
+      should "set the is_banned flag on the user" do
+        user = FactoryGirl.create(:user)
+        ban = FactoryGirl.build(:ban, :user => user, :banner => @banner)
+        ban.save
+        user.reload
+        assert(user.is_banned?)
+      end
+
       should "not be valid against another admin" do
         user = FactoryGirl.create(:admin_user)
         ban = FactoryGirl.build(:ban, :user => user, :banner => @banner)
@@ -35,7 +43,7 @@ class BanTest < ActiveSupport::TestCase
         ban = FactoryGirl.create(:ban, :user => user, :banner => @banner)
         assert(ban.errors.empty?)
 
-        user = FactoryGirl.create(:privileged_user)
+        user = FactoryGirl.create(:gold_user)
         ban = FactoryGirl.create(:ban, :user => user, :banner => @banner)
         assert(ban.errors.empty?)
 
@@ -79,7 +87,7 @@ class BanTest < ActiveSupport::TestCase
         ban = FactoryGirl.create(:ban, :user => user, :banner => @banner)
         assert(ban.errors.empty?)
 
-        user = FactoryGirl.create(:privileged_user)
+        user = FactoryGirl.create(:gold_user)
         ban = FactoryGirl.create(:ban, :user => user, :banner => @banner)
         assert(ban.errors.empty?)
 
@@ -123,7 +131,7 @@ class BanTest < ActiveSupport::TestCase
         ban.save
         assert(ban.errors.any?)
 
-        user = FactoryGirl.create(:privileged_user)
+        user = FactoryGirl.create(:gold_user)
         ban = FactoryGirl.build(:ban, :user => user, :banner => @banner)
         ban.save
         assert(ban.errors.any?)

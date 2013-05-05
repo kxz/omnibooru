@@ -6,6 +6,7 @@
       this.initialize_selector();
       this.initialize_preview_link();
       this.initialize_edit_form();
+      this.initialize_tag_script_field();
       Danbooru.PostModeMenu.change();
     }
   }
@@ -52,6 +53,19 @@
     });
   }
 
+  Danbooru.PostModeMenu.initialize_tag_script_field = function() {
+    $("#tag-script-field").blur(function(e) {
+      var script = $(this).val();
+
+      if (script) {
+        Danbooru.Cookie.put("tag-script", script);
+      } else {
+        $("#mode-box select").val("view");
+        Danbooru.PostModeMenu.change(e);
+      }
+    });
+  }
+
   Danbooru.PostModeMenu.change = function(e) {
     $("#quick-edit-div").slideUp("fast");
     var s = $("#mode-box select").val();
@@ -63,18 +77,12 @@
     $body.addClass("mode-" + s);
     Danbooru.Cookie.put("mode", s, 1);
 
-    if (s === "edit-tag-script") {
+    if (s === "tag-script") {
       var script = Danbooru.Cookie.get("tag-script");
-      script = prompt("Enter a tag script", script);
 
-      if (script) {
-        Danbooru.Cookie.put("tag-script", script);
-        $("#mode-box select").val("apply-tag-script");
-      } else {
-        $("#mode-box select").val("view");
-      }
-
-      Danbooru.PostModeMenu.change(e);
+      $("#tag-script-field").val(script).show().focus().selectEnd();
+    } else {
+      $("#tag-script-field").hide();
     }
   }
 
@@ -82,7 +90,7 @@
     var $post = $("#post_" + post_id);
     $("#quick-edit-div").slideDown("fast");
     $("#quick-edit-form").attr("action", "/posts/" + post_id + ".json");
-    $("#post_tag_string").val($post.data("tags") + " ").focus();
+    $("#post_tag_string").val($post.data("tags") + " ").focus().selectEnd().height($("#post_tag_string")[0].scrollHeight);
   }
 
   Danbooru.PostModeMenu.click = function(e) {
@@ -111,7 +119,7 @@
       Danbooru.Post.update(post_id, {"post[is_note_locked]": "1"});
     } else if (s === 'approve') {
       Danbooru.Post.approve(post_id);
-    } else if (s === "apply-tag-script") {
+    } else if (s === "tag-script") {
       var tag_script = Danbooru.Cookie.get("tag-script");
       Danbooru.TagScript.run(post_id, tag_script);
     } else {

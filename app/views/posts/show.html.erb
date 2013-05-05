@@ -3,7 +3,7 @@
     <aside id="sidebar">
       <%= render "posts/partials/common/search", :path => posts_path, :tags => params[:tags] %>
 
-      <%= render_advertisement("vertical") %>
+      <%= render "posts/partials/index/blacklist" %>
 
       <section id="tag-list">
         <%= @post.presenter.split_tag_list_html(self) %>
@@ -40,10 +40,8 @@
 
       <%= render "posts/partials/show/notices", :post => @post %>
 
-      <%= render_advertisement("horizontal") %>
-
-      <section id="image-container">
-        <div id="note-container"></div>
+      <section id="image-container" data-tags="<%= @post.tag_string %>" data-user="<%= @post.uploader_name %>" data-rating="<%= @post.rating %>" data-flags="<%= @post.status_flags %>">
+        <div id="note-container"><div id="note-helper"></div></div>
         <%= @post.presenter.image_html(self) %>
       </section>
 
@@ -76,8 +74,6 @@
       <section id="share" style="display: none;">
         <%= render "posts/partials/show/share", :post => @post %>
       </section>
-
-      <%= render_rss_advertisement("long", @post.rating == "e") %>
     </section>
   </div>
 

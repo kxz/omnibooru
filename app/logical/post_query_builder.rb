@@ -120,6 +120,7 @@ class PostQueryBuilder
     relation = add_range_relation(q[:fav_count], "posts.fav_count", relation)
     relation = add_range_relation(q[:filesize], "posts.file_size", relation)
     relation = add_range_relation(q[:date], "posts.created_at", relation)
+    relation = add_range_relation(q[:age], "posts.created_at", relation)
     relation = add_range_relation(q[:general_tag_count], "posts.tag_count_general", relation)
     relation = add_range_relation(q[:artist_tag_count], "posts.tag_count_artist", relation)
     relation = add_range_relation(q[:copyright_tag_count], "posts.tag_count_copyright", relation)
@@ -192,18 +193,30 @@ class PostQueryBuilder
       has_constraints!
     end
 
-    if q[:commenter_id]
-      relation = relation.where(:id => Comment.where("creator_id = ?", q[:commenter_id]).select("post_id").uniq)
+    if q[:commenter_ids]
+      q[:commenter_ids].each do |commenter_id|
+        relation = relation.where(:id => Comment.where("creator_id = ?", commenter_id).select("post_id").uniq)
+      end
       has_constraints!
     end
 
-    if q[:noter_id]
-      relation = relation.where(:id => Note.where("creator_id = ?", q[:noter_id]).select("post_id").uniq)
+    if q[:noter_ids]
+      q[:noter_ids].each do |noter_id|
+        relation = relation.where(:id => Note.where("creator_id = ?", noter_id).select("post_id").uniq)
+      end
       has_constraints!
     end
 
-    if q[:parent_id]
-      relation = relation.where("(posts.id = ? or posts.parent_id = ?)", q[:parent_id], q[:parent_id])
+    if q[:post_id_negated]
+      relation = relation.where("posts.id <> ?", q[:post_id_negated])
+    end
+
+    if q[:parent] == "none"
+      relation = relation.where("posts.parent_id IS NULL")
+    elsif q[:parent_neg] == "none" || q[:parent] == "any"
+      relation = relation.where("posts.parent_id IS NOT NULL")
+    elsif q[:parent]
+      relation = relation.where("(posts.id = ? or posts.parent_id = ?)", q[:parent].to_i, q[:parent].to_i)
       has_constraints!
     end
 
