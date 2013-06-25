@@ -12,7 +12,8 @@
   <% if CurrentUser.is_builder? %>
     <li><%= link_to "Copy all notes", "#", :id => "copy-notes" %></li>
   <% end %>
-  <li><%= link_to "Find similar", "http://danbooru.iqdb.org/db-search.php?url=http://#{Danbooru.config.hostname}#{post.preview_file_url}" %></li>
+  <li><%= link_to "Similar images on IQDB", "http://iqdb.org/db-search.php?url=" + URI::join(root_path(:only_path => false), post.preview_file_url).to_s %></li>
+  <li><%= link_to "Google Search by Image", "http://images.google.com/searchbyimage?image_url=" + URI::join(root_path(:only_path => false), post.preview_file_url).to_s %></li>
 
   <% if post.is_status_locked? %>
     <li><span id="status-locked-notice">Status locked</span></li>
