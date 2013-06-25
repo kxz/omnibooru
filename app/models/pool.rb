@@ -3,6 +3,7 @@ require 'ostruct'
 class Pool < ActiveRecord::Base
   validates_uniqueness_of :name
   validates_format_of :name, :with => /\A[^\s;,]+\Z/, :on => :create, :message => "cannot have whitespace, commas, or semicolons"
+  validates_inclusion_of :category, :in => %w(series collection)
   belongs_to :creator, :class_name => "User"
   belongs_to :updater, :class_name => "User"
   has_many :versions, :class_name => "PoolVersion", :dependent => :destroy, :order => "pool_versions.id ASC"
@@ -11,13 +12,26 @@ class Pool < ActiveRecord::Base
   before_validation :initialize_is_active, :on => :create
   before_validation :initialize_creator, :on => :create
   after_save :create_version
+  after_create :synchronize!
   before_destroy :create_mod_action_for_destroy
-  attr_accessible :name, :description, :post_ids, :post_id_array, :post_count, :is_active, :as => [:member, :gold, :platinum, :contributor, :janitor, :moderator, :admin, :default]
+  attr_accessible :name, :description, :post_ids, :post_id_array, :post_count, :is_active, :category, :as => [:member, :gold, :platinum, :contributor, :janitor, :moderator, :admin, :default]
   attr_accessible :is_deleted, :as => [:janitor, :moderator, :admin]
 
   module SearchMethods
     def active
       where("is_deleted = false")
+    end
+
+    def series
+      where("category = ?", "series")
+    end
+
+    def collection
+      where("category = ?", "collection")
+    end
+
+    def series_first
+      order("(case category when 'series' then 0 else 1 end), name")
     end
 
     def search(params)
@@ -48,10 +62,21 @@ class Pool < ActiveRecord::Base
         q = q.where("is_active = false")
       end
 
-      if params[:sort] == "name"
+      case params[:sort]
+      when "name"
         q = q.order("name")
+      when "created_at"
+        q = q.order("created_at desc")
+      when "post_count"
+        q = q.order("post_count desc")
       else
         q = q.order("updated_at desc")
+      end
+
+      if params[:category] == "series"
+        q = q.series
+      elsif params[:category] == "collection"
+        q = q.collection
       end
 
       q
@@ -90,7 +115,7 @@ class Pool < ActiveRecord::Base
   end
 
   def self.normalize_post_ids(post_ids)
-    post_ids.scan(/\d+/).join(" ")
+    post_ids.scan(/\d+/).uniq.join(" ")
   end
 
   def self.find_by_name(name)
@@ -120,6 +145,10 @@ class Pool < ActiveRecord::Base
     name.tr("_", " ")
   end
 
+  def pretty_category
+    category.titleize
+  end
+
   def creator_name
     User.id_to_name(creator_id)
   end
@@ -138,12 +167,24 @@ class Pool < ActiveRecord::Base
     post_ids =~ /(?:\A| )#{post_id}(?:\Z| )/
   end
 
+  def page_number(post_id)
+    post_id_array.find_index(post_id).to_i + 1
+  end
+
   def deletable_by?(user)
     user.is_janitor?
   end
 
+  def create_mod_action_for_delete
+    ModAction.create(:description => "deleted pool ##{id} (name: #{name})")
+  end
+
+  def create_mod_action_for_undelete
+    ModAction.create(:description => "undeleted pool ##{id} (name: #{name})")
+  end
+
   def create_mod_action_for_destroy
-    ModAction.create(:description => "deleted pool ##{id} name=#{name} post_ids=#{post_ids}")
+    ModAction.create(:description => "permanently deleted pool ##{id} name=#{name} post_ids=#{post_ids}")
   end
 
   def add!(post)
@@ -235,8 +276,8 @@ class Pool < ActiveRecord::Base
     end
   end
 
-  def create_version
-    if post_ids_changed? || name_changed? || description_changed? || is_active_changed? || is_deleted_changed?
+  def create_version(force = false)
+    if post_ids_changed? || name_changed? || description_changed? || is_active_changed? || is_deleted_changed? || category_changed? || force
       last_version = versions.last
 
       if last_version && CurrentUser.ip_addr == last_version.updater_ip_addr && CurrentUser.id == last_version.updater_id
@@ -263,6 +304,7 @@ class Pool < ActiveRecord::Base
 
   def serializable_hash(options = {})
     return {
+      "category" => category,
       "created_at" => created_at,
       "creator_id" => creator_id,
       "creator_name" => creator_name,

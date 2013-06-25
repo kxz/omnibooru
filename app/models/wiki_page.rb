@@ -3,10 +3,11 @@ class WikiPage < ActiveRecord::Base
   before_validation :initialize_creator, :on => :create
   before_validation :initialize_updater
   after_save :create_version
+  before_destroy :create_mod_action_for_destroy
   belongs_to :creator, :class_name => "User"
   belongs_to :updater, :class_name => "User"
   validates_uniqueness_of :title, :case_sensitive => false
-  validates_presence_of :title, :body
+  validates_presence_of :title
   validate :validate_locker_is_janitor
   attr_accessible :title, :body, :is_locked
   has_one :tag, :foreign_key => "name", :primary_key => "title"
@@ -57,13 +58,17 @@ class WikiPage < ActiveRecord::Base
   end
 
   module ApiMethods
+    def hidden_attributes
+      super + [:body_index]
+    end
+
     def serializable_hash(options = {})
       options ||= {}
       options[:except] ||= []
       options[:except] += hidden_attributes
       unless options[:builder]
         options[:methods] ||= []
-        options[:methods] += [:creator_name]
+        options[:methods] += [:creator_name, :category_name]
       end
       hash = super(options)
       hash
@@ -71,8 +76,8 @@ class WikiPage < ActiveRecord::Base
 
     def to_xml(options = {}, &block)
       options ||= {}
-      options[:procs] ||= []
-      options[:procs] << lambda {|options, record| options[:builder].tag!("creator-name", record.creator_name)}
+      options[:methods] ||= []
+      options[:methods] += [:creator_name, :category_name]
       super(options, &block)
     end
   end
@@ -158,5 +163,9 @@ class WikiPage < ActiveRecord::Base
         match
       end
     end.map {|x| x.mb_chars.downcase.tr(" ", "_").to_s}
+  end
+
+  def create_mod_action_for_destroy
+    ModAction.create(:description => "permanently deleted wiki page [[#{title}]]")
   end
 end

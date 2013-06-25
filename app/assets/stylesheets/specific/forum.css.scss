@@ -30,6 +30,12 @@ div.list-of-forum-posts {
 }
 
 div#c-forum-topics {
+  p.info {
+    color: #AAA;
+    font-style: italic;
+    font-size: 80%;
+  }
+
   div.single-forum-post {
   }
 
@@ -52,5 +58,9 @@ div#c-forum-topics {
 
   span.locked-topic {
     color: #666;
+  }
+  
+  tr.forum-topic-row td:last-child {
+    white-space: nowrap;
   }
 }

@@ -1,0 +1,27 @@
+<div id="c-explore-posts">
+  <div id="a-intro">
+    <header>
+      <h1><%= Danbooru.config.app_name %></h1>
+      <p class="byline">Find good anime art fast</p>
+
+      <%= form_tag(posts_path, :method => :get) do %>
+        <%= text_field_tag "tags", "", :size => 50 %>
+        <%= submit_tag "Search" %>
+      <% end %>
+    </header>
+
+    <p style="text-align: center;">Type in your favorite anime, manga, or character (last name first). Here are some examples:</p>
+
+    <% @presenter.each do |tag, post_set| %>
+      <div class="posts">
+        <h2><%= link_to tag, posts_path(:tags => tag) %></h2>
+        <%= post_set.presenter.post_previews_html(self) %>
+        <div class="clearfix"></div>
+      </div>
+    <% end %>
+  </div>
+</div> 
+
+<% content_for(:page_title) do %>
+  <%= Danbooru.config.app_name %>
+<% end %>

@@ -29,10 +29,19 @@
       </tr>
 
       <tr>
+        <th><label for="search_category">Category</th>
+        <td>
+          <div class="input">
+            <%= select "search", "category", [["Series", "series"], ["Collection", "collection"]], :selected => params[:search][:category], :include_blank => true %>
+          </div>
+        </td>
+      </tr>
+
+      <tr>
         <th><label for="search_sort">Order</th>
         <td>
           <div class="input">
-            <%= select "search", "sort", [["Last updated", "updated_at"], ["Name", "name"]], :selected => params[:search][:sort] %>
+            <%= select "search", "sort", [["Last updated", "updated_at"], ["Name", "name"], ["Recently created", "created_at"], ["Post count", "post_count"]], :selected => params[:search][:sort] %>
           </div>
         </td>
       </tr>

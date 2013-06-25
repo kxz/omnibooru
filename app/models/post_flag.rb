@@ -43,6 +43,12 @@ class PostFlag < ActiveRecord::Base
         q = q.where("post_id = ?", params[:post_id].to_i)
       end
 
+      if params[:is_resolved] == "true"
+        q = q.resolved
+      elsif params[:is_resolved] == "false"
+        q = q.unresolved
+      end
+
       q
     end
   end
@@ -67,9 +73,6 @@ class PostFlag < ActiveRecord::Base
   def validate_post_is_active
     if post.is_deleted?
       errors[:post] << "is deleted"
-      false
-    elsif post.is_pending?
-      errors[:post] << "is pending"
       false
     else
       true

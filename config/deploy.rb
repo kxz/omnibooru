@@ -1,5 +1,6 @@
 set :stages, %w(production staging)
 set :default_stage, "staging"
+set :unicorn_env, "staging"
 require 'capistrano/ext/multistage'
 
 require 'bundler/capistrano'
@@ -63,13 +64,15 @@ namespace :data do
     run "mkdir -p #{release_path}/public/cache"
     run "mkdir -p #{deploy_to}/shared/system/cache"
     run "touch #{deploy_to}/shared/system/cache/tags.json"
-    run "ln -s #{deploy_to}/shared/system/cache/tags.json #{release_path}/public/cache/tags.json"
+    run "ln -s #{deploy_to}/shared/system/cache/tags.json #{release_path}/public/cache/tags.json" 
+    run "touch #{deploy_to}/shared/system/cache/tags.json.gz"
+    run "ln -s #{deploy_to}/shared/system/cache/tags.json.gz #{release_path}/public/cache/tags.json.gz"
   end
 end
 
 desc "Change ownership of common directory to user"
 task :reset_ownership_of_common_directory do
-  sudo "chown -R #{user}:#{user} /var/www/danbooru2"
+  sudo "chown -R #{user}:#{user} #{deploy_to}"
 end
 
 namespace :deploy do

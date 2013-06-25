@@ -46,28 +46,58 @@ a.blacklisted-active {
   border: 2px solid #F00;
 }
 
-.category-1 a, a.tag-type-1 {
-  color: #A00;
+.post-preview.current-post {
+  background-color: rgba(0,0,0,0.1);
 }
 
-.category-1 a:hover, a.tag-type-1:hover {
-  color: #B66;
+#has-parent-relationship-preview, #has-children-relationship-preview {
+  overflow-x: auto;
+  white-space: nowrap;
+  
+  article.post-preview {
+    float: none;
+    width: auto;
+    border: none;
+    margin: 0px;
+    padding: 5px 5px 10px;
+  }
+}
+
+.category-0 a, a.tag-type-0 {
+  color: $link_color;
+
+  &:hover {
+    color: $link_hover_color;
+  }
+}
+
+.category-1 a, a.tag-type-1 {
+  color: #A00;
+
+  &:hover {
+    color: #B66;
+  }
 }
 
 .category-3 a, a.tag-type-3 {
   color: #A0A;
-}
 
-.category-3 a:hover, a.tag-type-3:hover {
-  color: #B6B;
+  &:hover {
+    color: #B6B;
+  }
 }
 
 .category-4 a, a.tag-type-4 {
   color: #0A0;
+
+  &:hover {
+    color: #6B6;
+  }
 }
 
-.category-4 a:hover, a.tag-type-4:hover {
-  color: #6B6;
+.category-banned a, a.tag-type-banned {
+  color: black;
+  background-color: red;
 }
 
 .post-count {
@@ -77,58 +107,6 @@ a.blacklisted-active {
 
 .low-post-count {
   color: red;
-}
-
-body.mode-edit {
-  background: #3A3;
-}
-
-body.mode-add-fav {
-  background: #FFA;
-}
-
-body.mode-remove-fav {
-  background: #FFA;
-}
-
-body.mode-rating-q {
-  background: #AAA;
-}
-
-body.mode-rating-s {
-  background: #6F6;
-}
-
-body.mode-rating-e {
-  background: #F66;
-}
-
-body.mode-vote-down {
-  background: #FAA;
-}
-
-body.mode-vote-up {
-  background: #AFA;
-}
-
-body.mode-lock-rating {
-  background: #AA3;
-}
-
-body.mode-lock-note {
-  background: #3AA;
-}
-
-body.mode-approve {
-  background: #26A;
-}
-
-body.mode-add-to-pool {
-  background: #26A;
-}
-
-body.mode-tag-script {
-  background: #A3A;
 }
 
 div#c-posts {
@@ -150,11 +128,46 @@ div#c-posts {
       margin-left: 0.5em;
       font-weight: bold;
     }
+
+    &.notice-parent {
+      border-color: #C0FCC0;
+      background: #D8FCD9;
+    }
+
+    &.notice-child {
+      border-color: #FCFCC0;
+      background: #FBFCD8;
+    }
+
+    &.notice-pending {
+      border-color: #C0C0FC;
+      background: #D8D8FC;
+    }
+
+    &.notice-flagged {
+      border-color: #FCC0C0;
+      background: #FCD9D8;
+    }
+
+    &.notice-deleted {
+      border-color: #FF8C8C;
+      background: #FFA7A5;
+    }
+
+    &.notice-appealed {
+      border-color: #C0ECFC;
+      background: #D8F2FC;
+    }
+
+    &.notice-resized {
+      border-color: #E4C0FC;
+      background: #EED8FC;
+    }
   }
 
   div.nav-notice {
     padding: 0.5em;
-    margin-bottom: 1em;
+    margin: 1em 0;
     background: #EEE;
     border: 1px solid #AAA;
     position: relative;
@@ -188,10 +201,6 @@ div#c-posts {
   }
 
   div#a-index {
-    #content.with-ads {
-      margin-right: 6.5em;
-    }
-
     div#jlist-rss-ads-for-show {
       float: right;
       position: absolute;
@@ -247,37 +256,42 @@ div#c-posts {
       word-wrap: break-word;
     }
 
-    #nav-links {
-      margin: 1em 0;
-      padding: 0.5em;
-    }
-    
-    #content.with-ads {
-      margin-right: 7em;
-    }
-
     #favlist {
       margin-left: 1em;
       word-wrap: break-word;
     }
 
-    #pool-nav, #search-seq-nav, #nav-help {
-      margin: 0px 0px 0.5em 0px;
-      
+    #search-seq-nav + #pool-nav {
+      margin-top: 0.5em;
+    }
+
+    #pool-nav, #search-seq-nav {
       li {
         position: relative;
         text-align: center;
-        padding: 0px 4.5em;
+        padding: 0px 5.5em;
 
         .prev {
           position: absolute;
-          left: 1em;
+          left: 2em;
           top: 0px;
         }
 
         .next {
           position: absolute;
-          right: 1em;
+          right: 2em;
+          top: 0px;
+        }
+
+        .first {
+          position: absolute;
+          left: 0.5em;
+          top: 0px;
+        }
+
+        .last {
+          position: absolute;
+          right: 0.5em;
           top: 0px;
         }
 
@@ -342,8 +356,12 @@ div#c-explore-posts {
     margin: 0 0.5em;
   }
 
+  #popular-nav-links {
+    text-align: center;
+  }
+
   .period {
-    margin: 0 0.5em;
+    margin: 0 5em;
 
     &:first-child {
       margin-left: 0;

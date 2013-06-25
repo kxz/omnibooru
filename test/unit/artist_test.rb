@@ -14,6 +14,30 @@ class ArtistTest < ActiveSupport::TestCase
       CurrentUser.ip_addr = nil
     end
 
+    context "#rename!" do
+      setup do
+        @artist = FactoryGirl.create(:artist, :name => "aaa", :notes => "xxx")
+      end
+
+      should "rename the wiki page" do
+        wiki_page = @artist.wiki_page
+        @artist.rename!("bbb")
+        assert_equal("bbb", @artist.name)
+        wiki_page.reload
+        assert_equal("bbb", wiki_page.title)
+      end
+
+      should "merge the old wiki page into the new one if a wiki page for the new name already exists" do
+        FactoryGirl.create(:wiki_page, :title => "bbb", :body => "abcabc")
+        wiki_page = @artist.wiki_page
+        @artist.rename!("bbb")
+        wiki_page.reload
+        @artist.reload
+        assert_equal("xxx", wiki_page.body)
+        assert_equal("abcabc\n\nxxx", @artist.wiki_page.body)
+      end
+    end
+
     context "with a matching tag alias" do
       setup do
         @tag_alias = FactoryGirl.create(:tag_alias, :antecedent_name => "aaa", :consequent_name => "bbb")
@@ -93,6 +117,12 @@ class ArtistTest < ActiveSupport::TestCase
       artist.save
       artist.reload
       assert_equal(["http://not.rembrandt.com/test.jpg"], artist.urls.map(&:to_s).sort)
+    end
+
+    should "ignore pixiv.net/ and pixiv.net/img/ url matches" do
+      a1 = FactoryGirl.create(:artist, :name => "yomosaka", :url_string => "http://i2.pixiv.net/img100/img/yomosaka/27618292.jpg")
+      a2 = FactoryGirl.create(:artist, :name => "niwatazumi_bf", :url_string => "http://i2.pixiv.net/img16/img/niwatazumi_bf/35488864_big_p6.jpg")
+      assert_equal([], Artist.find_all_by_url("http://i2.pixiv.net/img28/img/kyang692/35563903.jpg"))
     end
 
     should "find matches by url" do

@@ -141,9 +141,11 @@ class PostQueryBuilder
       relation = relation.where("posts.is_deleted = TRUE")
     elsif q[:status] == "banned"
       relation = relation.where("posts.is_banned = TRUE")
+    elsif q[:status] == "active"
+      relation = relation.where("posts.is_pending = FALSE AND posts.is_deleted = FALSE AND posts.is_banned = FALSE")
     elsif q[:status] == "all" || q[:status] == "any"
       # do nothing
-    elsif q[:status_neg] == "pending" || q[:status] == "active"
+    elsif q[:status_neg] == "pending"
       relation = relation.where("posts.is_pending = FALSE")
     elsif q[:status_neg] == "flagged"
       relation = relation.where("posts.is_flagged = FALSE")
@@ -166,6 +168,20 @@ class PostQueryBuilder
         has_constraints!
       else
         relation = relation.where("SourcePattern(posts.source) LIKE SourcePattern(?) ESCAPE E'\\\\'", q[:source])
+        has_constraints!
+      end
+    end
+
+    if q[:source_neg]
+      if q[:source_neg] == "none%"
+        relation = relation.where("(posts.source != '' AND posts.source IS NOT NULL)")
+      elsif q[:source_neg] == "http%"
+        relation = relation.where("(posts.source not like ?)", "http%")
+      elsif q[:source_neg] =~ /^%\.?pixiv(?:\.net(?:\/img)?)?(?:%\/|(?=%$))(.+)$/
+        relation = relation.where("SourcePattern(posts.source) NOT LIKE ? ESCAPE E'\\\\'", "pixiv/" + $1)
+        has_constraints!
+      else
+        relation = relation.where("SourcePattern(posts.source) NOT LIKE SourcePattern(?) ESCAPE E'\\\\'", q[:source_neg])
         has_constraints!
       end
     end
@@ -256,6 +272,10 @@ class PostQueryBuilder
 
     if q[:order] == "rank"
       relation = relation.where("posts.score > 0 and posts.created_at >= ?", 2.days.ago)
+    elsif q[:order] == "rank2"
+      relation = relation.where("posts.fav_count > 0 and posts.created_at >= ?", 2.days.ago)
+    elsif q[:order] == "landscape" || q[:order] == "portrait"
+      relation = relation.where("posts.image_width IS NOT NULL and posts.image_height IS NOT NULL")
     end
 
     case q[:order]
@@ -311,6 +331,9 @@ class PostQueryBuilder
 
     when "rank"
       relation = relation.order("log(3, posts.score) + (extract(epoch from posts.created_at) - extract(epoch from timestamp '2005-05-24')) / 45000 DESC")
+
+    when "rank2"
+      relation = relation.order("log(3, posts.fav_count) + (extract(epoch from posts.created_at) - extract(epoch from timestamp '2005-05-24')) / 45000 DESC")
 
     else
       relation = relation.order("posts.id DESC")

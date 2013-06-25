@@ -7,6 +7,8 @@ class Note < ActiveRecord::Base
   before_validation :initialize_updater
   before_validation :blank_body
   validates_presence_of :post_id, :creator_id, :updater_id, :x, :y, :width, :height
+  validate :post_must_exist
+  validate :note_within_image, :message => "must be inside the image"
   has_many :versions, :class_name => "NoteVersion", :order => "note_versions.id ASC"
   after_save :update_post
   after_save :create_version
@@ -59,6 +61,10 @@ class Note < ActiveRecord::Base
   end
 
   module ApiMethods
+    def hidden_attributes
+      super + [:body_index]
+    end
+
     def serializable_hash(options = {})
       options ||= {}
       options[:except] ||= []
@@ -73,8 +79,8 @@ class Note < ActiveRecord::Base
 
     def to_xml(options = {}, &block)
       options ||= {}
-      options[:procs] ||= []
-      options[:procs] << lambda {|options, record| options[:builder].tag!("creator-name", record.creator_name)}
+      options[:methods] ||= []
+      options[:methods] += [:creator_name]
       super(options, &block)
     end
   end
@@ -95,9 +101,24 @@ class Note < ActiveRecord::Base
     self.updater_ip_addr = CurrentUser.ip_addr
   end
 
+  def post_must_exist
+    if !Post.exists?(post_id)
+      errors.add :post, "must exist"
+      return false
+    end
+  end
+
   def post_must_not_be_note_locked
     if is_locked?
       errors.add :post, "is note locked"
+      return false
+    end
+  end
+
+  def note_within_image
+    return false unless post.present?
+    if x < 0 || y < 0 || (x > post.image_width) || (y > post.image_height) || width < 0 || height < 0 || (x + width > post.image_width) || (y + height > post.image_height)
+      self.errors.add(:note, "must be inside the image")
       return false
     end
   end
@@ -155,6 +176,21 @@ class Note < ActiveRecord::Base
   def revert_to!(version)
     revert_to(version)
     save!
+  end
+
+  def copy_to(new_post)
+    new_note = dup
+    new_note.post_id = new_post.id
+    new_note.version = 0
+
+    width_ratio = new_post.image_width.to_f / post.image_width
+    height_ratio = new_post.image_height.to_f / post.image_height
+    new_note.x = x * width_ratio
+    new_note.y = y * height_ratio
+    new_note.width = width * width_ratio
+    new_note.height = height * height_ratio
+
+    new_note.save
   end
 
   def self.undo_changes_by_user(user_id)

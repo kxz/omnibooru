@@ -1,6 +1,6 @@
 div#note-container {
   position: absolute;
-  z-index: 500;
+  z-index: 50;
 
   div.note-body {
     position: absolute;
@@ -11,7 +11,7 @@ div#note-container {
     line-height: normal;
     cursor: pointer;
     padding: 4px;
-    z-index: 1500;
+    z-index: 150;
     overflow: auto;
 
     h1, h2, h3, h4, h5, h6, a, span, div, blockquote, br, p, ul, li, ol, em, strong, small, big, b, i, font, u, s, code, center {
@@ -21,6 +21,10 @@ div#note-container {
     p.tn {
       font-size: 0.8em;
       color: gray;
+    }
+
+    p:last-child {
+      margin-bottom: 0;
     }
 
     b, strong {
@@ -55,14 +59,14 @@ div#note-container {
       border: 1px solid red;
     }
   }
-  
-  div#note-helper {
-    position: absolute;
-    border: 1px solid red;
-    opacity: 0.6;
-    display: none;
-    background: white;
-  }
+}
+
+div#note-preview {
+  position: absolute;
+  border: 1px solid red;
+  opacity: 0.6;
+  display: none;
+  background: white;
 }
 
 div.note-edit-dialog {

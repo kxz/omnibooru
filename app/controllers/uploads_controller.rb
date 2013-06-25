@@ -18,7 +18,7 @@ class UploadsController < ApplicationController
 
   def index
     @search = Upload.search(params[:search])
-    @uploads = @search.order("id desc").paginate(params[:page])
+    @uploads = @search.order("id desc").paginate(params[:page], :limit => params[:limit])
     respond_with(@uploads) do |format|
       format.xml do
         render :xml => @uploads.to_xml(:root => "uploads")
@@ -53,8 +53,9 @@ protected
   def save_recent_tags
     if @upload
       tags = Tag.scan_tags(@upload.tag_string)
-      tags = TagAlias.to_aliased(tags) + Tag.scan_tags(cookies[:recent_tags])
-      cookies[:recent_tags] = tags.uniq.slice(0, 40).join(" ")
+      tags = (TagAlias.to_aliased(tags) + Tag.scan_tags(cookies[:recent_tags])).uniq.slice(0, 30)
+      cookies[:recent_tags] = tags.join(" ")
+      cookies[:recent_tags_with_categories] = Tag.categories_for(tags).to_a.flatten.join(" ")
     end
   end
 end

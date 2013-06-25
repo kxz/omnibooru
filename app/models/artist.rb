@@ -28,7 +28,7 @@ class Artist < ActiveRecord::Base
           u = u.to_escaped_for_sql_like.gsub(/\*/, '%') + '%'
           artists += Artist.joins(:urls).where(["artists.is_active = TRUE AND artist_urls.normalized_url LIKE ? ESCAPE E'\\\\'", u]).limit(10).order("artists.name").all
           url = File.dirname(url) + "/"
-          break if url =~ /pixiv\.net\/$/
+          break if url =~ /pixiv\.net\/(?:img\/)?$/
         end
 
         artists.uniq_by {|x| x.name}.slice(0, 20)
@@ -77,6 +77,18 @@ class Artist < ActiveRecord::Base
 
     def other_names_comma=(string)
       self.other_names = string.split(/,/).map {|x| Artist.normalize_name(x)}.join(" ")
+    end
+
+    def rename!(new_name)
+      new_wiki_page = WikiPage.titled(new_name).first
+      if new_wiki_page && wiki_page
+        # Merge the old wiki page into the new one
+        new_wiki_page.update_attributes(:body => new_wiki_page.body + "\n\n" + notes)
+      elsif wiki_page
+        wiki_page.update_attribute(:title, new_name)
+      end
+      reload
+      update_attribute(:name, new_name)
     end
   end
 
@@ -149,13 +161,10 @@ class Artist < ActiveRecord::Base
 
     def notes=(msg)
       if wiki_page
-        wiki_page.title = name
         wiki_page.body = msg
-        wiki_page.save if wiki_page.body_changed?
-      else
-        if msg.present?
-          self.wiki_page = WikiPage.new(:title => name, :body => msg)
-        end
+        wiki_page.save if wiki_page.body_changed? || wiki_page.title_changed?
+      elsif msg.present?
+        self.wiki_page = WikiPage.new(:title => name, :body => msg)
       end
     end
   end
@@ -192,7 +201,6 @@ class Artist < ActiveRecord::Base
           tag_implication.delay(:queue => "default").process!
         end
 
-        update_column(:is_active, false)
         update_column(:is_banned, true)
       end
     end
@@ -298,6 +306,24 @@ class Artist < ActiveRecord::Base
     end
   end
 
+  module ApiMethods
+    def hidden_attributes
+      super + [:other_names_index]
+    end
+
+    def legacy_api_hash
+      return {
+        :id => id,
+        :name => name,
+        :other_names => other_names,
+        :group_name => group_name,
+        :urls => artist_urls.map {|x| x.url},
+        :is_active => is_active?,
+        :updater_id => 0
+      }
+    end
+  end
+
   include UrlMethods
   include NameMethods
   include GroupMethods
@@ -307,10 +333,13 @@ class Artist < ActiveRecord::Base
   include TagMethods
   include BanMethods
   extend SearchMethods
+  include ApiMethods
 
   def status
-    if is_banned?
+    if is_banned? && is_active?
       "Banned"
+    elsif is_banned?
+      "Banned Deleted"
     elsif is_active?
       "Active"
     else
@@ -318,19 +347,11 @@ class Artist < ActiveRecord::Base
     end
   end
 
-  def legacy_api_hash
-    return {
-      :id => id,
-      :name => name,
-      :other_names => other_names,
-      :group_name => group_name,
-      :urls => artist_urls.map {|x| x.url},
-      :is_active => is_active?,
-      :updater_id => 0
-    }
-  end
-
   def initialize_creator
     self.creator_id = CurrentUser.user.id
+  end
+
+  def deletable_by?(user)
+    user.is_builder?
   end
 end

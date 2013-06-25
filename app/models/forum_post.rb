@@ -7,7 +7,9 @@ class ForumPost < ActiveRecord::Base
   before_validation :initialize_creator, :on => :create
   before_validation :initialize_updater
   before_validation :initialize_is_deleted, :on => :create
-  after_create :update_topic_updated_at
+  after_create :update_topic_updated_at_on_create
+  after_update :update_topic_updated_at_on_update_for_original_posts
+  after_destroy :update_topic_updated_at_on_destroy
   validates_presence_of :body, :creator_id
   validate :validate_topic_is_unlocked
   before_destroy :validate_topic_is_unlocked
@@ -54,6 +56,10 @@ class ForumPost < ActiveRecord::Base
         q = q.creator_name(params[:creator_name].tr(" ", "_"))
       end
 
+      if params[:topic_category_id].present?
+        q = q.joins(:topic).where("forum_topics.category_id = ?", params[:topic_category_id].to_i)
+      end
+
       q
     end
   end
@@ -87,11 +93,25 @@ class ForumPost < ActiveRecord::Base
     creator_id == user.id || user.is_janitor?
   end
 
-  def update_topic_updated_at
+  def update_topic_updated_at_on_create
     if topic
-      topic.updater_id = CurrentUser.id
-      topic.response_count = topic.response_count + 1
-      topic.save
+      # need to do this to bypass the topic's original post from getting touched
+      ForumTopic.update_all(["updater_id = ?, response_count = response_count + 1, updated_at = ?", CurrentUser.id, Time.now], {:id => topic.id})
+    end
+  end
+
+  def update_topic_updated_at_on_update_for_original_posts
+    if is_original_post?
+      topic.touch
+    end
+  end
+
+  def update_topic_updated_at_on_destroy
+    max = ForumPost.where(:topic_id => topic.id).maximum(:updated_at)
+    if max
+      ForumTopic.update_all(["response_count = response_count - 1, updated_at = ?", max], {:id => topic.id})
+    else
+      ForumTopic.update_all(["response_count = response_count - 1"], {:id => topic.id})
     end
   end
 
@@ -140,5 +160,9 @@ class ForumPost < ActiveRecord::Base
     dup.tap do |x|
       x.body = x.quoted_response
     end
+  end
+
+  def hidden_attributes
+    super + [:text_index]
   end
 end

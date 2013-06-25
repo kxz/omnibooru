@@ -1,5 +1,6 @@
 class PostsController < ApplicationController
   before_filter :member_only, :except => [:show, :show_seq, :index]
+  before_filter :builder_only, :only => [:copy_notes]
   after_filter :save_recent_tags, :only => [:update]
   respond_to :html, :xml, :json
   rescue_from PostSets::SearchError, :with => :rescue_exception
@@ -8,7 +9,7 @@ class PostsController < ApplicationController
   rescue_from ActiveRecord::RecordNotFound, :with => :rescue_exception
 
   def index
-    @post_set = PostSets::Post.new(tag_query, params[:page], params[:limit] || CurrentUser.user.per_page)
+    @post_set = PostSets::Post.new(tag_query, params[:page], params[:limit] || CurrentUser.user.per_page, params[:raw])
     @posts = @post_set.posts
     respond_with(@posts) do |format|
       format.atom
@@ -68,10 +69,21 @@ class PostsController < ApplicationController
   def revert
     @post = Post.find(params[:id])
     @version = PostVersion.find(params[:version_id])
-    @post.revert_to!(@version)
+
+    if Danbooru.config.can_user_see_post?(CurrentUser.user, @post)
+      @post.revert_to!(@version)
+    end
+    
     respond_with(@post) do |format|
       format.js
     end
+  end
+
+  def copy_notes
+    @post = Post.find(params[:id])
+    @other_post = Post.find(params[:other_post_id].to_i)
+    @post.copy_notes_to(@other_post)
+    render :nothing => true
   end
 
 private
@@ -82,8 +94,9 @@ private
   def save_recent_tags
     if @post
       tags = Tag.scan_tags(@post.tag_string)
-      tags = TagAlias.to_aliased(tags) + Tag.scan_tags(cookies[:recent_tags])
-      cookies[:recent_tags] = tags.uniq.slice(0, 40).join(" ")
+      tags = (TagAlias.to_aliased(tags) + Tag.scan_tags(cookies[:recent_tags])).uniq.slice(0, 30)
+      cookies[:recent_tags] = tags.join(" ")
+      cookies[:recent_tags_with_categories] = Tag.categories_for(tags).to_a.flatten.join(" ")
     end
   end
 end

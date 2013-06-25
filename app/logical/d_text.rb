@@ -19,7 +19,6 @@ class DText
     str.gsub!(/\[i\](.+?)\[\/i\]/i, '<em>\1</em>')
     str.gsub!(/\[s\](.+?)\[\/s\]/i, '<s>\1</s>')
     str.gsub!(/\[u\](.+?)\[\/u\]/i, '<u>\1</u>')
-    str.gsub!(/\[spoilers?\](.+?)\[\/spoilers?\]/i, '<span class="spoiler">\1</span>')
 
     str = parse_links(str)
     str = parse_aliased_wiki_links(str)
@@ -131,6 +130,11 @@ class DText
       str.gsub!(/\s*\[\/quote\]\s*/m, "\n\n[/quote]\n\n")
       str.gsub!(/\s*\[code\]\s*/m, "\n\n[code]\n\n")
       str.gsub!(/\s*\[\/code\]\s*/m, "\n\n[/code]\n\n")
+      str.gsub!(/\s*\[spoilers?\](?!\])\s*/m, "\n\n[spoiler]\n\n")
+      str.gsub!(/\s*\[\/spoilers?\]\s*/m, "\n\n[/spoiler]\n\n")
+      str.gsub!(/^(h[1-6]\.\s*.+)$/, "\n\n\\1\n\n")
+      str.gsub!(/\s*\[expand(\=[^\]]*)?\]\s*/m, "\n\n[expand\\1]\n\n")
+      str.gsub!(/\s*\[\/expand\]\s*/m, "\n\n[/expand]\n\n")
     end
 
     str.gsub!(/(?:\r?\n){3,}/, "\n\n")
@@ -141,7 +145,7 @@ class DText
 
     html = blocks.map do |block|
       case block
-      when /^(h[1-6])\.\s*(.+)$/
+      when /\A(h[1-6])\.\s*(.+)\Z/
         tag = $1
         content = $2
 
@@ -171,6 +175,18 @@ class DText
         else
           ""
         end
+
+      when "[spoiler]"
+        stack << "spoiler"
+        '<div class="spoiler">'
+
+      when "[/spoiler]"
+        if stack.last == "spoiler"
+          stack.pop
+          "</div>"
+        else
+          ""
+        end
         
       when /\[code\](?!\])/
         flags[:code] = true
@@ -179,6 +195,20 @@ class DText
       when /\[\/code\](?!\])/
         flags[:code] = false
         '</pre>'
+
+      when /\[expand(?:\=([^\]]*))?\](?!\])/
+        stack << "expandable"
+        expand_html = '<div class="expandable"><div class="expandable-header">'
+        expand_html << "<span>#{h($1)}</span>" if $1.present?
+        expand_html << '<div class="expandable-button">Show</div></div>'
+        expand_html << '<div class="expandable-content">'
+        expand_html
+
+      when /\[\/expand\](?!\])/
+        if stack.last == "expandable"
+          stack.pop
+          '</div></div>'
+        end 
 
       else
         if flags[:code]
@@ -196,6 +226,10 @@ class DText
         html << "</div>"
       elsif tag == "pre"
         html << "</pre>"
+      elsif tag == "spoiler"
+        html << "</div>"
+      elsif tag == "expandable"
+        html << "</div></div>"
       end
     end
 

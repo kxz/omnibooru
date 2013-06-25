@@ -4,7 +4,7 @@ require "tmpdir"
 class Upload < ActiveRecord::Base
   class Error < Exception ; end
 
-  attr_accessor :file, :image_width, :image_height, :file_ext, :md5, :file_size
+  attr_accessor :file, :image_width, :image_height, :file_ext, :md5, :file_size, :as_pending
   belongs_to :uploader, :class_name => "User"
   belongs_to :post
   before_validation :initialize_uploader, :on => :create
@@ -62,7 +62,7 @@ class Upload < ActiveRecord::Base
   end
 
   module ConversionMethods
-    def process! force=false
+    def process!(force = false)
       return if !force && status =~ /processing|completed|error/
 
       CurrentUser.scoped(uploader, uploader_ip_addr) do
@@ -113,7 +113,7 @@ class Upload < ActiveRecord::Base
         p.uploader_ip_addr = uploader_ip_addr
         p.parent_id = parent_id
 
-        unless uploader.is_contributor?
+        if !uploader.is_contributor? || upload_as_pending?
           p.is_pending = true
         end
       end
@@ -182,6 +182,11 @@ class Upload < ActiveRecord::Base
     def add_dimension_tags!
       return if !Danbooru.config.enable_dimension_autotagging
 
+      %w(incredibly_absurdres absurdres highres lowres).each do |tag|
+        escaped_tag = Regexp.escape(tag) 
+        self.tag_string = tag_string.gsub(/(?:\A| )#{escaped_tag}(?:\Z| )/, " ").strip
+      end
+
       if image_width >= 10_000 || image_height >= 10_000
         self.tag_string = "#{tag_string} incredibly_absurdres".strip
       elsif image_width >= 3200 || image_height >= 2400
@@ -192,9 +197,9 @@ class Upload < ActiveRecord::Base
         self.tag_string = "#{tag_string} lowres".strip
       end
 
-      if image_width >= 1024 && image_width.to_f / image_height >= 3
+      if image_width >= 1024 && image_width.to_f / image_height >= 4
         self.tag_string = "#{tag_string} wide_image".strip
-      elsif image_height >= 1024 && image_height.to_f / image_width >= 3
+      elsif image_height >= 1024 && image_height.to_f / image_width >= 4
         self.tag_string = "#{tag_string} tall_image".strip
       end
     end
@@ -391,8 +396,8 @@ class Upload < ActiveRecord::Base
 
     def to_xml(options = {}, &block)
       options ||= {}
-      options[:procs] ||= []
-      options[:procs] << lambda {|options, record| options[:builder].tag!("uploader-name", record.uploader_name)}
+      options[:methods] ||= []
+      options[:methods] += [:uploader_name]
       super(options, &block)
     end
   end
@@ -423,5 +428,9 @@ class Upload < ActiveRecord::Base
 
   def presenter
     @presenter ||= UploadPresenter.new(self)
+  end
+
+  def upload_as_pending?
+    as_pending == "1"
   end
 end

@@ -24,24 +24,25 @@
       <section>
         <h1>History</h1>
         <ul>
-          <% if Danbooru.config.can_user_see_post?(CurrentUser.user, @post) %>
-            <li><%= fast_link_to "Tags", post_versions_path(:search => {:post_id => @post.id}) %></li>
-          <% end %>
+          <li><%= fast_link_to "Tags", post_versions_path(:search => {:post_id => @post.id}) %></li>
           <li><%= fast_link_to "Notes", note_versions_path(:search => {:post_id => @post.id}) %></li>
+          <li><%= fast_link_to "Flags", post_flags_path(:search => {:post_id => @post.id}) %></li>
+          <li><%= fast_link_to "Appeals", post_appeals_path(:search => {:post_id => @post.id}) %></li>
         </ul>
       </section>
 
     </aside>
 
-    <section id="content" class="<%= Danbooru.config.can_see_ads?(CurrentUser.user) ? "with-ads" : "without-ads" %>">
+    <section id="content">
       <% if @post.presenter.has_nav_links?(self) %>
         <%= render "posts/partials/show/nav_links", :post => @post, :position => "top" %>
       <% end %>
 
       <%= render "posts/partials/show/notices", :post => @post %>
 
-      <section id="image-container" data-tags="<%= @post.tag_string %>" data-user="<%= @post.uploader_name %>" data-rating="<%= @post.rating %>" data-flags="<%= @post.status_flags %>">
-        <div id="note-container"><div id="note-helper"></div></div>
+      <section id="image-container" data-tags="<%= @post.tag_string %>" data-uploader="<%= @post.uploader_name %>" data-rating="<%= @post.rating %>" data-flags="<%= @post.status_flags %>">
+        <div id="note-container"></div>
+        <div id="note-preview"></div>
         <%= @post.presenter.image_html(self) %>
       </section>
 
@@ -104,10 +105,17 @@
   <meta name="post-is-flagged" content="<%= @post.is_flagged? %>">
   <meta name="config-large-width" content="<%= Danbooru.config.large_image_width %>">
   <meta name="always-resize-images" content="<%= CurrentUser.user.always_resize_images? %>">
-  <meta name="favorite-tags" content="<%= CurrentUser.user.favorite_tags %>">
   <meta property="og:title" content="<%= h @post.presenter.humanized_essential_tag_string %> - <%= Danbooru.config.app_name %>">
   <meta property="og:description" content="<%= h @post.presenter.humanized_tag_string %>">
   <meta property="og:image" content="<%= @post.preview_file_url %>">
+
+  <!-- Twitter properties -->
+  <% if @post.twitter_card_supported? %>
+    <meta name="twitter:card" content="photo">
+    <meta name="twitter:image:src" content="http://<%= Danbooru.config.hostname %><%= @post.file_url %>">
+    <meta name="twitter:image:width" content="<%= @post.image_width %>">
+    <meta name="twitter:image:height" content="<%= @post.image_height %>">
+  <% end %>
 <% end %>
 
 <%= render "posts/partials/common/secondary_links" %>

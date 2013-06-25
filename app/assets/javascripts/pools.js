@@ -15,16 +15,31 @@
     $("#add-to-pool-dialog").dialog({autoOpen: false});
 
     $("#c-pool-elements #a-new input[type=text]").autocomplete({
+      minLength: 1,
       source: function(req, resp) {
-        $.getJSON(
-          "/pools.json?search[name_matches]=" + req.term,
-          function(data) {
-            resp(data.map(function(x) {return x.name.replace(/_/g, " ");}));
+        $.ajax({
+          url: "/pools.json",
+          data: {
+            "search[is_active]": "true",
+            "search[name_matches]": req.term,
+            "limit": 10
+          },
+          method: "get",
+          success: function(data) {
+            resp($.map(data, function(pool) {
+              return {
+                label: pool.name.replace(/_/g, " "),
+                value: pool.name,
+                category: pool.category
+              };
+            }));
           }
-        );
-      },
-      minLength: 2,
-    });
+        });
+      }
+    }).data("uiAutocomplete")._renderItem = function(list, pool) {
+      var $link = $("<a/>").addClass("pool-category-" + pool.category).text(pool.label);
+      return $("<li/>").data("item.autocomplete", pool).append($link).appendTo(list);
+    }
 
     $("#pool").click(function(e) {
       e.preventDefault();

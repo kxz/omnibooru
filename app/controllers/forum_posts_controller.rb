@@ -21,7 +21,7 @@ class ForumPostsController < ApplicationController
     else
       @search = ForumPost.active.search(params[:search])
     end
-    @forum_posts = @search.order("forum_posts.id DESC").paginate(params[:page], :search_count => params[:search])
+    @forum_posts = @search.order("forum_posts.id DESC").paginate(params[:page], :limit => params[:limit], :search_count => params[:search])
     respond_with(@forum_posts) do |format|
       format.xml do
         render :xml => @forum_posts.to_xml(:root => "forum-posts")
@@ -50,13 +50,13 @@ class ForumPostsController < ApplicationController
     @forum_post = ForumPost.find(params[:id])
     check_privilege(@forum_post)
     @forum_post.update_attributes(params[:forum_post])
-    respond_with(@forum_post, :location => forum_topic_path(@forum_post.topic, :page => @forum_post.forum_topic_page))
+    respond_with(@forum_post, :location => forum_topic_path(@forum_post.topic, :page => @forum_post.forum_topic_page, :anchor => "forum_post_#{@forum_post.id}"))
   end
 
   def destroy
     @forum_post = ForumPost.find(params[:id])
     raise User::PrivilegeError unless @forum_post.editable_by?(CurrentUser.user)
-    @forum_post.update_attribute(:is_deleted, true)
+    @forum_post.update_column(:is_deleted, true)
     respond_with(@forum_post)
   end
 

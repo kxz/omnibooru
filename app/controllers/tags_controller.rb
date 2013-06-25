@@ -9,7 +9,7 @@ class TagsController < ApplicationController
   end
 
   def index
-    @tags = Tag.search(params[:search]).paginate(params[:page], :search_count => params[:search])
+    @tags = Tag.search(params[:search]).paginate(params[:page], :limit => params[:limit], :search_count => params[:search])
     respond_with(@tags) do |format|
       format.xml do
         render :xml => @tags.to_xml(:root => "tags")
@@ -28,7 +28,7 @@ class TagsController < ApplicationController
   def update
     @tag = Tag.find(params[:id])
     check_privilege(@tag)
-    @tag.update_attributes(params[:tag])
+    @tag.update_attributes(params[:tag], :as => CurrentUser.role)
     @tag.update_category_cache_for_all
     respond_with(@tag)
   end

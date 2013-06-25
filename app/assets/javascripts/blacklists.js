@@ -32,7 +32,7 @@
   }
 
   Danbooru.Blacklist.toggle_entry = function(e) {
-    var tags = $(e.target).html();
+    var tags = $(e.target).text();
     var match = $.grep(Danbooru.Blacklist.entries, function(entry, i) {
       return entry.tags === tags;
     })[0];
@@ -57,7 +57,7 @@
       var link = $("<a/>");
       var count = $("<span/>");
 
-      link.html(entry.tags);
+      link.text(entry.tags);
       link.click(Danbooru.Blacklist.toggle_entry);
       count.html(entry.hits);
       item.append(link);
@@ -97,18 +97,18 @@
   }
 
   Danbooru.Blacklist.posts = function() {
-    return $(".post-preview, #image-container")
+    return $(".post-preview, #image-container");
   }
 
   Danbooru.Blacklist.post_match = function(post, entry) {
     if (entry.disabled) {
       return false;
     }
-    
+
     var $post = $(post);
-    var tags = String($post.data("tags")).match(/\S+/g) || [];
+    var tags = String($post.attr("data-tags")).match(/\S+/g) || [];
     tags.push("rating:" + $post.data("rating"));
-    tags.push("user:" + $post.data("user"));
+    tags.push("user:" + $post.attr("data-uploader").toLowerCase().replace(/ /g, "_"));
     $.each(String($post.data("flags")).match(/\S+/g) || [], function(i, v) {
       tags.push("status:" + v);
     });

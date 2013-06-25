@@ -17,7 +17,7 @@ class User < ActiveRecord::Base
   end
 
   attr_accessor :password, :old_password
-  attr_accessible :enable_privacy_mode, :enable_post_navigation, :new_post_navigation_layout, :password, :old_password, :password_confirmation, :password_hash, :email, :last_logged_in_at, :last_forum_read_at, :has_mail, :receive_email_notifications, :comment_threshold, :always_resize_images, :favorite_tags, :blacklisted_tags, :name, :ip_addr, :time_zone, :default_image_size, :enable_sequential_post_navigation, :per_page, :hide_deleted_posts, :style_usernames, :as => [:moderator, :janitor, :contributor, :gold, :member, :anonymous, :default, :builder, :admin]
+  attr_accessible :enable_privacy_mode, :enable_post_navigation, :new_post_navigation_layout, :password, :old_password, :password_confirmation, :password_hash, :email, :last_logged_in_at, :last_forum_read_at, :has_mail, :receive_email_notifications, :comment_threshold, :always_resize_images, :favorite_tags, :blacklisted_tags, :name, :ip_addr, :time_zone, :default_image_size, :enable_sequential_post_navigation, :per_page, :hide_deleted_posts, :style_usernames, :enable_auto_complete, :as => [:moderator, :janitor, :contributor, :gold, :member, :anonymous, :default, :builder, :admin]
   attr_accessible :level, :as => :admin
   validates_length_of :name, :within => 2..100, :on => :create
   validates_format_of :name, :with => /\A[^\s:]+\Z/, :on => :create, :message => "cannot have whitespace or colons"
@@ -40,7 +40,8 @@ class User < ActiveRecord::Base
   before_create :promote_to_admin_if_first_user
   has_many :feedback, :class_name => "UserFeedback", :dependent => :destroy
   has_many :posts, :foreign_key => "uploader_id"
-  has_one :ban
+  has_many :bans, :order => "bans.id desc"
+  has_one :recent_ban, :class_name => "Ban", :order => "bans.id desc"
   has_many :subscriptions, :class_name => "TagSubscription", :foreign_key => "creator_id", :order => "name"
   has_many :note_versions, :foreign_key => "updater_id"
   has_many :dmails, :foreign_key => "owner_id", :order => "dmails.id desc"
@@ -77,7 +78,7 @@ class User < ActiveRecord::Base
     module ClassMethods
       def name_to_id(name)
         Cache.get("uni:#{Cache.sanitize(name)}", 4.hours) do
-          select_value_sql("SELECT id FROM users WHERE lower(name) = ?", name.mb_chars.downcase.tr(" ", "_")).to_s
+          select_value_sql("SELECT id FROM users WHERE lower(name) = ?", name.mb_chars.downcase.tr(" ", "_").to_s)
         end
       end
 
@@ -238,6 +239,10 @@ class User < ActiveRecord::Base
           "Admin" => Levels::ADMIN
         }
       end
+    end
+
+    def promote_to(level)
+      update_attributes({:level => level}, :as => :admin)
     end
 
     def promote_to_admin_if_first_user
@@ -510,13 +515,15 @@ class User < ActiveRecord::Base
 
   module ApiMethods
     def hidden_attributes
-      super + [:password_hash, :bcrypt_password_hash, :email, :email_verification_key, :time_zone, :updated_at, :receive_email_notifications, :last_logged_in_at, :last_forum_read_at, :has_mail, :default_image_size, :comment_threshold, :always_resize_images, :favorite_tags, :blacklisted_tags, :recent_tags, :enable_privacy_mode, :enable_post_navigation, :new_post_navigation_layout, :enable_sequential_post_navigation, :hide_deleted_posts, :per_page, :style_usernames]
+      super + [:password_hash, :bcrypt_password_hash, :email, :email_verification_key, :time_zone, :updated_at, :receive_email_notifications, :last_logged_in_at, :last_forum_read_at, :has_mail, :default_image_size, :comment_threshold, :always_resize_images, :favorite_tags, :blacklisted_tags, :recent_tags, :enable_privacy_mode, :enable_post_navigation, :new_post_navigation_layout, :enable_sequential_post_navigation, :hide_deleted_posts, :per_page, :style_usernames, :enable_auto_complete]
     end
 
     def serializable_hash(options = {})
       options ||= {}
       options[:except] ||= []
       options[:except] += hidden_attributes
+      options[:methods] ||= []
+      options[:methods] += [:wiki_page_version_count, :artist_version_count, :pool_version_count, :forum_post_count, :comment_count, :positive_feedback_count, :neutral_feedback_count, :negative_feedback_count]
       super(options)
     end
 
@@ -525,6 +532,8 @@ class User < ActiveRecord::Base
       options ||= {}
       options[:except] ||= []
       options[:except] += hidden_attributes
+      options[:methods] ||= []
+      options[:methods] += [:wiki_page_version_count, :artist_version_count, :pool_version_count, :forum_post_count, :comment_count, :positive_feedback_count, :neutral_feedback_count, :negative_feedback_count]
       super(options, &block)
     end
 
@@ -535,6 +544,40 @@ class User < ActiveRecord::Base
         "level" => level,
         "created_at" => created_at.strftime("%Y-%m-%d %H:%M")
       }.to_json
+    end
+  end
+
+  module CountMethods
+    def wiki_page_version_count
+      WikiPageVersion.for_user(id).count
+    end
+
+    def artist_version_count
+      ArtistVersion.for_user(id).count
+    end
+
+    def pool_version_count
+      PoolVersion.for_user(id).count
+    end
+
+    def forum_post_count
+      ForumPost.for_user(id).count
+    end
+
+    def comment_count
+      Comment.for_creator(id).count
+    end
+
+    def positive_feedback_count
+      feedback.positive.count
+    end
+
+    def neutral_feedback_count
+      feedback.neutral.count
+    end
+
+    def negative_feedback_count
+      feedback.negative.count
     end
   end
 
@@ -572,11 +615,11 @@ class User < ActiveRecord::Base
       return q if params.blank?
 
       if params[:name].present?
-        q = q.name_matches(params[:name].mb_chars.downcase.tr(" ", "_"))
+        q = q.name_matches(params[:name].mb_chars.downcase.strip.tr(" ", "_"))
       end
 
       if params[:name_matches].present?
-        q = q.name_matches(params[:name_matches].mb_chars.downcase.tr(" ", "_"))
+        q = q.name_matches(params[:name_matches].mb_chars.downcase.strip.tr(" ", "_"))
       end
 
       if params[:min_level].present?
@@ -628,6 +671,7 @@ class User < ActiveRecord::Base
   include LimitMethods
   include InvitationMethods
   include ApiMethods
+  include CountMethods
   extend SearchMethods
 
   def initialize_default_image_size

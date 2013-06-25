@@ -17,7 +17,7 @@ class WikiPagesController < ApplicationController
   end
 
   def index
-    @wiki_pages = WikiPage.search(params[:search]).order("updated_at desc").paginate(params[:page], :search_count => params[:search])
+    @wiki_pages = WikiPage.search(params[:search]).order("updated_at desc").paginate(params[:page], :limit => params[:limit], :search_count => params[:search])
     respond_with(@wiki_pages) do |format|
       format.html do
         if @wiki_pages.count == 1 && (params[:page].nil? || params[:page].to_i == 1)
@@ -70,7 +70,8 @@ class WikiPagesController < ApplicationController
     if @wiki_page
       redirect_to wiki_page_path(@wiki_page)
     else
-      redirect_to new_wiki_page_path(:wiki_page => {:title => params[:title]})
+      @wiki_page = WikiPage.new(:title => params[:title])
+      respond_with(@wiki_page)
     end
   end
 

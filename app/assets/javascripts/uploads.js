@@ -16,9 +16,11 @@
   }
 
   Danbooru.Upload.initialize_enter_on_tags = function() {
-    $("#upload_tag_string,#post_tag_string").bind("keydown.return", function(e) {
-      $("#form").trigger("submit");
-      $("#quick-edit-form").trigger("submit");
+    $("#upload_tag_string,#post_tag_string").bind("keydown", "return", function(e) {
+      if (!Danbooru.autocompleting) {
+        $("#form").trigger("submit");
+        $("#quick-edit-form").trigger("submit");
+      }
       e.preventDefault();
     });
   }
@@ -26,7 +28,7 @@
   Danbooru.Upload.initialize_similar = function() {
     $("#similar-button").click(function(e) {
       var old_source_name = $("#upload_source").attr("name");
-  		var old_file_name = $("#upload_file").attr("name")
+  		var old_file_name = $("#upload_file").attr("name");
   		var old_action = $("#form").attr("action");
 
   		$("#upload_source").attr("name", "url");

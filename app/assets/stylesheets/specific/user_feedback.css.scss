@@ -1,4 +1,4 @@
-div#c-user-feedbacks {
+div#c-user-feedbacks, div#c-moderator-dashboards div#col2 {
   .feedback-category-positive {
     background: #DDFFDD !important;
   }
@@ -9,5 +9,9 @@ div#c-user-feedbacks {
 
   .feedback-category-neutral {
     background: #FFFFFF !important;
+  }
+  
+  blockquote {
+    padding: 0.5em;
   }
 }

@@ -1,6 +1,6 @@
 class PostPresenter < Presenter
   def self.preview(post, options = {})
-    if post.is_deleted? && options[:tags] !~ /status:(?:all|any|deleted|banned)/
+    if post.is_deleted? && options[:tags] !~ /status:(?:all|any|deleted|banned)/ && !options[:raw]
       return ""
     end
     
@@ -161,12 +161,14 @@ class PostPresenter < Presenter
       return if pool.nil?
       html += pool_link_html(template, pool, :include_rel => true)
 
-      @post.pools.active.where("id <> ?", template.params[:pool_id]).each do |other_pool|
+      other_pools = @post.pools.where("id <> ?", template.params[:pool_id]).series_first
+      other_pools.each do |other_pool|
         html += pool_link_html(template, other_pool)
       end
     else
       first = true
-      @post.pools.active.each do |pool|
+      pools = @post.pools.series_first
+      pools.each do |pool|
         if first && template.params[:tags].blank?
           html += pool_link_html(template, pool, :include_rel => true)
           first = false
@@ -187,29 +189,41 @@ class PostPresenter < Presenter
     if options[:include_rel]
       prev_rel = "prev"
       next_rel = "next"
-      klass = "active"
+      klass = "active pool-category-#{pool.category}"
     else
       prev_rel = nil
       next_rel = nil
-      klass = ""
+      klass = "pool-category-#{pool.category}"
+    end
+
+    if @post.id != pool.post_id_array.first
+      pool_html << template.link_to("&laquo;".html_safe, template.post_path(pool.post_id_array.first, :pool_id => pool.id), :class => "#{klass} first", :title => "to page 1")
+    else
+      pool_html << '<span class="first">&laquo;</span>'
     end
 
     if pool.neighbors(@post).previous
-      pool_html << template.link_to("&laquo;prev".html_safe, template.post_path(pool.neighbors(@post).previous, :pool_id => pool.id), :rel => prev_rel, :class => "#{klass} prev")
+      pool_html << template.link_to("&lsaquo;&thinsp;prev".html_safe, template.post_path(pool.neighbors(@post).previous, :pool_id => pool.id), :rel => prev_rel, :class => "#{klass} prev", :title => "to page #{pool.page_number(pool.neighbors(@post).previous)}")
       match_found = true
     else
-      pool_html << '<span class="prev">&laquo;prev</span>'
+      pool_html << '<span class="prev">&lsaquo;&thinsp;prev</span>'
     end
 
     pool_html << ' <span class="pool-name ' + klass + '">'
-    pool_html << template.link_to("Pool: #{pool.pretty_name}", template.pool_path(pool))
+    pool_html << template.link_to("Pool: #{pool.pretty_name}", template.pool_path(pool), :title => "page #{pool.page_number(@post.id)}/#{pool.post_count}")
     pool_html << '</span> '
 
     if pool.neighbors(@post).next
-      pool_html << template.link_to("next&raquo;".html_safe, template.post_path(pool.neighbors(@post).next, :pool_id => pool.id), :rel => next_rel, :class => "#{klass} next")
+      pool_html << template.link_to("next&thinsp;&rsaquo;".html_safe, template.post_path(pool.neighbors(@post).next, :pool_id => pool.id), :rel => next_rel, :class => "#{klass} next", :title => "to page #{pool.page_number(pool.neighbors(@post).next)}")
       match_found = true
     else
-      pool_html << '<span class="next">next&raquo;</span>'
+      pool_html << '<span class="next">next&thinsp;&rsaquo;</span>'
+    end
+
+    if @post.id != pool.post_id_array.last
+      pool_html << template.link_to("&raquo;".html_safe, template.post_path(pool.post_id_array.last, :pool_id => pool.id), :class => "#{klass} last", :title => "to page #{pool.post_count}")
+    else
+      pool_html << '<span class="last">&raquo;</span>'
     end
 
     pool_html << "</li>"

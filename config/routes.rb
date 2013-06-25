@@ -40,6 +40,7 @@ Danbooru::Application.routes.draw do
       collection do
         get :popular
         get :hot
+        get :intro
       end
     end
   end
@@ -47,6 +48,8 @@ Danbooru::Application.routes.draw do
     namespace :user do
       resource :password_reset, :only => [:new, :create, :edit, :update]
       resource :login_reminder, :only => [:new, :create]
+      resource :deletion, :only => [:show, :destroy]
+      resource :email_change, :only => [:new, :create]
     end
   end
 
@@ -57,19 +60,31 @@ Danbooru::Application.routes.draw do
     member do
       put :revert
       put :ban
+      get :edit_name
+      put :update_name
+      post :undelete
     end
     collection do
       get :show_or_new
       get :banned
     end
   end
-  resources :artist_versions, :only => [:index]
+  resources :artist_versions, :only => [:index] do
+    collection do
+      get :search
+    end
+  end
   resources :bans
   resources :comments do
     resources :votes, :controller => "comment_votes", :only => [:create, :destroy]
     collection do
       get :search
       get :index_all
+    end
+  end
+  resources :counts do
+    collection do
+      get :posts
     end
   end
   resources :delayed_jobs, :only => [:index]
@@ -120,6 +135,7 @@ Danbooru::Application.routes.draw do
     end
   end
   resources :note_versions, :only => [:index]
+  resource :note_previews, :only => [:show]
   resources :pools do
     member do
       put :revert
@@ -137,17 +153,22 @@ Danbooru::Application.routes.draw do
     resources :votes, :controller => "post_votes", :only => [:create, :destroy]
     member do
       put :revert
+      put :copy_notes
       get :show_seq
     end
   end
   resources :post_appeals
   resources :post_flags
   resources :post_versions, :only => [:index, :search] do
+    member do
+      put :undo
+    end
     collection do
       get :search
     end
   end
   resource :related_tag, :only => [:show]
+  match "reports/user_promotions" => "reports#user_promotions"
   resource :session do
     collection do
       get :sign_out
@@ -238,7 +259,13 @@ Danbooru::Application.routes.draw do
   match "/comment/index" => redirect {|params, req| "/comments?page=#{req.params[:page]}"}
   match "/comment/show/:id" => redirect("/comments/%{id}")
   match "/comment/new" => redirect("/comments")
-  match "/comment/search" => redirect("/comments/search")
+  match("/comment/search" => redirect do |params, req|
+    if req.params[:query] =~ /^user:(.+)/i
+      "/comments?group_by=comment&search[creator_name]=#{CGI::escape($1)}"
+    else
+      "/comments/search"
+    end
+  end)
 
   match "/favorite" => redirect {|params, req| "/favorites?page=#{req.params[:page]}"}
   match "/favorite/index" => redirect {|params, req| "/favorites?page=#{req.params[:page]}"}
@@ -282,8 +309,11 @@ Danbooru::Application.routes.draw do
   match "/post/view/:id" => redirect("/posts/%{id}")
   match "/post/flag/:id" => redirect("/posts/%{id}")
 
-  match "/post_tag_history" => redirect {|params, req| "/post_versions?page=#{req.params[:page]}"}
-  match "/post_tag_history/index" => redirect {|params, req| "/post_versions?page=#{req.params[:page]}"}
+  match("/post_tag_history" => redirect do |params, req|
+    page = req.params[:before_id].present? ? "b#{req.params[:before_id]}" : req.params[:page]
+    "/post_versions?page=#{page}&search[updater_id]=#{req.params[:user_id]}"
+  end)
+  match "/post_tag_history/index" => redirect {|params, req| "/post_versions?page=#{req.params[:page]}&search[post_id]=#{req.params[:post_id]}"}
 
   match "/tag/index.xml", :controller => "legacy", :action => "tags", :format => "xml"
   match "/tag/index.json", :controller => "legacy", :action => "tags", :format => "json"
@@ -298,6 +328,7 @@ Danbooru::Application.routes.draw do
   match "/user/index" => redirect {|params, req| "/users?page=#{req.params[:page]}"}
   match "/user/show/:id" => redirect("/users/%{id}")
   match "/user/login" => redirect("/sessions/new")
+  match "/user_record" => redirect {|params, req| "/user_feedbacks?search[user_id]=#{req.params[:user_id]}"}
 
   match "/wiki" => redirect {|params, req| "/wiki_pages?page=#{req.params[:page]}"}
   match "/wiki/index" => redirect {|params, req| "/wiki_pages?page=#{req.params[:page]}"}

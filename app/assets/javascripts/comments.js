@@ -6,6 +6,10 @@
       this.initialize_response_link();
       this.initialize_reply_links();
       this.initialize_expand_links();
+
+      if (!$("#a-edit").length) {
+        this.initialize_edit_links();
+      }
     }
 
     if ($("#c-posts").length && $("#a-show").length) {
@@ -15,7 +19,7 @@
 
   Danbooru.Comment.quote_message = function(data) {
     var stripped_body = data["body"].replace(/\[quote\](?:.|\n|\r)+?\[\/quote\](?:\r\n|\r|\n)*/gm, "");
-    return "[quote]\n" + data["creator_name"] + " said:\n" + stripped_body + "\n[/quote]\n\n";
+    return "[quote]\n" + data["creator_name"] + " said:\n\n" + stripped_body + "\n[/quote]\n\n";
   }
 
   Danbooru.Comment.quote = function(e) {
@@ -23,8 +27,8 @@
       "/comments/" + $(e.target).data('comment-id') + ".json",
       function(data) {
         var $link = $(e.target);
-        var $div = $link.closest("div.comments-for-post");
-        var $textarea = $div.find("textarea")
+        var $div = $link.closest("div.comments-for-post").find(".new-comment");
+        var $textarea = $div.find("textarea");
         var msg = Danbooru.Comment.quote_message(data);
         if ($textarea.val().length > 0) {
           msg = $textarea.val() + "\n\n" + msg;
@@ -63,6 +67,16 @@
     $("div.new-comment form").hide();
   }
 
+  Danbooru.Comment.initialize_edit_links = function() {
+    $(".edit_comment").hide();
+    $(".edit_comment_link").click(function(e) {
+      var link_id = $(this).attr("id");
+      var comment_id = link_id.match(/^edit_comment_link_(\d+)$/)[1];
+      $("#edit_comment_" + comment_id).fadeToggle("fast");
+      e.preventDefault();
+    });
+  }
+
   Danbooru.Comment.highlight_threshold_comments = function(post_id) {
     var threshold = parseInt(Danbooru.meta("user-comment-threshold"));
     var articles = $("article.comment[data-post-id=" + post_id + "]");
@@ -71,7 +85,7 @@
       if (parseInt($comment.data("score")) < threshold) {
         $comment.addClass("below-threshold");
       }
-    })
+    });
   }
 
   Danbooru.Comment.hide_threshold_comments = function(post_id) {
@@ -82,7 +96,7 @@
       if (parseInt($comment.data("score")) < threshold) {
         $comment.hide();
       }
-    })
+    });
   }
 })();
 

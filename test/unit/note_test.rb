@@ -34,7 +34,25 @@ class NoteTest < ActiveSupport::TestCase
 
     context "creating a note" do
       setup do
-        @post = FactoryGirl.create(:post)
+        @post = FactoryGirl.create(:post, :image_width => 1000, :image_height => 1000)
+      end
+
+      should "not validate if the note is outside the image" do
+        @note = FactoryGirl.build(:note, :x => 1001, :y => 500, :post => @post)
+        @note.save
+        assert_equal(["Note must be inside the image"], @note.errors.full_messages)
+      end
+
+      should "not validate if the note is larger than the image" do
+        @note = FactoryGirl.build(:note, :x => 500, :y => 500, :height => 501, :width => 500, :post => @post)
+        @note.save
+        assert_equal(["Note must be inside the image"], @note.errors.full_messages)
+      end
+
+      should "not validate if the post does not exist" do
+        @note = FactoryGirl.build(:note, :x => 500, :y => 500, :post_id => -1)
+        @note.save
+        assert_equal(["Post must exist"], @note.errors.full_messages)
       end
 
       should "create a version" do
@@ -72,7 +90,7 @@ class NoteTest < ActiveSupport::TestCase
 
     context "updating a note" do
       setup do
-        @post = FactoryGirl.create(:post)
+        @post = FactoryGirl.create(:post, :image_width => 1000, :image_height => 1000)
         @note = FactoryGirl.create(:note, :post => @post)
       end
 
@@ -84,7 +102,7 @@ class NoteTest < ActiveSupport::TestCase
 
       should "update the post's last_noted_at field" do
         assert_nil(@post.last_noted_at)
-        @note.update_attributes(:x => 1000)
+        @note.update_attributes(:x => 500)
         @post.reload
         assert_equal(@post.last_noted_at.to_i, @note.updated_at.to_i)
       end
@@ -105,7 +123,7 @@ class NoteTest < ActiveSupport::TestCase
         end
 
         should "fail" do
-          @note.update_attributes(:x => 1000)
+          @note.update_attributes(:x => 500)
           assert_equal(["Post is note locked"], @note.errors.full_messages)
         end
       end
@@ -114,9 +132,9 @@ class NoteTest < ActiveSupport::TestCase
     context "when notes have been vandalized by one user" do
       setup do
         @vandal = FactoryGirl.create(:user)
-        @note = FactoryGirl.create(:note, :x => 100, :y => 100)
+        @note = FactoryGirl.create(:note, :x => 5, :y => 5)
         CurrentUser.scoped(@vandal, "127.0.0.1") do
-          @note.update_attributes(:x => 2000, :y => 2000)
+          @note.update_attributes(:x => 10, :y => 10)
         end
       end
 
@@ -124,8 +142,8 @@ class NoteTest < ActiveSupport::TestCase
         should "revert any affected notes" do
           Note.undo_changes_by_user(@vandal.id)
           @note.reload
-          assert_equal(100, @note.x)
-          assert_equal(100, @note.y)
+          assert_equal(5, @note.x)
+          assert_equal(5, @note.y)
         end
       end
     end

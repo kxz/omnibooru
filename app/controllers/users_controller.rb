@@ -15,10 +15,15 @@ class UsersController < ApplicationController
   end
 
   def index
-    @users = User.search(params[:search]).order("users.id desc").paginate(params[:page], :search_count => params[:search])
-    respond_with(@users) do |format|
-      format.xml do
-        render :xml => @users.to_xml(:root => "users")
+    if params[:name].present?
+      @user = User.find_by_name(params[:name])
+      redirect_to user_path(@user)
+    else
+      @users = User.search(params[:search]).order("users.id desc").paginate(params[:page], :limit => params[:limit], :search_count => params[:search])
+      respond_with(@users) do |format|
+        format.xml do
+          render :xml => @users.to_xml(:root => "users")
+        end
       end
     end
   end
@@ -46,6 +51,8 @@ class UsersController < ApplicationController
     check_privilege(@user)
     sanitize_params!
     @user.update_attributes(params[:user], :as => CurrentUser.role)
+    cookies.delete(:favorite_tags)
+    cookies.delete(:favorite_tags_with_categories)
     respond_with(@user)
   end
 

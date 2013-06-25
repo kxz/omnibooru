@@ -1,6 +1,7 @@
 class ArtistsController < ApplicationController
   respond_to :html, :xml, :json
   before_filter :member_only, :except => [:index, :show, :banned]
+  before_filter :builder_only, :only => [:edit_name, :update_name, :destroy]
   before_filter :admin_only, :only => [:ban]
 
   def new
@@ -10,6 +11,17 @@ class ArtistsController < ApplicationController
 
   def edit
     @artist = Artist.find(params[:id])
+    respond_with(@artist)
+  end
+
+  def edit_name
+    @artist = Artist.find(params[:id])
+    respond_with(@artist)
+  end
+
+  def update_name
+    @artist = Artist.find(params[:id])
+    @artist.rename!(params[:artist][:name])
     respond_with(@artist)
   end
 
@@ -32,7 +44,8 @@ class ArtistsController < ApplicationController
   end
 
   def index
-    @artists = Artist.search(params[:search] || params).order("id desc").paginate(params[:page])
+    search_params = params[:search].present? ? params[:search] : params
+    @artists = Artist.search(search_params).order("id desc").paginate(params[:page], :limit => params[:limit])
     respond_with(@artists) do |format|
       format.xml do
         render :xml => @artists.to_xml(:include => [:urls], :root => "artists")
@@ -68,6 +81,24 @@ class ArtistsController < ApplicationController
     @artist = Artist.find(params[:id])
     @artist.update_attributes(params[:artist], :as => CurrentUser.role)
     respond_with(@artist)
+  end
+
+  def destroy
+    @artist = Artist.find(params[:id])
+    if !@artist.deletable_by?(CurrentUser.user)
+      raise User::PrivilegeError
+    end
+    @artist.update_attribute(:is_active, false)
+    redirect_to(artist_path(@artist), :notice => "Artist deleted")
+  end
+
+  def undelete
+    @artist = Artist.find(params[:id])
+    if !@artist.deletable_by?(CurrentUser.user)
+      raise User::PrivilegeError
+    end
+    @artist.update_attribute(:is_active, true)
+    redirect_to(artist_path(@artist), :notice => "Artist undeleted")
   end
 
   def revert

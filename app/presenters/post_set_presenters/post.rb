@@ -23,16 +23,7 @@ module PostSetPresenters
     end
 
     def popular_tags
-      n = 1
-      results = []
-
-      while results.empty? && n < 256
-        query = n.days.ago.strftime("date:>%Y-%m-%d")
-        results = RelatedTagCalculator.calculate_from_sample_to_array(query).map(&:first)
-        n *= 2
-      end
-
-      results
+      Tag.trending
     end
 
     def pattern_tags
@@ -44,7 +35,7 @@ module PostSetPresenters
     end
 
     def related_tags_for_single
-      tag = Tag.find_by_name(post_set.tag_string)
+      tag = Tag.find_by_name(post_set.tag_string.downcase)
 
       if tag
         tag.related_tag_array.map(&:first)

@@ -1,6 +1,7 @@
 class Tag < ActiveRecord::Base
-  METATAGS = "-user|user|-approver|approver|commenter|comm|noter|-pool|pool|-fav|fav|sub|md5|-rating|rating|-locked|locked|width|height|mpixels|score|favcount|filesize|source|id|-id|date|age|order|-status|status|tagcount|gentags|arttags|chartags|copytags|parent|-parent|pixiv_id|pixiv"
-  attr_accessible :category
+  METATAGS = "-user|user|-approver|approver|commenter|comm|noter|-pool|pool|-fav|fav|sub|md5|-rating|rating|-locked|locked|width|height|mpixels|score|favcount|filesize|source|-source|id|-id|date|age|order|-status|status|tagcount|gentags|arttags|chartags|copytags|parent|-parent|pixiv_id|pixiv"
+  attr_accessible :category, :as => [:moderator, :janitor, :contributor, :gold, :member, :anonymous, :default, :builder, :admin]
+  attr_accessible :is_locked, :as => [:moderator, :janitor, :admin]
   has_one :wiki_page, :foreign_key => "name", :primary_key => "title"
 
   module ApiMethods
@@ -66,20 +67,21 @@ class Tag < ActiveRecord::Base
         select_value_sql("SELECT category FROM tags WHERE name = ?", tag_name).to_i
       end
 
-      def category_for(tag_name)
-        Cache.get("tc:#{Cache.sanitize(tag_name)}") do
+      def category_for(tag_name, options = {})
+        if options[:disable_caching]
           select_category_for(tag_name)
+        else
+          Cache.get("tc:#{Cache.sanitize(tag_name)}") do
+            select_category_for(tag_name)
+          end
         end
       end
 
-      def categories_for(tag_names)
+      def categories_for(tag_names, options = {})
         Array(tag_names).inject({}) do |hash, tag_name|
-          hash[tag_name] = category_for(tag_name)
+          hash[tag_name] = category_for(tag_name, options)
           hash
         end
-        # Cache.get_multi(tag_names, "tc") do |name|
-        #   select_category_for(name)
-        # end
       end
     end
 
@@ -104,11 +106,7 @@ class Tag < ActiveRecord::Base
         Post.raw_tag_match(name).find_each do |post|
           post.reload
           post.set_tag_counts
-          post.update_column(:tag_count, post.tag_count)
-          post.update_column(:tag_count_general, post.tag_count_general)
-          post.update_column(:tag_count_artist, post.tag_count_artist)
-          post.update_column(:tag_count_copyright, post.tag_count_copyright)
-          post.update_column(:tag_count_character, post.tag_count_character)
+          Post.update_all({:tag_count => post.tag_count, :tag_count_general => post.tag_count_general, :tag_count_artist => post.tag_count_artist, :tag_count_copyright => post.tag_count_copyright, :tag_count_character => post.tag_count_character}, {:id => post.id})
         end
       end
     end
@@ -120,7 +118,25 @@ class Tag < ActiveRecord::Base
 
   module StatisticsMethods
     def trending
-      raise NotImplementedError
+      Cache.get("popular-tags", 1.hour) do
+        CurrentUser.scoped(User.admins.first, "127.0.0.1") do
+          n = 1
+          results = []
+
+          while results.empty? && n < 256
+            query = n.days.ago.strftime("date:>%Y-%m-%d")
+            results = RelatedTagCalculator.calculate_from_sample_to_array(query)
+            n *= 2
+          end
+
+          results.map! do |tag_name, recent_count|
+            tag = Tag.find_or_create_by_name(tag_name)
+            [tag_name, recent_count.to_f / tag.post_count.to_f]
+          end
+
+          results.sort_by! {|x| -x[1]}.map(&:first)
+        end
+      end
     end
   end
 
@@ -144,7 +160,7 @@ class Tag < ActiveRecord::Base
         if category
           category_id = categories.value_for(category)
 
-          if category_id != tag.category && (CurrentUser.is_builder? || tag.post_count <= 50)
+          if category_id != tag.category && !tag.is_locked? && (CurrentUser.is_builder? || tag.post_count <= 50)
             tag.update_column(:category, category_id)
             tag.update_category_cache_for_all
           end
@@ -402,6 +418,9 @@ class Tag < ActiveRecord::Base
           when "source"
             q[:source] = ($2.to_escaped_for_sql_like + "%").gsub(/%+/, '%')
 
+          when "-source"
+            q[:source_neg] = ($2.to_escaped_for_sql_like + "%").gsub(/%+/, '%')
+
           when "date"
             q[:date] = parse_helper($2, :date)
 
@@ -547,11 +566,17 @@ class Tag < ActiveRecord::Base
       elsif params[:order] == "date"
         q = q.reorder("id desc")
 
+      elsif params[:order] == "count"
+        q = q.reorder("post_count desc")
+
       elsif params[:sort] == "date"
         q = q.reorder("id desc")
 
       elsif params[:sort] == "name"
         q = q.reorder("name")
+
+      elsif params[:sort] == "count"
+        q = q.reorder("post_count desc")
 
       else
         q = q.reorder("id desc")

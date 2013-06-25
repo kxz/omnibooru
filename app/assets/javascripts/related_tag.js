@@ -16,10 +16,10 @@
     this.common_bind("#related-copyrights-button", "copyright");
     $("#find-artist-button").click(Danbooru.RelatedTag.find_artist);
   }
-  
+
   Danbooru.RelatedTag.tags_include = function(name) {
-    var current = $("#upload_tag_string,#post_tag_string").val().match(/\S+/g) || [];
-    if ($.inArray(name, current) > -1) {
+    var current = $("#upload_tag_string,#post_tag_string").val().toLowerCase().match(/\S+/g) || [];
+    if ($.inArray(name.toLowerCase(), current) > -1) {
       return true;
     } else {
       return false;
@@ -47,10 +47,10 @@
     // 5. abc| def   -> abc
     // 6. ab|c def   -> abc
     // 7. |abc def   -> abc
-    // 8. | abc def  -> abc   -- not supported by this code but a pretty rare case
+    // 8. | abc def  -> abc
 
     var $field = $("#upload_tag_string,#post_tag_string");
-    var string = $field.val().trim();
+    var string = $field.val();
     var n = string.length;
     var a = $field.get(0).selectionStart;
     var b = $field.get(0).selectionStart;
@@ -59,6 +59,11 @@
       // 4 is the only case where we need to scan forward. in all other cases we
       // can drag a backwards, and then drag b forwards.
 
+      while ((b < n) && (!/\s/.test(string[b]))) {
+        b++;
+      }
+    } else if (string.search(/\S/) > b) { // case 8
+      b = string.search(/\S/);
       while ((b < n) && (!/\s/.test(string[b]))) {
         b++;
       }
@@ -100,13 +105,15 @@
     var $dest = $("#related-tags");
     $dest.empty();
 
-    if (Danbooru.Cookie.get("recent_tags")) {
-      $dest.append(Danbooru.RelatedTag.build_html("recent", Danbooru.RelatedTag.recent_tags()));
+    var recent_tags = Danbooru.Cookie.get("recent_tags_with_categories");
+    var favorite_tags = Danbooru.Cookie.get("favorite_tags_with_categories");
+    if (recent_tags.length) {
+      $dest.append(this.build_html("recent", this.other_tags(recent_tags)));
     }
-    if (Danbooru.RelatedTag.favorite_tags().length) {
-      $dest.append(Danbooru.RelatedTag.build_html("frequent", Danbooru.RelatedTag.favorite_tags()));
+    if (favorite_tags.length) {
+      $dest.append(this.build_html("frequent", this.other_tags(favorite_tags)));
     }
-    $dest.append(Danbooru.RelatedTag.build_html(query, related_tags));
+    $dest.append(this.build_html(query, related_tags));
     if (wiki_page_tags.length) {
       $dest.append(Danbooru.RelatedTag.build_html("wiki:" + query, wiki_page_tags));
     }
@@ -116,9 +123,14 @@
         tags.push([" none", 0]);
       } else if (Danbooru.RelatedTag.recent_artists.length === 1) {
         tags.push([Danbooru.RelatedTag.recent_artists[0].name, 1]);
+        if (Danbooru.RelatedTag.recent_artists[0].is_banned === true) {
+          tags.push(["BANNED_ARTIST", "banned"]);
+        }
         $.each(Danbooru.RelatedTag.recent_artists[0].urls, function(i, url) {
           tags.push([" " + url.url, 0]);
         });
+      } else if (Danbooru.RelatedTag.recent_artists.length >= 10) {
+        tags.push([" none", 0]);
       } else {
         $.each(Danbooru.RelatedTag.recent_artists, function(i, artist) {
           tags.push([artist.name, 1]);
@@ -128,22 +140,11 @@
     }
   }
 
-  Danbooru.RelatedTag.favorite_tags = function() {
-    var string = Danbooru.meta("favorite-tags");
-    if (string) {
-      return $.map(string.match(/\S+/g), function(x, i) {
-        return [[x, 0]];
-      });
-    } else {
-      return [];
-    }
-  }
-
-  Danbooru.RelatedTag.recent_tags = function() {
-    var string = Danbooru.Cookie.get("recent_tags");
+  Danbooru.RelatedTag.other_tags = function(string) {
     if (string && string.length) {
-      return $.map(string.match(/\S+/g), function(x, i) {
-        return [[x, 0]];
+      return $.map(string.match(/\S+ \d+/g), function(x, i) {
+        var submatch = x.match(/(\S+) (\d+)/);
+        return [[submatch[1], submatch[2]]];
       });
     } else {
       return [];
@@ -155,36 +156,43 @@
       return "";
     }
 
-    var current = $("#upload_tag_string,#post_tag_string").val().match(/\S+/g) || [];
+    query = query.replace(/_/g, " ");
+    var header = $("<em/>");
+
+    var match = query.match(/^wiki:(.+)/);
+    if (match) {
+      header.html($("<a/>").attr("href", "/wiki_pages?title=" + encodeURIComponent(match[1])).attr("target", "_blank").text(query));
+    } else {
+      header.text(query);
+    }
+
     var $div = $("<div/>");
-    $div.addClass("tag-column")
+    $div.addClass("tag-column");
     if (is_wide_column) {
       $div.addClass("wide-column");
     }
     var $ul = $("<ul/>");
     $ul.append(
       $("<li/>").append(
-        $("<em/>").html(
-          query.replace(/_/g, " ")
-        )
+        header
       )
     );
 
     $.each(related_tags, function(i, tag) {
       if (tag[0][0] !== " ") {
         var $link = $("<a/>");
-        $link.html(tag[0].replace(/_/g, " "));
+        $link.text(tag[0].replace(/_/g, " "));
         $link.addClass("tag-type-" + tag[1]);
         $link.attr("href", "/posts?tags=" + encodeURIComponent(tag[0]));
         $link.click(Danbooru.RelatedTag.toggle_tag);
-        if ($.inArray(tag[0], current) > -1) {
+        if (Danbooru.RelatedTag.tags_include(tag[0])) {
           $link.addClass("selected");
         }
         $ul.append(
           $("<li/>").append($link)
         );
       } else {
-        $ul.append($("<li/>").html(tag[0]));
+        $ul.append($("<li/>").text(tag[0]));
       }
     });
 
@@ -194,10 +202,9 @@
 
   Danbooru.RelatedTag.toggle_tag = function(e) {
     var $field = $("#upload_tag_string,#post_tag_string");
-    var tags = $field.val().match(/\S+/g) || [];
     var tag = $(e.target).html().replace(/ /g, "_").replace(/&gt;/g, ">").replace(/&lt;/g, "<").replace(/&amp;/g, "&");
 
-    if ($.inArray(tag, tags) > -1) {
+    if (Danbooru.RelatedTag.tags_include(tag)) {
       var escaped_tag = Danbooru.regexp_escape(tag);
       $field.val($field.val().replace(new RegExp("(^|\\s)" + escaped_tag + "($|\\s)", "gi"), "$1$2"));
     } else {
@@ -210,6 +217,11 @@
     if (Danbooru.RelatedTag.recent_artist && $("#artist-tags-container").css("display") === "block") {
       Danbooru.RelatedTag.process_artist(Danbooru.RelatedTag.recent_artist);
     }
+
+    if ($(window).scrollTop() <= $field.offset().top + $field.outerHeight()) {
+      $field.focus();
+    }
+
     e.preventDefault();
   }
 

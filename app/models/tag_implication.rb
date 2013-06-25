@@ -1,6 +1,7 @@
 class TagImplication < ActiveRecord::Base
   before_save :update_descendant_names
   after_save :update_descendant_names_for_parent
+  after_destroy :update_descendant_names_for_parent
   belongs_to :creator, :class_name => "User"
   before_validation :initialize_creator, :on => :create
   before_validation :normalize_names
@@ -90,6 +91,10 @@ class TagImplication < ActiveRecord::Base
         q = q.where("antecedent_name = ?", params[:antecedent_name])
       end
 
+      if params[:consequent_name].present?
+        q = q.where("consequent_name = ?", params[:consequent_name])
+      end
+
       q
     end
   end
@@ -105,7 +110,7 @@ class TagImplication < ActiveRecord::Base
 
   def process!
     update_column(:status, "processing")
-    update_posts
+    update_posts_for_create
     update_column(:status, "active")
     update_descendant_names_for_parent
   rescue Exception => e
@@ -120,12 +125,11 @@ class TagImplication < ActiveRecord::Base
     end
   end
 
-  def update_posts
+  def update_posts_for_create
     Post.tag_match("#{antecedent_name} status:any").find_each do |post|
       escaped_antecedent_name = Regexp.escape(antecedent_name)
       fixed_tags = post.tag_string.sub(/(?:\A| )#{escaped_antecedent_name}(?:\Z| )/, " #{antecedent_name} #{descendant_names} ").strip
       CurrentUser.scoped(creator, creator_ip_addr) do
-        post.disable_versioning = true
         post.update_attributes(
           :tag_string => fixed_tags
         )

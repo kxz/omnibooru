@@ -3,7 +3,16 @@
     <h1>Tag: <%= @tag.name %></h1>
 
     <%= simple_form_for(@tag) do |f| %>
-      <%= f.input :category, :collection => Danbooru.config.canonical_tag_category_mapping.to_a, :include_blank => false %>
+      <% if @tag.is_locked? %>
+        <p>This tag is category locked</p>
+      <% else %>
+        <%= f.input :category, :collection => Danbooru.config.canonical_tag_category_mapping.to_a, :include_blank => false %>
+      <% end %>
+
+      <% if CurrentUser.user.is_janitor? %>
+        <%= f.input :is_locked, :collection => [["No", "false"], ["Yes", "true"]], :include_blank => false %>
+      <% end %>
+
       <%= f.button :submit, "Submit" %>
     <% end %>
   </div>

@@ -117,7 +117,7 @@ class TagAlias < ActiveRecord::Base
   end
 
   def ensure_category_consistency
-    if antecedent_tag.category != consequent_tag.category
+    if antecedent_tag.category != consequent_tag.category && antecedent_tag.category != Tag.categories.general
       consequent_tag.update_attribute(:category, antecedent_tag.category)
       consequent_tag.update_category_cache_for_all
     end
@@ -130,7 +130,6 @@ class TagAlias < ActiveRecord::Base
       escaped_antecedent_name = Regexp.escape(antecedent_name)
       fixed_tags = post.tag_string.sub(/(?:\A| )#{escaped_antecedent_name}(?:\Z| )/, " #{consequent_name} ").strip
       CurrentUser.scoped(creator, creator_ip_addr) do
-        post.disable_versioning = true
         post.update_attributes(
           :tag_string => fixed_tags
         )
@@ -146,8 +145,7 @@ class TagAlias < ActiveRecord::Base
     if antecedent_wiki.present? && WikiPage.titled(consequent_name).blank?
       CurrentUser.scoped(creator, creator_ip_addr) do
         antecedent_wiki.update_attributes(
-          :title => consequent_name,
-          :body => "[i]This page was automatically renamed from [[#{antecedent_name}]] by a tag alias.[/i]\n\n#{antecedent_wiki.body}"
+          :title => consequent_name
         )
       end
     end
