@@ -111,7 +111,7 @@ class Post < ActiveRecord::Base
       if Danbooru.config.ssd_path
         "/ssd/data/preview/#{file_path_prefix}#{md5}.jpg"
       else
-        "/data/preview/#{file_path_prefix}#{md5}.jpg"
+        "/booru/data/preview/#{file_path_prefix}#{md5}.jpg"
       end
     end
 
@@ -1097,7 +1097,7 @@ class Post < ActiveRecord::Base
       q
     end
   end
-  
+
   module PixivMethods
     def parse_pixiv_id
       if source =~ %r!http://i\d\.pixiv\.net/img-inf/img/\d+/\d+/\d+/\d+/\d+/\d+/(\d+)_s.jpg!
@@ -1113,7 +1113,7 @@ class Post < ActiveRecord::Base
       end
     end
   end
-  
+
   include FileMethods
   include ImageMethods
   include ApprovalMethods

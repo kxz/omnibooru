@@ -350,3 +350,7 @@ Danbooru::Application.routes.draw do
 
   root :to => "posts#index"
 end
+
+# SCRIPT_NAME hack for Rails < 4.0
+# <https://github.com/rails/rails/issues/6933#issuecomment-7654247>
+Rails.application.routes.default_url_options[:script_name] = '/booru'
