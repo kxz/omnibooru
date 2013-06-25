@@ -308,7 +308,7 @@ class User < ActiveRecord::Base
 
       when Levels::ADMIN
         "Admin"
-        
+
       else
         ""
       end
@@ -359,12 +359,12 @@ class User < ActiveRecord::Base
         ModAction.create(:description => %{"#{name}":/users/#{id} level changed #{level_string(level_was)} -> #{level_string}})
       end
     end
-    
+
     def set_per_page
       if per_page.nil? || !is_gold?
         self.per_page = Danbooru.config.posts_per_page
       end
-      
+
       return true
     end
 
@@ -415,19 +415,13 @@ class User < ActiveRecord::Base
     def can_upload?
       if is_contributor?
         true
-      elsif created_at > 1.week.ago
-        false
       else
         upload_limit > 0
       end
     end
 
     def upload_limited_reason
-      if created_at > 1.week.ago
-        "cannot upload during your first week of registration"
-      else
-        "can not upload until your pending posts have been approved"
-      end
+      "can not upload until your pending posts have been approved"
     end
 
     def can_comment?
@@ -451,7 +445,7 @@ class User < ActiveRecord::Base
     end
 
     def can_remove_from_pools?
-      created_at <= 1.week.ago
+      true
     end
 
     def upload_limit
@@ -491,7 +485,7 @@ class User < ActiveRecord::Base
         10_000
       end
     end
-    
+
     def api_hourly_limit
       if is_platinum?
         20_000
@@ -501,7 +495,7 @@ class User < ActiveRecord::Base
         3_000
       end
     end
-    
+
     def statement_timeout
       if is_platinum?
         9_000
@@ -637,7 +631,7 @@ class User < ActiveRecord::Base
       if params[:id].present?
         q = q.where("id in (?)", params[:id].split(",").map(&:to_i))
       end
-      
+
       case params[:order]
       when "name"
         q = q.order("name")
