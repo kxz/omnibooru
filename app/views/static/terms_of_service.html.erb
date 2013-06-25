@@ -1,37 +1,19 @@
 <div id="terms-of-service">
   <div class="section">
     <h1>Rules</h1>
-    
+
     <p>Please read the following before using the site:</p>
-    
+
     <ul>
-      <li>Danbooru reserves the right to delete or modify your account, or any content you have posted to the site.</li>
-      <li>You will make a best faith effort to upload only high quality anime-related images.</li>
-      <li>You have read the <%= link_to "tagging guidelines", wiki_pages_path(:title => "help:tags") %>.</li>
+      <li><%= Danbooru.config.app_name %> reserves the right to delete or modify your account, or any content you have posted to the site.</li>
+      <li>You will make a best faith effort to upload only high quality images.</li>
+      <li>You have read the <%= link_to "tagging guidelines", wiki_pages_path(:title => "howto:tag") %>.</li>
     </ul>
 
     <div class="section">
       <h6>Post/Comment Limiting</h6>
-      <p>You cannot upload a post or comment during the first week of signing up.</p>
-      <p>After the initial period, you can post up to one comment an hour and a variable number of posts based on how many of your previous uploads were approved or deleted.</p>
+      <p>You can post up to <%= Danbooru.config.member_comment_limit %> comments an hour and a variable number of posts based on how many of your previous uploads were approved or deleted.</p>
     </div>
-
-    <div class="section">
-      <h6>Prohibited Content</h6>
-      <p>In addition, you may not upload any of the following:</p>
-      <ul>
-        <li>Non-anime: Photographs of American porn actresses, for example, are prohibited. Photographs of cosplayers, figures, or prominent figures in the industry are acceptable.</li>
-        <li>Furry: Any image or movie where a person's skin is made of fur or scales.</li>
-        <li>Watermarked: Any image where a person who is not the original copyright owner has placed a watermark on the image.</li>
-        <li>Poorly compressed: Any image where compression artifacts are easily visible.</li>
-        <li>Grotesque: Any depiction of extreme mutilation, extreme bodily distension, feces, or bodies that are far outside the realm of normal human proportion (for example, breasts that are larger than three heads in size or penises that are larger than two heads in size).</li>
-        <li>Manga: Uploading entire manga or doujinshi chapters is discouraged. Individual pages can be uploaded if they meet the quality criterion.</li>
-        <li>Nude Filter: Images that have been edited by someone other than the original creator to remove clothing or censorship. These typically feature crude drawings of breasts or genitalia laid on top of the original image.</li>
-        <li>Fake translations: Images that have false translations are not allowed in any case.</li>
-        <li>Hard translations: Images that have been edited to replace the original language are discouraged.</li>
-      </ul>
-    </div>
-  </div>
 
   <div class="section">
     <h4>Copyright Infringement</h4>
@@ -47,10 +29,10 @@
   <div class="section">
     <h4>Privacy Policy</h4>
 
-    <p>Danbooru will not disclose the IP address, email address, password, or DMails of any user except to the staff.</p>
-    <p>Danbooru is allowed to make public everything else, including but not limited to: uploaded posts, favorited posts, comments, forum posts, wiki edits, and note edits.</p>
+    <p><%= Danbooru.config.app_name %> will not disclose the IP address, email address, password, or DMails of any user except to the staff.</p>
+    <p><%= Danbooru.config.app_name %> is allowed to make public everything else, including but not limited to: uploaded posts, favorited posts, comments, forum posts, wiki edits, and note edits.</p>
   </div>
-  
+
   <%= form_tag(accept_terms_of_service_path) do %>
     <%= hidden_field_tag :url, params[:url] %>
     <%= submit_tag "I have read and agree to these rules" %>
