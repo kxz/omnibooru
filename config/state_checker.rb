@@ -7,7 +7,7 @@ class StateChecker
 private
 
   def secret_token_path
-    File.expand_path("~/.danbooru/secret_token")
+    File.expand_path("#{Rails.root}/config/secret_token")
   end
 
   def check_secret_token
@@ -21,7 +21,7 @@ private
   end
 
   def session_secret_key_path
-    File.expand_path("~/.danbooru/session_secret_key")
+    File.expand_path("#{Rails.root}/config/session_secret_key")
   end
 
   def check_session_secret_key
