@@ -1,11 +1,11 @@
 class IntroPresenter
   def popular_tags
-    Tag.where("category in (3, 4)").order("post_count desc").limit(8).map(&:name)
+    Tag.where("category = 3").order("post_count desc").limit(12).map(&:name)
   end
 
   def each
     popular_tags.each do |tag|
-      yield(tag, PostSets::Post.new(tag, 1, 6))
+      yield(tag, PostSets::Intro.new(tag))
     end
   end
 end
