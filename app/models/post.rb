@@ -92,12 +92,12 @@ class Post < ActiveRecord::Base
     end
 
     def file_url
-      "/data/#{file_path_prefix}#{md5}.#{file_ext}"
+      "/booru/data/#{file_path_prefix}#{md5}.#{file_ext}"
     end
 
     def large_file_url
       if has_large?
-        "/data/sample/#{file_path_prefix}#{Danbooru.config.large_image_prefix}#{md5}.jpg"
+        "/booru/data/sample/#{file_path_prefix}#{Danbooru.config.large_image_prefix}#{md5}.jpg"
       else
         file_url
       end
@@ -105,7 +105,7 @@ class Post < ActiveRecord::Base
 
     def preview_file_url
       if !is_image?
-        return "/images/download-preview.png"
+        return "/booru/images/download-preview.png"
       end
 
       if Danbooru.config.ssd_path
