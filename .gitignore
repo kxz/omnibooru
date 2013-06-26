@@ -6,6 +6,7 @@ config/session_secret_key
 db/*.sqlite3
 log/*.log
 tmp/*
+public/assets
 public/data
 vendor/cache/*.gem
 .sass-cache
