@@ -103,7 +103,7 @@ private
       if categories[tag] == Tag.categories.artist
         html << %{<a class="wiki-link" href="#{url.show_or_new_artists_path :name => tag}">?</a> }
       else
-        html << %{<a class="wiki-link" href="#{url.show_or_new_wiki_pages_path :name => tag}">?</a> }
+        html << %{<a class="wiki-link" href="#{url.show_or_new_wiki_pages_path :title => tag}">?</a> }
       end
 
       if CurrentUser.user.is_gold? && current_query.present?
