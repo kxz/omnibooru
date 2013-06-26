@@ -9,7 +9,8 @@
     var date = new Date();
     date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
     var expires = "; expires=" + date.toGMTString();
-    document.cookie = name + "=" + encodeURIComponent(value) + expires + "; path=/";
+    var secure = (window.location.protocol == "https:" ? "; secure" : "");
+    document.cookie = name + "=" + encodeURIComponent(value) + expires + secure + "; path=/";
   }
 
   Danbooru.Cookie.raw_get = function(name) {
