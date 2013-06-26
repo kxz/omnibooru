@@ -120,7 +120,10 @@ module ApplicationHelper
 
 protected
   def nav_link_match(controller, url)
-    url =~ case controller
+    unprefixed_url = url.clone
+    # root_path has a trailing slash, which we don't want to slice out.
+    unprefixed_url.slice!(Danbooru::Application.routes.url_helpers.root_path.chop)
+    unprefixed_url =~ case controller
     when "sessions", "users", "maintenance/user/login_reminders", "maintenance/user/password_resets", "admin/users", "tag_subscriptions"
       /^\/(session|users)/
 
