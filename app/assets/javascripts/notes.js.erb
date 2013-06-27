@@ -433,7 +433,7 @@ Danbooru.Note = {
       $this.dialog("close");
 
       if (id.match(/\d/)) {
-        $.ajax("/notes/" + id + ".js", {
+        $.ajax("<%= Danbooru::Application.routes.url_helpers.notes_path %>/" + id + ".js", {
           type: "DELETE"
         });
       }
