@@ -55,7 +55,6 @@
         <% if CurrentUser.is_member? && Danbooru.config.can_user_see_post?(CurrentUser.user, @post) %>
           <li><a href="#edit" id="post-edit-link">Edit</a></li>
         <% end %>
-        <li><a href="#share">Share</a></li>
       </menu>
 
       <section id="comments">
@@ -71,10 +70,6 @@
           <%= render "posts/partials/show/edit", :post => @post %>
         </section>
       <% end %>
-
-      <section id="share" style="display: none;">
-        <%= render "posts/partials/show/share", :post => @post %>
-      </section>
     </section>
   </div>
 

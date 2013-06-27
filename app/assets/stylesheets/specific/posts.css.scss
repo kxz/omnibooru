@@ -53,7 +53,7 @@ a.blacklisted-active {
 #has-parent-relationship-preview, #has-children-relationship-preview {
   overflow-x: auto;
   white-space: nowrap;
-  
+
   article.post-preview {
     float: none;
     width: auto;
@@ -234,10 +234,6 @@ div#c-posts {
       li {
         padding: 0 1em 0 0;
       }
-
-      div.share a {
-        margin: 0;
-      }
     }
 
     div.notices {
@@ -307,7 +303,7 @@ div#c-posts {
       right: 5px;
       cursor: pointer;
     }
-    
+
     div.comments-for-post {
       width:100%
     }
