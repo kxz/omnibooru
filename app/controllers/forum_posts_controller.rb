@@ -1,7 +1,6 @@
 class ForumPostsController < ApplicationController
   respond_to :html, :xml, :json, :js
   before_filter :member_only, :except => [:index, :show]
-  rescue_from User::PrivilegeError, :with => "static/access_denied"
 
   def new
     @forum_topic = ForumTopic.find(params[:topic_id]) if params[:topic_id]
@@ -35,7 +34,7 @@ class ForumPostsController < ApplicationController
   def show
     @forum_post = ForumPost.find(params[:id])
     if request.format == "text/html" && @forum_post.id == @forum_post.topic.original_post.id
-      redirect_to(forum_topic_path(@forum_post.topic))
+      redirect_to(forum_topic_path(@forum_post.topic, :page => params[:page]))
     else
       respond_with(@forum_post)
     end

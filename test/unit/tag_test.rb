@@ -14,6 +14,24 @@ class TagTest < ActiveSupport::TestCase
     CurrentUser.ip_addr = nil
   end
 
+  context ".trending" do
+    setup do
+      Tag.stubs(:trending_count_limit).returns(0)
+
+      Timecop.travel(1.week.ago) do
+        FactoryGirl.create(:post, :tag_string => "aaa")
+        FactoryGirl.create(:post, :tag_string => "bbb")
+      end
+
+      FactoryGirl.create(:post, :tag_string => "bbb")
+      FactoryGirl.create(:post, :tag_string => "ccc")
+    end
+
+    should "order the results by the total post count" do
+      assert_equal(["ccc", "bbb"], Tag.trending)
+    end
+  end
+
   context "A tag category fetcher" do
     setup do
       MEMCACHE.flush_all

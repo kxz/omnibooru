@@ -81,6 +81,9 @@ Danbooru::Application.routes.draw do
       get :search
       get :index_all
     end
+    member do
+      put :unvote
+    end
   end
   resources :counts do
     collection do
@@ -155,6 +158,7 @@ Danbooru::Application.routes.draw do
       put :revert
       put :copy_notes
       get :show_seq
+      put :unvote
     end
   end
   resources :post_appeals
@@ -273,7 +277,7 @@ Danbooru::Application.routes.draw do
 
   match "/forum" => redirect {|params, req| "/booru/forum_topics?page=#{req.params[:page]}"}
   match "/forum/index" => redirect {|params, req| "/booru/forum_topics?page=#{req.params[:page]}"}
-  match "/forum/show/:id" => redirect("/booru/forum_posts/%{id}")
+  match "/forum/show/:id" => redirect {|params, req| "/booru/forum_posts/#{req.params[:id]}?page=#{req.params[:page]}"}
   match "/forum/search" => redirect("/booru/forum_posts/search")
   match "/forum/new" => redirect("/booru/forum_posts/new")
   match "/forum/edit/:id" => redirect("/booru/forum_posts/%{id}/edit")
@@ -335,7 +339,7 @@ Danbooru::Application.routes.draw do
   match "/wiki/revert" => redirect("/booru/wiki_pages")
   match "/wiki/rename" => redirect("/booru/wiki_pages")
   match "/wiki/show" => redirect {|params, req| "/booru/wiki_pages?title=#{CGI::escape(req.params[:title].to_s)}"}
-  match "/wiki/recent_changes" => redirect("/booru/wiki_page_versions")
+  match "/wiki/recent_changes" => redirect {|params, req| "/booru/wiki_page_versions?search[updater_id]=#{req.params[:user_id]}"}
   match "/wiki/history/:title" => redirect("/booru/wiki_page_versions?title=%{title}")
 
   match "/static/keyboard_shortcuts" => "static#keyboard_shortcuts", :as => "keyboard_shortcuts"

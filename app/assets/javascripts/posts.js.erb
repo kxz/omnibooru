@@ -47,6 +47,7 @@
     );
 
     $fields.autocomplete({
+      delay: 100,
       focus: function() {
         return false;
       },
@@ -71,7 +72,7 @@
         }
 
         var term = before_caret_text.match(/\S+/g).pop();
-        var prefixes = /^(?:-|~|general:|gen:|artist:|art:|copyright:|copy:|co:|character:|char:|ch:)(.*)$/
+        var prefixes = /^(?:-|~|general:|gen:|artist:|art:|copyright:|copy:|co:|character:|char:|ch:)(.*)$/;
         var match = term.match(prefixes);
         if (match) {
           term = match[1];
@@ -93,7 +94,8 @@
               return {
                 label: tag.name.replace(/_/g, " "),
                 value: tag.name,
-                category: tag.category
+                category: tag.category,
+                post_count: tag.post_count
               };
             }));
           }
@@ -113,8 +115,19 @@
 
     var render_tag = function(list, tag) {
       var $link = $("<a/>").addClass("tag-type-" + tag.category).text(tag.label);
+
+      var count;
+      if (tag.post_count > 1000) {
+        count = Math.floor(tag.post_count / 1000) + "k";
+      } else {
+        count = tag.post_count;
+      }
+      var $post_count = $("<span/>").addClass("post-count").css("float", "right").text(count);
+      $link.append($post_count);
+
       return $("<li/>").data("item.autocomplete", tag).append($link).appendTo(list);
-    }
+    };
+
     $fields.each(function(i, field) {
       $(field).data("uiAutocomplete")._renderItem = render_tag;
     });
@@ -219,6 +232,8 @@
 
       e.preventDefault();
     });
+
+    $(".unvote-post-link").hide();
   }
 
   Danbooru.Post.initialize_post_relationship_previews = function() {

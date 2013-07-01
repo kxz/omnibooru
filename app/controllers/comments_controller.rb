@@ -1,7 +1,6 @@
 class CommentsController < ApplicationController
   respond_to :html, :xml, :json
   before_filter :member_only, :only => [:update, :create, :edit, :destroy]
-  rescue_from User::PrivilegeError, :with => "static/access_denied"
   rescue_from ActiveRecord::StatementInvalid, :with => :search_error
 
   def index
@@ -63,6 +62,13 @@ class CommentsController < ApplicationController
     end
   end
 
+  def unvote
+    @comment = Comment.find(params[:id])
+    @comment.unvote!
+  rescue CommentVote::Error => x
+    @error = x
+  end
+
 private
   def index_for_post
     @post = Post.find(params[:post_id])
@@ -99,7 +105,6 @@ private
   end
 
 protected
-
   def search_error(e)
     if e.message =~ /syntax error in tsquery/
       @error_message = "Meta-tags are not supported in comment searches by tag"

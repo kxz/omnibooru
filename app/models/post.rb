@@ -294,11 +294,7 @@ class Post < ActiveRecord::Base
       if source =~ /pixiv\.net\/img/
         img_id = source[/(\d+)(_s|_m|(_big)?_p\d+)?\.[\w\?]+\s*$/, 1]
 
-        if $2 =~ /_p/
-          "http://www.pixiv.net/member_illust.php?mode=manga&illust_id=#{img_id}"
-        else
-          "http://www.pixiv.net/member_illust.php?mode=medium&illust_id=#{img_id}"
-        end
+        "http://www.pixiv.net/member_illust.php?mode=medium&illust_id=#{img_id}"
       else
         source
       end
@@ -652,6 +648,24 @@ class Post < ActiveRecord::Base
         raise PostVote::Error.new("You have already voted for this post")
       end
     end
+
+    def unvote!
+      if can_be_voted_by?(CurrentUser.user)
+        raise PostVote::Error.new("You have not voted for this post")
+      else
+        vote = votes.where("user_id = ?", CurrentUser.user.id).first
+
+        if vote.score == 1
+          Post.update_all("score = score - 1, up_score = up_score - 1", {:id => id})
+          self.score -= 1
+        else
+          Post.update_all("score = score + 1, down_score = down_score + 1", {:id => id})
+          self.score += 1
+        end
+
+        vote.destroy
+      end
+    end
   end
 
   module CountMethods
@@ -875,7 +889,11 @@ class Post < ActiveRecord::Base
         update_column(:is_banned, true) if options[:ban] || has_tag?("banned_artist")
 
         unless options[:without_mod_action]
-          ModAction.create(:description => "deleted post ##{id}")
+          if options[:reason]
+            ModAction.create(:description => "deleted post ##{id}, reason: #{options[:reason]}")
+          else
+            ModAction.create(:description => "deleted post ##{id}")
+          end
         end
       end
     end

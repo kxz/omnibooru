@@ -117,24 +117,34 @@ class Tag < ActiveRecord::Base
   end
 
   module StatisticsMethods
-    def trending
-      Cache.get("popular-tags", 1.hour) do
-        CurrentUser.scoped(User.admins.first, "127.0.0.1") do
-          n = 1
-          results = []
+    def trending_count_limit
+      10
+    end
 
-          while results.empty? && n < 256
-            query = n.days.ago.strftime("date:>%Y-%m-%d")
-            results = RelatedTagCalculator.calculate_from_sample_to_array(query)
+    def trending
+      Cache.get("popular-tags-v3", 1.hour) do
+        CurrentUser.scoped(User.admins.first, "127.0.0.1") do
+          n = 8
+          counts = {}
+
+          while counts.empty? && n < 256
+            tag_strings = Post.select_values_sql("select tag_string from posts where created_at >= ?", n.hours.ago)
+            tag_strings.each do |tag_string|
+              tag_string.scan(/\S+/).each do |tag|
+                counts[tag] ||= 0
+                counts[tag] += 1
+              end
+            end
             n *= 2
           end
 
-          results.map! do |tag_name, recent_count|
+          counts = counts.to_a.select {|x| x[1] > trending_count_limit}
+          counts = counts.map do |tag_name, recent_count|
             tag = Tag.find_or_create_by_name(tag_name)
             [tag_name, recent_count.to_f / tag.post_count.to_f]
           end
 
-          results.sort_by! {|x| -x[1]}.map(&:first)
+          counts.sort_by {|x| -x[1]}.slice(0, 25).map(&:first)
         end
       end
     end
