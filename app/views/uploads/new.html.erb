@@ -60,7 +60,7 @@
       <% if CurrentUser.is_contributor? %>
         <div class="input">
           <label for="upload_as_pending">
-            <%= f.check_box :as_pending %>
+            <%= f.check_box :as_pending, :checked => true %>
             Upload for approval
           </label>
         </div>
