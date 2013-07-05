@@ -154,6 +154,9 @@ Danbooru::Application.routes.draw do
   resources :pool_versions, :only => [:index]
   resources :posts do
     resources :votes, :controller => "post_votes", :only => [:create, :destroy]
+    collection do
+      get :home
+    end
     member do
       put :revert
       put :copy_notes
