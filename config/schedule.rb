@@ -1,4 +1,4 @@
-set :output, "/var/log/whenever.log"
+set :output, "log/whenever.log"
 
 every 1.hour do
   runner "UploadErrorChecker.new.check!"
