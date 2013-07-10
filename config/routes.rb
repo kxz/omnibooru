@@ -287,9 +287,9 @@ Danbooru::Application.routes.draw do
 
   match "/help/:title" => redirect {|params, req| ("/booru/wiki_pages?title=#{CGI::escape('help:' + req.params[:title])}")}
 
-  match "/note" => redirect {|params, req| "/booru/notes?page=#{req.params[:page]}"}
-  match "/note/index" => redirect {|params, req| "/booru/notes?page=#{req.params[:page]}"}
-  match "/note/history" => redirect("/booru/note_versions")
+  match "/note" => redirect {|params, req| "/notes?page=#{req.params[:page]}"}
+  match "/note/index" => redirect {|params, req| "/notes?page=#{req.params[:page]}"}
+  match "/note/history" => redirect {|params, req| "/booru/note_versions?search[updater_id]=#{req.params[:user_id]}"}
 
   match "/pool" => redirect {|params, req| "/booru/pools?page=#{req.params[:page]}"}
   match "/pool/index" => redirect {|params, req| "/booru/pools?page=#{req.params[:page]}"}
@@ -312,6 +312,7 @@ Danbooru::Application.routes.draw do
   match "/post/popular_by_month" => redirect("/booru/explore/posts/popular")
   match "/post/show/:id/:tag_title" => redirect("/booru/posts/%{id}")
   match "/post/show/:id" => redirect("/booru/posts/%{id}")
+  match "/post/show" => redirect {|params, req| "/booru/posts?md5=#{req.params[:md5]}"}
   match "/post/view/:id/:tag_title" => redirect("/booru/posts/%{id}")
   match "/post/view/:id" => redirect("/booru/posts/%{id}")
   match "/post/flag/:id" => redirect("/booru/posts/%{id}")

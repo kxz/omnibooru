@@ -17,7 +17,7 @@
     }
 
     if ($("#c-posts").length && $("#a-index").length) {
-      this.initialize_wiki_page_excerpt();
+      this.initialize_excerpt();
     }
 
     if ($("#c-posts").length && $("#a-show").length) {
@@ -36,8 +36,10 @@
   }
 
   Danbooru.Post.initialize_tag_autocomplete = function() {
-    var $fields = $(
-      "#tags,#post_tag_string,#upload_tag_string,#tag-script-field," +
+    var $fields_multiple = $(
+      "#tags,#post_tag_string,#upload_tag_string,#tag-script-field"
+    );
+    var $fields_single = $(
       "#search_post_tags_match,#c-tags #search_name_matches,#c-tag-aliases #query,#c-tag-implications #query," +
       "#wiki_page_title,#artist_name," +
       "#tag_alias_request_antecedent_name,#tag_alias_request_consequent_name," +
@@ -46,7 +48,9 @@
       "#tag_implication_antecedent_name,#tag_implication_consequent_name"
     );
 
-    $fields.autocomplete({
+    var prefixes = "-|~|general:|gen:|artist:|art:|copyright:|copy:|co:|character:|char:|ch:";
+
+    $fields_multiple.autocomplete({
       delay: 100,
       focus: function() {
         return false;
@@ -55,7 +59,8 @@
         var before_caret_text = this.value.substring(0, this.selectionStart);
         var after_caret_text = this.value.substring(this.selectionStart);
 
-        this.value = before_caret_text.replace(/\S+\s*$/g, ui.item.value + " ");
+        var regexp = new RegExp("(" + prefixes + ")?\\S+$", "g");
+        this.value = before_caret_text.replace(regexp, "$1" + ui.item.value + " ");
 
         // Preserve original caret position to prevent it from jumping to the end
         var original_start = this.selectionStart;
@@ -68,12 +73,13 @@
         var before_caret_text = req.term.substring(0, this.element.get(0).selectionStart);
 
         if (before_caret_text.match(/ $/)) {
+          this.close();
           return;
         }
 
         var term = before_caret_text.match(/\S+/g).pop();
-        var prefixes = /^(?:-|~|general:|gen:|artist:|art:|copyright:|copy:|co:|character:|char:|ch:)(.*)$/;
-        var match = term.match(prefixes);
+        var regexp = new RegExp("^(?:" + prefixes + ")(.*)$");
+        var match = term.match(regexp);
         if (match) {
           term = match[1];
         }
@@ -103,14 +109,39 @@
       }
     });
 
-    $fields.on("autocompleteselect", function() {
+    $fields_multiple.on("autocompleteselect", function() {
       Danbooru.autocompleting = true;
     });
 
-    $fields.on("autocompleteclose", function() {
+    $fields_multiple.on("autocompleteclose", function() {
       // this is needed otherwise the var is disabled by the time the
       // keydown is triggered
       setTimeout(function() {Danbooru.autocompleting = false;}, 100);
+    });
+
+    $fields_single.autocomplete({
+      minLength: 1,
+      source: function(req, resp) {
+        $.ajax({
+          url: "/tags.json",
+          data: {
+            "search[order]": "count",
+            "search[name_matches]": req.term + "*",
+            "limit": 10
+          },
+          method: "get",
+          success: function(data) {
+            resp($.map(data, function(tag) {
+              return {
+                label: tag.name.replace(/_/g, " "),
+                value: tag.name,
+                category: tag.category,
+                post_count: tag.post_count
+              };
+            }));
+          }
+        });
+      }
     });
 
     var render_tag = function(list, tag) {
@@ -128,7 +159,7 @@
       return $("<li/>").data("item.autocomplete", tag).append($link).appendTo(list);
     };
 
-    $fields.each(function(i, field) {
+    $.merge($fields_multiple, $fields_single).each(function(i, field) {
       $(field).data("uiAutocomplete")._renderItem = render_tag;
     });
   }
@@ -338,13 +369,16 @@
     $("#image-resize-link").click(function(e) {
       var $link = $(e.target);
       var $image = $("#image");
-      $image.removeAttr("src");
-      $image.attr("src", "https://www.google.com")
       $image.attr("src", $link.attr("href"));
+      $image.css("opacity", "0.25");
       $image.width($image.data("original-width"));
       $image.height($image.data("original-height"));        
+      $image.on("load", function() {
+        $image.css("opacity", "1");
+        $("#image-resize-notice").hide();
+      });
+      $("#image-resize-notice").html("Loading...");
       Danbooru.Note.Box.scale_all();
-      $("#image-resize-notice").hide();
       $image.data("scale_factor", 1);
       e.preventDefault();
     });
@@ -377,30 +411,30 @@
     });
   }
 
-  Danbooru.Post.initialize_wiki_page_excerpt = function() {
-    $("#wiki-page-excerpt").hide();
+  Danbooru.Post.initialize_excerpt = function() {
+    $("#excerpt").hide();
 
     $("#show-posts-link").click(function(e) {
       $("#show-posts-link").parent("li").addClass("active");
-      $("#show-wiki-excerpt-link").parent("li").removeClass("active");
+      $("#show-excerpt-link").parent("li").removeClass("active");
       $("#posts").show();
-      $("#wiki-page-excerpt").hide();
+      $("#excerpt").hide();
       e.preventDefault();
     });
 
-    $("#show-wiki-excerpt-link").click(function(e) {
+    $("#show-excerpt-link").click(function(e) {
       if ($(this).parent("li").hasClass("active")) {
         return;
       }
       $("#show-posts-link").parent("li").removeClass("active");
-      $("#show-wiki-excerpt-link").parent("li").addClass("active");
+      $("#show-excerpt-link").parent("li").addClass("active");
       $("#posts").hide();
-      $("#wiki-page-excerpt").show();
+      $("#excerpt").show();
       e.preventDefault();
     });
 
     if (/Nobody here but us chickens/.test($("#posts").html()) && !/Deleted posts/.test($("#related-box").html())) {
-      $("#show-wiki-excerpt-link").click();
+      $("#show-excerpt-link").click();
     }
   }
 
