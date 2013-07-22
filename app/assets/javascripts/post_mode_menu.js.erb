@@ -19,7 +19,10 @@
       $("#mode-box select").val(Danbooru.Cookie.get("mode"));
     }
 
-    $("#mode-box select").change(Danbooru.PostModeMenu.change);
+    $("#mode-box select").change(function(e) {
+      Danbooru.PostModeMenu.change();
+      $("#tag-script-field:visible").focus().select();
+    });
   }
 
   Danbooru.PostModeMenu.initialize_preview_link = function() {
@@ -29,7 +32,7 @@
   Danbooru.PostModeMenu.initialize_edit_form = function() {
     $("#quick-edit-div").hide();
     $("#quick-edit-form input[value=Cancel]").click(function(e) {
-      $("#quick-edit-div").slideUp("fast");
+      Danbooru.PostModeMenu.close_edit_form();
       e.preventDefault();
     });
 
@@ -46,12 +49,19 @@
           Danbooru.Post.update_data(data);
           $("#post_" + data.id).effect("shake", {distance: 5, times: 1}, 100);
           Danbooru.notice("Post #" + data.id + " updated");
-          $("#quick-edit-div").slideUp("fast");
+          Danbooru.PostModeMenu.close_edit_form();
         }
       });
 
       e.preventDefault();
     });
+  }
+
+  Danbooru.PostModeMenu.close_edit_form = function() {
+    $("#quick-edit-div").slideUp("fast");
+    if (Danbooru.meta("enable-auto-complete") === "true") {
+      $("#post_tag_string").data("uiAutocomplete").close();
+    }
   }
 
   Danbooru.PostModeMenu.initialize_tag_script_field = function() {
@@ -62,12 +72,12 @@
         Danbooru.Cookie.put("tag-script", script);
       } else {
         $("#mode-box select").val("view");
-        Danbooru.PostModeMenu.change(e);
+        Danbooru.PostModeMenu.change();
       }
     });
   }
 
-  Danbooru.PostModeMenu.change = function(e) {
+  Danbooru.PostModeMenu.change = function() {
     $("#quick-edit-div").slideUp("fast");
     var s = $("#mode-box select").val();
     if (s === undefined) {
@@ -81,7 +91,7 @@
     if (s === "tag-script") {
       var script = Danbooru.Cookie.get("tag-script");
 
-      $("#tag-script-field").val(script).show().focus().selectEnd();
+      $("#tag-script-field").val(script).show();
     } else {
       $("#tag-script-field").hide();
     }

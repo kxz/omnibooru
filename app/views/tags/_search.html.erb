@@ -21,10 +21,10 @@
       </tr>
 
       <tr>
-        <th><label for="search_sort">Sort</label></th>
+        <th><label for="search_order">Order</label></th>
         <td>
           <div class="input">
-            <%= select "search", "sort", %w(count date name), :selected => params[:search][:sort] %>
+            <%= select "search", "order", %w(count date name), :selected => params[:search][:order] %>
           </div>
         </td>
       </tr>
@@ -34,6 +34,15 @@
         <td>
           <div class="input">
             <%= select "search", "hide_empty", ["yes", "no"], :selected => params[:search][:hide_empty] %>
+          </div>
+        </td>
+      </tr>
+
+      <tr>
+        <th><label for="search_has_wiki">Has a Wiki Page</label></th>
+        <td>
+          <div class="input">
+            <%= select "search", "has_wiki", ["yes", "no"], :selected => params[:search][:has_wiki], :include_blank => true %>
           </div>
         </td>
       </tr>

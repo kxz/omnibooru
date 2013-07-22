@@ -2,7 +2,7 @@ require 'ostruct'
 
 class Pool < ActiveRecord::Base
   validates_uniqueness_of :name
-  validates_format_of :name, :with => /\A[^\s;,]+\Z/, :on => :create, :message => "cannot have whitespace, commas, or semicolons"
+  validates_format_of :name, :with => /\A[^\s,]+\Z/, :on => :create, :message => "cannot have whitespace or commas"
   validates_inclusion_of :category, :in => %w(series collection)
   belongs_to :creator, :class_name => "User"
   belongs_to :updater, :class_name => "User"
@@ -62,7 +62,8 @@ class Pool < ActiveRecord::Base
         q = q.where("is_active = false")
       end
 
-      case params[:sort]
+      params[:order] ||= params.delete(:sort)
+      case params[:order]
       when "name"
         q = q.order("name")
       when "created_at"
@@ -280,13 +281,17 @@ class Pool < ActiveRecord::Base
     if post_ids_changed? || name_changed? || description_changed? || is_active_changed? || is_deleted_changed? || category_changed? || force
       last_version = versions.last
 
-      if last_version && CurrentUser.ip_addr == last_version.updater_ip_addr && CurrentUser.id == last_version.updater_id
+      if last_version && CurrentUser.ip_addr == last_version.updater_ip_addr && CurrentUser.id == last_version.updater_id && last_version.created_at > 1.hour.ago
         last_version.update_column(:post_ids, post_ids)
         last_version.update_column(:name, name)
       else
         versions.create(:post_ids => post_ids, :name => name)
       end
     end
+  end
+
+  def last_page
+    (post_count / CurrentUser.user.per_page.to_f).ceil
   end
 
   def reload(options = {})

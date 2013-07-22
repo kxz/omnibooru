@@ -2,7 +2,7 @@ class Tag < ActiveRecord::Base
   METATAGS = "-user|user|-approver|approver|commenter|comm|noter|-pool|pool|-fav|fav|sub|md5|-rating|rating|-locked|locked|width|height|mpixels|score|favcount|filesize|source|-source|id|-id|date|age|order|-status|status|tagcount|gentags|arttags|chartags|copytags|parent|-parent|pixiv_id|pixiv"
   attr_accessible :category, :as => [:moderator, :janitor, :contributor, :gold, :member, :anonymous, :default, :builder, :admin]
   attr_accessible :is_locked, :as => [:moderator, :janitor, :admin]
-  has_one :wiki_page, :foreign_key => "name", :primary_key => "title"
+  has_one :wiki_page, :foreign_key => "title", :primary_key => "name"
 
   module ApiMethods
     def to_legacy_json
@@ -563,6 +563,10 @@ class Tag < ActiveRecord::Base
         q = q.name_matches(params[:name_matches].strip.tr(" ", "_"))
       end
 
+      if params[:name].present?
+        q = q.where("name in (?)", params[:name].split(","))
+      end
+
       if params[:category].present?
         q = q.where("category = ?", params[:category])
       end
@@ -571,28 +575,20 @@ class Tag < ActiveRecord::Base
         q = q.where("post_count > 0")
       end
 
-      if params[:limit].present?
-        q = q.limit(params[:limit].to_i)
+      if params[:has_wiki] == "yes"
+        q = q.joins(:wiki_page)
+      elsif params[:has_wiki] == "no"
+        q = q.joins("LEFT JOIN wiki_pages ON tags.name = wiki_pages.title").where("wiki_pages.title IS NULL")
       end
 
-      if params[:order] == "name"
+      params[:order] ||= params.delete(:sort)
+      case params[:order]
+      when "name"
         q = q.reorder("name")
-
-      elsif params[:order] == "date"
+      when "date"
         q = q.reorder("id desc")
-
-      elsif params[:order] == "count"
+      when "count"
         q = q.reorder("post_count desc")
-
-      elsif params[:sort] == "date"
-        q = q.reorder("id desc")
-
-      elsif params[:sort] == "name"
-        q = q.reorder("name")
-
-      elsif params[:sort] == "count"
-        q = q.reorder("post_count desc")
-
       else
         q = q.reorder("id desc")
       end

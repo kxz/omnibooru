@@ -226,7 +226,11 @@ class Artist < ActiveRecord::Base
     end
 
     def other_names_match(string)
-      where("other_names_index @@ to_tsquery('danbooru', E?)", Artist.normalize_name(string).to_escaped_for_tsquery)
+      if string =~ /\*/ && CurrentUser.user.is_builder?
+        where("other_names ILIKE ? ESCAPE E'\\\\'", string.to_escaped_for_sql_like)
+      else
+        where("other_names_index @@ to_tsquery('danbooru', E?)", Artist.normalize_name(string).to_escaped_for_tsquery)
+      end
     end
 
     def group_name_matches(name)
@@ -241,8 +245,12 @@ class Artist < ActiveRecord::Base
 
     def any_name_matches(name)
       stripped_name = normalize_name(name).to_escaped_for_sql_like
-      name_for_tsquery = normalize_name(name).to_escaped_for_tsquery
-      where("(name LIKE ? ESCAPE E'\\\\' OR other_names_index @@ to_tsquery('danbooru', E?))", stripped_name, name_for_tsquery)
+      if name =~ /\*/ && CurrentUser.user.is_builder?
+        where("(name LIKE ? ESCAPE E'\\\\' OR other_names LIKE ? ESCAPE E'\\\\')", stripped_name, stripped_name)
+      else
+        name_for_tsquery = normalize_name(name).to_escaped_for_tsquery
+        where("(name LIKE ? ESCAPE E'\\\\' OR other_names_index @@ to_tsquery('danbooru', E?))", stripped_name, name_for_tsquery)
+      end
     end
 
     def search(params)
@@ -272,7 +280,8 @@ class Artist < ActiveRecord::Base
         q = q.any_name_matches(params[:name])
       end
 
-      if params[:sort] == "name"
+      params[:order] ||= params.delete(:sort)
+      if params[:order] == "name"
         q = q.reorder("name")
       else
         q = q.reorder("id desc")

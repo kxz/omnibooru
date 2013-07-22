@@ -24,7 +24,11 @@ class WikiPage < ActiveRecord::Base
     end
 
     def body_matches(query)
-      where("body_index @@ plainto_tsquery(?)", query.to_escaped_for_tsquery_split)
+      if query =~ /\*/ && CurrentUser.user.is_builder?
+        where("body ILIKE ? ESCAPE E'\\\\'", query.to_escaped_for_sql_like)
+      else
+        where("body_index @@ plainto_tsquery(?)", query.to_escaped_for_tsquery_split)
+      end
     end
 
     def search(params = {})
@@ -47,9 +51,10 @@ class WikiPage < ActiveRecord::Base
         q = q.where("creator_id = (select _.id from users _ where lower(_.name) = ?)", params[:creator_name].tr(" ", "_").mb_chars.downcase)
       end
 
-      if params[:sort] == "time" || params[:sort] == "Date"
+      params[:order] ||= params.delete(:sort)
+      if params[:order] == "time" || params[:order] == "Date"
         q = q.order("updated_at desc")
-      elsif params[:sort] == "title"
+      elsif params[:order] == "title" || params[:order] == "Name"
         q = q.order("title")
       end
 

@@ -15,7 +15,7 @@ class TagImplication < ActiveRecord::Base
     module ClassMethods
       # assumes names are normalized
       def with_descendants(names)
-        (names + where("antecedent_name in (?) and status = ?", names, "active").map(&:descendant_names_array)).flatten.uniq
+        (names + where("antecedent_name in (?) and status in (?)", names, ["active", "processing"]).map(&:descendant_names_array)).flatten.uniq
       end
     end
 
@@ -26,7 +26,7 @@ class TagImplication < ActiveRecord::Base
 
           until children.empty?
             all.concat(children)
-            children = TagImplication.where("antecedent_name IN (?) and status = ?", children, "active").all.map(&:consequent_name)
+            children = TagImplication.where("antecedent_name IN (?) and status in (?)", children, ["active", "processing"]).all.map(&:consequent_name)
           end
         end.sort.uniq
       end
@@ -110,7 +110,7 @@ class TagImplication < ActiveRecord::Base
 
   def process!
     update_column(:status, "processing")
-    update_posts_for_create
+    update_posts
     update_column(:status, "active")
     update_descendant_names_for_parent
   rescue Exception => e
@@ -125,10 +125,9 @@ class TagImplication < ActiveRecord::Base
     end
   end
 
-  def update_posts_for_create
-    Post.tag_match("#{antecedent_name} status:any").find_each do |post|
-      escaped_antecedent_name = Regexp.escape(antecedent_name)
-      fixed_tags = post.tag_string.sub(/(?:\A| )#{escaped_antecedent_name}(?:\Z| )/, " #{antecedent_name} #{descendant_names} ").strip
+  def update_posts
+    Post.raw_tag_match(antecedent_name).find_each do |post|
+      fixed_tags = "#{post.tag_string} #{descendant_names}".strip
       CurrentUser.scoped(creator, creator_ip_addr) do
         post.update_attributes(
           :tag_string => fixed_tags
