@@ -126,12 +126,14 @@ class TagImplication < ActiveRecord::Base
   end
 
   def update_posts
-    Post.raw_tag_match(antecedent_name).find_each do |post|
-      fixed_tags = "#{post.tag_string} #{descendant_names}".strip
-      CurrentUser.scoped(creator, creator_ip_addr) do
-        post.update_attributes(
-          :tag_string => fixed_tags
-        )
+    CurrentUser.without_safe_mode do
+      Post.raw_tag_match(antecedent_name).find_each do |post|
+        fixed_tags = "#{post.tag_string} #{descendant_names}".strip
+        CurrentUser.scoped(creator, creator_ip_addr) do
+          post.update_attributes(
+            :tag_string => fixed_tags
+          )
+        end
       end
     end
   end
@@ -161,5 +163,12 @@ class TagImplication < ActiveRecord::Base
     super
     clear_parent_cache
     clear_descendants_cache
+  end
+
+  def deletable_by?(user)
+    return true if user.is_admin?
+    return true if is_pending? && user.is_janitor?
+    return true if is_pending? && user.id == creator_id
+    return false
   end
 end

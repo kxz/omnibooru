@@ -114,7 +114,6 @@ class PostQueryBuilder
 
     if CurrentUser.safe_mode?
       relation = relation.where(:rating => "s")
-      # relation = relation.where("created_at <= ?", 3.months.ago)
     end
 
     relation = add_range_relation(q[:post_id], "posts.id", relation)
@@ -156,7 +155,7 @@ class PostQueryBuilder
       relation = relation.where("posts.is_flagged = FALSE")
     elsif q[:status_neg] == "deleted"
       relation = relation.where("posts.is_deleted = FALSE")
-    elsif CurrentUser.user.hide_deleted_posts?
+    elsif CurrentUser.user.hide_deleted_posts? && !CurrentUser.admin_mode?
       relation = relation.where("posts.is_deleted = FALSE")
     end
 
@@ -277,8 +276,6 @@ class PostQueryBuilder
 
     if q[:order] == "rank"
       relation = relation.where("posts.score > 0 and posts.created_at >= ?", 2.days.ago)
-    elsif q[:order] == "rank2"
-      relation = relation.where("posts.fav_count > 0 and posts.created_at >= ?", 2.days.ago)
     elsif q[:order] == "landscape" || q[:order] == "portrait"
       relation = relation.where("posts.image_width IS NOT NULL and posts.image_height IS NOT NULL")
     end
@@ -336,9 +333,6 @@ class PostQueryBuilder
 
     when "rank"
       relation = relation.order("log(3, posts.score) + (extract(epoch from posts.created_at) - extract(epoch from timestamp '2005-05-24')) / 45000 DESC")
-
-    when "rank2"
-      relation = relation.order("log(3, posts.fav_count) + (extract(epoch from posts.created_at) - extract(epoch from timestamp '2005-05-24')) / 45000 DESC")
 
     else
       relation = relation.order("posts.id DESC")
