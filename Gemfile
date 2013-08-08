@@ -4,7 +4,7 @@ group :test do
   gem "shoulda"
   gem "factory_girl"
   gem "mocha", :require => "mocha/setup"
-  gem "ffaker", :git => "http://github.com/EmmanuelOga/ffaker.git"
+  gem "ffaker"
   gem "simplecov", :require => false
   gem "pry"
   gem "vcr"
@@ -20,14 +20,15 @@ end
 
 gem "rails", "3.2.12"
 gem "pg", "0.12.2"
-gem "memcache-client", :require => "memcache"
+gem "kgio"
+gem "dalli"
 gem "delayed_job"
 gem "delayed_job_active_record"
 gem "simple_form"
-gem "mechanize", :git => 'git://github.com/caribio/mechanize.git'
+gem "mechanize"
 gem "nokogiri"
 gem "whenever", :require => false
-gem "sanitize", :git => "git://github.com/rgrove/sanitize.git"
+gem "sanitize"
 gem 'rmagick', :require => "RMagick"
 gem 'daemons'
 gem 'net-ssh'
@@ -39,7 +40,7 @@ gem 'bcrypt-ruby', :require => "bcrypt"
 gem 'aws-s3', :require => "aws/s3"
 gem 'awesome_print'
 gem 'statistics2'
-gem 'ruby-imagespec', :require => "image_spec"
+gem 'ruby-imagespec', :require => "image_spec", :git => "https://github.com/r888888888/ruby-imagespec.git", :branch => "exif-fixes"
 
 group :production do
   gem 'unicorn', :platforms => :ruby

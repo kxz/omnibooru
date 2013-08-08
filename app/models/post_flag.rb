@@ -49,6 +49,15 @@ class PostFlag < ActiveRecord::Base
         q = q.unresolved
       end
 
+      case params[:category]
+      when "normal"
+        q = q.where("reason != ? and reason != ?", "Unapproved in three days", "Artist requested removal")
+      when "unapproved"
+        q = q.where("reason = ?", "Unapproved in three days")
+      when "banned"
+        q = q.where("reason = ?", "Artist requested removal")
+      end
+
       q
     end
   end
@@ -61,21 +70,19 @@ class PostFlag < ActiveRecord::Base
 
   def validate_creator_is_not_limited
     if CurrentUser.is_janitor?
-      false
-    elsif flag_count_for_creator >= 10
+      # do nothing
+    elsif creator.created_at > 1.week.ago
+      errors[:creator] << "cannot flag within the first week of sign up"
+    elsif creator.is_gold? && flag_count_for_creator >= 10
       errors[:creator] << "can flag 10 posts a day"
-      false
-    else
-      true
+    elsif !creator.is_gold? && flag_count_for_creator >= 1
+      errors[:creator] << "can flag 1 post a day"
     end
   end
 
   def validate_post_is_active
     if post.is_deleted?
       errors[:post] << "is deleted"
-      false
-    else
-      true
     end
   end
 

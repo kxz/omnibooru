@@ -40,7 +40,7 @@
 
       <%= render "posts/partials/show/notices", :post => @post %>
 
-      <section id="image-container" data-tags="<%= @post.tag_string %>" data-uploader="<%= @post.uploader_name %>" data-rating="<%= @post.rating %>" data-flags="<%= @post.status_flags %>">
+      <section id="image-container" <%= PostPresenter.data_attributes(@post) %>>
         <div id="note-container"></div>
         <div id="note-preview"></div>
         <%= @post.presenter.image_html(self) %>
@@ -58,6 +58,9 @@
       </menu>
 
       <section id="comments">
+        <% if !CurrentUser.user.is_builder? %>
+          <h2>Before commenting, read the <%= link_to "how to comment guide", wiki_pages_path(:search => {:title => "howto:comment"}) %>.</h2>
+        <% end %>
         <%= render "comments/partials/index/list", :comments => @post.comments.visible(CurrentUser.user), :post => @post, :show_header => false %>
       </section>
 
@@ -100,14 +103,14 @@
   <meta name="post-is-flagged" content="<%= @post.is_flagged? %>">
   <meta name="config-large-width" content="<%= Danbooru.config.large_image_width %>">
   <meta name="always-resize-images" content="<%= CurrentUser.user.always_resize_images? %>">
-  <meta property="og:title" content="<%= h @post.presenter.humanized_essential_tag_string %> - <%= Danbooru.config.app_name %>">
-  <meta property="og:description" content="<%= h @post.presenter.humanized_tag_string %>">
+  <meta property="og:title" content="<%= @post.presenter.humanized_essential_tag_string %> - <%= Danbooru.config.app_name %>">
+  <meta property="og:description" content="<%= @post.presenter.humanized_tag_string %>">
   <meta property="og:image" content="<%= @post.preview_file_url %>">
 
   <!-- Twitter properties -->
   <% if @post.twitter_card_supported? %>
     <meta name="twitter:card" content="photo">
-    <meta name="twitter:image:src" content="http://<%= Danbooru.config.hostname %><%= @post.file_url %>">
+    <meta name="twitter:image:src" content="http://<%= Danbooru.config.hostname %><%= @post.large_file_url %>">
     <meta name="twitter:image:width" content="<%= @post.image_width %>">
     <meta name="twitter:image:height" content="<%= @post.image_height %>">
   <% end %>
