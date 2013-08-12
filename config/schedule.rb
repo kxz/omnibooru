@@ -5,8 +5,8 @@ every 1.day do
 end
 
 every 1.day, :at => "1:00 am" do
-  command "cd /srv/danbooru2/current ; script/donmai/backup_db"
-  command "cd /srv/danbooru2/current ; script/donmai/prune_backup_dbs"
+  script "donmai/backup_db"
+  script "donmai/prune_backup_dbs"
   command "psql --set statement_timeout=0 -c \"vacuum analyze;\" danbooru2"
 end
 
