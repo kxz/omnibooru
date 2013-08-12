@@ -33,7 +33,6 @@ gem 'rmagick', :require => "RMagick"
 gem 'daemons'
 gem 'net-ssh'
 gem 'net-sftp'
-gem 'newrelic_rpm'
 gem 'term-ansicolor', :require => "term/ansicolor"
 gem 'diff-lcs', :require => "diff/lcs/array"
 gem 'bcrypt-ruby', :require => "bcrypt"

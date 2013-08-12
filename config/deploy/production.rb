@@ -1,2 +1,1 @@
-server "sonohara.donmai.us", :web, :app, :db, :primary => true
-server "hijiribe.donmai.us", :web, :app
+server "room208.org", :web, :app, :db, :primary => true

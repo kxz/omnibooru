@@ -1,78 +1,80 @@
-set :stages, %w(production staging)
-set :default_stage, "staging"
+set :stages, %w(production)
+set :default_stage, "production"
 set :unicorn_env, defer {stage}
 require 'capistrano/ext/multistage'
 
+require 'capistrano-unicorn'
+set :unicorn_user, "danbooru"
+
 require 'bundler/capistrano'
-set :bundle_flags, "--deployment --quiet --binstubs --shebang ruby-local-exec"
+set :bundle_cmd, "/usr/local/rbenv/shims/bundle"
+set :bundle_flags, "--deployment --binstubs"
 
 set :default_environment, {
-  "PATH" => '$HOME/.rbenv/shims:$HOME/.rbenv/bin:$PATH'
+  "PATH" => '/usr/local/rbenv/shims:/usr/local/rbenv/bin:$PATH'
 }
 
-set :whenever_command, "bundle exec whenever"
+set :application, "omnibooru"
+set :repository, "git://github.com/kxz/omnibooru.git"
+set :scm, :git
+
+set :deploy_to, "/srv/danbooru2"
+set :deploy_via, :remote_cache
+set :use_sudo, false
+set :rake, defer {"#{sudo :as => unicorn_user} #{bundle_cmd} exec rake"}
+set :asset_env, "RAILS_RELATIVE_URL_ROOT=/booru RAILS_GROUPS=assets"
+set :shared_children, %w(public/system log tmp/pids tmp/sockets)
+
+set :whenever_command, defer {"#{sudo :as => unicorn_user} #{bundle_cmd} exec whenever"}
 set :whenever_environment, defer {stage}
 require 'whenever/capistrano'
-
-set :application, "danbooru"
-set :repository,  "git://github.com/r888888888/danbooru.git"
-set :scm, :git
-set :user, "albert"
-set :deploy_to, "/var/www/danbooru2"
-
-require 'capistrano-unicorn'
 
 default_run_options[:pty] = true
 
 namespace :local_config do
   desc "Create the shared config directory"
   task :setup_shared_directory do
-    run "mkdir -p #{deploy_to}/shared/config"
+    run "mkdir -p #{shared_path}/config"
   end
 
   desc "Initialize local config files"
   task :setup_local_files do
-    run "curl -s https://raw.github.com/r888888888/danbooru/master/script/install/danbooru_local_config.rb.templ > #{deploy_to}/shared/config/danbooru_local_config.rb"
-    run "curl -s https://raw.github.com/r888888888/danbooru/master/script/install/database.yml.templ > #{deploy_to}/shared/config/database.yml"
+    run "curl -s https://raw.github.com/r888888888/danbooru/master/script/install/danbooru_local_config.rb.templ > #{shared_path}/config/danbooru_local_config.rb"
+    run "curl -s https://raw.github.com/r888888888/danbooru/master/script/install/database.yml.templ > #{shared_path}/config/database.yml"
   end
 
   desc "Link the local config files"
   task :link_local_files do
-    run "ln -s #{deploy_to}/shared/config/danbooru_local_config.rb #{release_path}/config/danbooru_local_config.rb"
-    run "ln -s #{deploy_to}/shared/config/database.yml #{release_path}/config/database.yml"
-    run "ln -s #{deploy_to}/shared/config/newrelic.yml #{release_path}/config/newrelic.yml"
+    %w(danbooru_local_config.rb database.yml secret_token session_secret_key).map do |file|
+      run "ln -s #{shared_path}/config/#{file} #{release_path}/config/#{file}"
+    end
   end
 end
 
 namespace :data do
   task :setup_directories do
-    run "mkdir -p #{deploy_to}/shared/data"
-    run "mkdir #{deploy_to}/shared/data/preview"
-    run "mkdir #{deploy_to}/shared/data/sample"
+    run "mkdir -p #{shared_path}/data"
+    run "mkdir #{shared_path}/data/preview"
+    run "mkdir #{shared_path}/data/sample"
   end
 
   task :link_directories do
     run "rm -f #{release_path}/public/data"
-    run "ln -s #{deploy_to}/shared/data #{release_path}/public/data"
+    run "ln -s #{shared_path}/data #{release_path}/public/data"
 
     run "rm -f #{release_path}/public/ssd"
     run "ln -s /mnt/ssd#{deploy_to}/current/public #{release_path}/public/ssd"
 
     run "rm -f #{release_path}/public/images/advertisements"
-    run "ln -s #{deploy_to}/shared/advertisements #{release_path}/public/images/advertisements"
+    run "ln -s #{shared_path}/advertisements #{release_path}/public/images/advertisements"
 
     run "mkdir -p #{release_path}/public/cache"
-    run "mkdir -p #{deploy_to}/shared/system/cache"
-    run "touch #{deploy_to}/shared/system/cache/tags.json"
-    run "ln -s #{deploy_to}/shared/system/cache/tags.json #{release_path}/public/cache/tags.json" 
-    run "touch #{deploy_to}/shared/system/cache/tags.json.gz"
-    run "ln -s #{deploy_to}/shared/system/cache/tags.json.gz #{release_path}/public/cache/tags.json.gz"
+    run "mkdir -p #{shared_path}/system/cache"
+    run "touch #{shared_path}/system/cache/tags.json"
+    run "ln -s #{shared_path}/system/cache/tags.json #{release_path}/public/cache/tags.json"
+    run "touch #{shared_path}/system/cache/tags.json.gz"
+    run "ln -s #{shared_path}/system/cache/tags.json.gz #{release_path}/public/cache/tags.json.gz"
   end
-end
-
-desc "Change ownership of common directory to user"
-task :reset_ownership_of_common_directory do
-  sudo "chown -R #{user}:#{user} #{deploy_to}"
 end
 
 namespace :deploy do
@@ -93,30 +95,40 @@ namespace :deploy do
   namespace :nginx do
     desc "Shut down Nginx"
     task :stop do
-      sudo "/etc/init.d/nginx stop"
+      run "#{sudo} /etc/init.d/nginx stop"
     end
 
     desc "Start Nginx"
     task :start do
-      sudo "/etc/init.d/nginx start"
+      run "#{sudo} /etc/init.d/nginx start"
     end
   end
 
-  desc "Precompiles assets"
-  task :precompile_assets do
-    run "cd #{current_path}; bundle exec rake assets:precompile"
+  namespace :assets do
+    desc "Sets asset permissions"
+    task :set_permissions do
+      run "#{sudo} chmod -R a+w #{shared_path}/#{shared_assets_prefix}"
+    end
+  end
+
+  desc "Sets release directory permissions"
+  task :set_permissions do
+    %w(. db/structure.sql log tmp).map do |path|
+      run "#{sudo} chown #{unicorn_user} #{release_path}/#{path}"
+      run "#{sudo} chmod g+w #{release_path}/#{path}"
+    end
   end
 end
 
 namespace :delayed_job do
   desc "Start delayed_job process"
   task :start, :roles => :app do
-    run "cd #{current_path}; RAILS_ENV=#{rails_env} bundle exec ruby script/delayed_job --queues=default,`hostname` start"
+    run "cd #{current_path}; #{sudo :as => unicorn_user} RAILS_ENV=#{rails_env} #{bundle_cmd} exec ruby script/delayed_job --queues=default,`hostname` start"
   end
 
   desc "Stop delayed_job process"
   task :stop, :roles => :app do
-    run "cd #{current_path}; RAILS_ENV=#{rails_env} bundle exec ruby script/delayed_job stop"
+    run "cd #{current_path}; #{sudo :as => unicorn_user} RAILS_ENV=#{rails_env} #{bundle_cmd} exec ruby script/delayed_job stop"
   end
 
   desc "Restart delayed_job process"
@@ -129,24 +141,24 @@ namespace :delayed_job do
     procs = capture("ps -A -o pid,command").split(/\r\n|\r|\n/).grep(/delayed_job/).map(&:to_i)
 
     if procs.any?
-      run "for i in #{procs.join(' ')} ; do kill -SIGTERM $i ; done"
+      run "for i in #{procs.join(' ')} ; do #{sudo :as => unicorn_user} kill -SIGTERM $i ; done"
     end
   end
 end
 
-after "deploy:setup", "reset_ownership_of_common_directory"
 after "deploy:setup", "local_config:setup_shared_directory"
 after "deploy:setup", "local_config:setup_local_files"
 after "deploy:setup", "data:setup_directories"
-after "deploy:create_symlink", "local_config:link_local_files"
 after "deploy:create_symlink", "data:link_directories"
 after "deploy:start", "delayed_job:start"
 after "deploy:stop", "delayed_job:stop"
 before "deploy:update", "deploy:web:disable"
-after "deploy:update", "delayed_job:restart"
+after "deploy:update_code", "local_config:link_local_files"
+after "deploy:update_code", "deploy:set_permissions"
+after "deploy:assets:precompile", "deploy:assets:set_permissions"
 after "deploy:update", "deploy:migrate"
+after "deploy:update", "delayed_job:restart"
 after "deploy:update", "unicorn:reload"
 after "deploy:update", "unicorn:restart"
-after "deploy:update", "deploy:precompile_assets"
 after "deploy:update", "deploy:web:enable"
 after "delayed_job:stop", "delayed_job:kill"
