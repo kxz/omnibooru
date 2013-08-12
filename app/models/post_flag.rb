@@ -36,7 +36,7 @@ class PostFlag < ActiveRecord::Base
       end
 
       if params[:creator_name].present?
-        q = q.where("creator_id = (select _.id from users _ where lower(_.name) = ?)", params[:creator_name].mb_chars.downcase)
+        q = q.where("creator_id = (select _.id from users _ where lower(_.name) = ?)", params[:creator_name].mb_chars.downcase.strip.tr(" ", "_"))
       end
 
       if params[:post_id].present?
@@ -51,9 +51,9 @@ class PostFlag < ActiveRecord::Base
 
       case params[:category]
       when "normal"
-        q = q.where("reason != ? and reason != ?", "Unapproved in three days", "Artist requested removal")
+        q = q.where("reason not in (?)", ["Unapproved in three days", "Unapproved in three days after returning to moderation queue", "Artist requested removal"])
       when "unapproved"
-        q = q.where("reason = ?", "Unapproved in three days")
+        q = q.where("reason in (?)", ["Unapproved in three days", "Unapproved in three days after returning to moderation queue"])
       when "banned"
         q = q.where("reason = ?", "Artist requested removal")
       end
