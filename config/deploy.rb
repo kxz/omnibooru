@@ -36,7 +36,7 @@ set :unicorn_env, defer {stage}
 set :unicorn_user, "danbooru"
 
 # Asset deployment
-set :rake, "#{sudo :as => unicorn_user} #{bundle_cmd} exec rake"
+set :rake, "#{sudo :as => unicorn_user} -E #{bundle_cmd} exec rake"
 set :asset_env, "RAILS_RELATIVE_URL_ROOT=/booru RAILS_GROUPS=assets"
 
 # delayed_job
