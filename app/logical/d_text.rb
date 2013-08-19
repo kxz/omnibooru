@@ -67,7 +67,7 @@ class DText
   def self.parse_post_links(str)
     str.gsub(/\{\{([^\}]+)\}\}/) do
       tags = CGI.unescapeHTML($1)
-      %{<a href="#{Danbooru::Application.routes.url_helpers.posts_path(:tag => tags)}">#{h(tags)}</a>}
+      %{<a href="#{Danbooru::Application.routes.url_helpers.posts_path(:tags => tags)}">#{h(tags)}</a>}
     end
   end
 
