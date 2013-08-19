@@ -105,6 +105,30 @@ class PostVersion < ActiveRecord::Base
     }
   end
 
+  def changes
+    @changes ||= diff(previous)
+  end
+
+  def added_tags
+    changes[:added_tags].join(" ")
+  end
+
+  def removed_tags
+    changes[:removed_tags].join(" ")
+  end
+
+  def obsolete_added_tags
+    changes[:obsolete_added_tags].join(" ")
+  end
+
+  def obsolete_removed_tags
+    changes[:obsolete_removed_tags].join(" ")
+  end
+
+  def unchanged_tags
+    changes[:unchanged_tags].join(" ")
+  end
+
   def previous
     PostVersion.where("post_id = ? and updated_at < ?", post_id, updated_at).order("updated_at desc").first
   end
@@ -121,6 +145,8 @@ class PostVersion < ActiveRecord::Base
     added.each do |tag|
       if tag =~ /^source:/
         post.source = ""
+      elsif tag =~ /^parent:/
+        post.parent_id = nil
       else
         escaped_tag = Regexp.escape(tag)
         post.tag_string = post.tag_string.sub(/(?:\A| )#{escaped_tag}(?:\Z| )/, " ").strip
@@ -138,5 +164,24 @@ class PostVersion < ActiveRecord::Base
   def undo!
     undo
     post.save!
+  end
+
+  def serializable_hash(options = {})
+    options ||= {}
+    options[:except] ||= []
+    options[:except] += hidden_attributes
+    unless options[:builder]
+      options[:methods] ||= []
+      options[:methods] += [:added_tags, :removed_tags, :obsolete_added_tags, :obsolete_removed_tags, :unchanged_tags]
+    end
+    hash = super(options)
+    hash
+  end
+
+  def to_xml(options = {}, &block)
+    options ||= {}
+    options[:methods] ||= []
+    options[:methods] += [:added_tags, :removed_tags, :obsolete_added_tags, :obsolete_removed_tags, :unchanged_tags]
+    super(options, &block)
   end
 end
