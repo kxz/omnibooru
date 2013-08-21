@@ -14,7 +14,7 @@
     <entry>
       <title><%= post.presenter.humanized_essential_tag_string %></title>
       <link href="<%= post_path post.id, :only_path => false %>" rel="alternate"/>
-      <% if post.source =~ /^http/ %>
+      <% if post.source =~ %r{\Ahttps?://} %>
         <link href="<%= post.source %>" rel="related"/>
       <% end %>
       <id><%= url_for :controller => :posts, :action => :show, :id => post.id, :only_path => false %></id>
