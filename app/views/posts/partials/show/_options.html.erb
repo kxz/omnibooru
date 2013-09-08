@@ -9,7 +9,7 @@
   <% else %>
     <li><%= link_to "Add notes", "#", :id => "translate", :title => "Shortcut is N" %></li>
   <% end %>
-  <% if CurrentUser.is_builder? %>
+  <% if CurrentUser.is_builder? && post.has_notes? %>
     <li><%= link_to "Copy all notes", "#", :id => "copy-notes" %></li>
   <% end %>
   <li><%= link_to "Similar images on IQDB", "http://iqdb.org/db-search.php?url=" + URI::join(root_path(:only_path => false), post.preview_file_url).to_s %></li>

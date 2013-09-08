@@ -3,13 +3,13 @@ class Post < ActiveRecord::Base
   class DisapprovalError < Exception ; end
   class SearchError < Exception ; end
 
-  attr_accessor :old_tag_string, :old_parent_id, :has_constraints, :disable_versioning
+  attr_accessor :old_tag_string, :old_parent_id, :old_source, :old_rating, :has_constraints, :disable_versioning
   after_destroy :delete_files
   after_destroy :delete_remote_files
   after_save :create_version
   after_save :update_parent_on_save
   after_save :apply_post_metatags, :on => :create
-  before_save :merge_old_tags
+  before_save :merge_old_changes
   before_save :normalize_tags
   before_save :create_tags
   before_save :update_tag_post_counts
@@ -31,9 +31,10 @@ class Post < ActiveRecord::Base
   has_many :comments, :order => "comments.id", :dependent => :destroy
   has_many :children, :class_name => "Post", :foreign_key => "parent_id", :order => "posts.id"
   has_many :disapprovals, :class_name => "PostDisapproval", :dependent => :destroy
+  has_many :favorites
   validates_uniqueness_of :md5
   validate :post_is_not_its_own_parent
-  attr_accessible :source, :rating, :tag_string, :old_tag_string, :last_noted_at, :parent_id, :as => [:member, :builder, :gold, :platinum, :contributor, :janitor, :moderator, :admin, :default]
+  attr_accessible :source, :rating, :tag_string, :old_tag_string, :old_parent_id, :old_source, :old_rating, :last_noted_at, :parent_id, :as => [:member, :builder, :gold, :platinum, :contributor, :janitor, :moderator, :admin, :default]
   attr_accessible :is_rating_locked, :is_note_locked, :as => [:builder, :contributor, :janitor, :moderator, :admin]
   attr_accessible :is_status_locked, :as => [:admin]
 
@@ -363,7 +364,7 @@ class Post < ActiveRecord::Base
       end
     end
 
-    def merge_old_tags
+    def merge_old_changes
       if old_tag_string
         # If someone else committed changes to this post before we did,
         # then try to merge the tag changes together.
@@ -371,6 +372,23 @@ class Post < ActiveRecord::Base
         new_tags = tag_array()
         old_tags = Tag.scan_tags(old_tag_string)
         set_tag_string(((current_tags + new_tags) - old_tags + (current_tags & new_tags)).uniq.sort.join(" "))
+      end
+
+      if old_parent_id == ""
+        old_parent_id = nil
+      else
+        old_parent_id = old_parent_id.to_i
+      end
+      if old_parent_id == parent_id
+        self.parent_id = parent_id_was
+      end
+
+      if old_source == source.to_s
+        self.source = source_was
+      end
+
+      if old_rating == rating
+        self.rating = rating_was
       end
     end
 
@@ -972,8 +990,19 @@ class Post < ActiveRecord::Base
       last_noted_at.to_i
     end
 
+    def has_notes?
+      last_noted_at.present?
+    end
+
     def copy_notes_to(other_post)
-      return if notes.active.length == 0
+      if id == other_post.id
+        errors.add :base, "Source and destination posts are the same"
+        return false
+      end
+      unless has_notes?
+        errors.add :post, "has no notes"
+        return false
+      end
 
       notes.active.each do |note|
         note.copy_to(other_post)
@@ -1024,7 +1053,7 @@ class Post < ActiveRecord::Base
         "has_children" => has_children?,
         "created_at" => created_at.to_formatted_s(:db),
         "md5" => md5,
-        "has_notes" => last_noted_at.present?,
+        "has_notes" => has_notes?,
         "rating" => rating,
         "author" => uploader_name,
         "creator_id" => uploader_id,
