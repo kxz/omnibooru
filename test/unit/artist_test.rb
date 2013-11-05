@@ -14,30 +14,6 @@ class ArtistTest < ActiveSupport::TestCase
       CurrentUser.ip_addr = nil
     end
 
-    context "#rename!" do
-      setup do
-        @artist = FactoryGirl.create(:artist, :name => "aaa", :notes => "xxx")
-      end
-
-      should "rename the wiki page" do
-        wiki_page = @artist.wiki_page
-        @artist.rename!("bbb")
-        assert_equal("bbb", @artist.name)
-        wiki_page.reload
-        assert_equal("bbb", wiki_page.title)
-      end
-
-      should "merge the old wiki page into the new one if a wiki page for the new name already exists" do
-        FactoryGirl.create(:wiki_page, :title => "bbb", :body => "abcabc")
-        wiki_page = @artist.wiki_page
-        @artist.rename!("bbb")
-        wiki_page.reload
-        @artist.reload
-        assert_equal("xxx", wiki_page.body)
-        assert_equal("abcabc\n\nxxx", @artist.wiki_page.body)
-      end
-    end
-
     context "with a matching tag alias" do
       setup do
         @tag_alias = FactoryGirl.create(:tag_alias, :antecedent_name => "aaa", :consequent_name => "bbb")
@@ -206,9 +182,18 @@ class ArtistTest < ActiveSupport::TestCase
       assert_equal("yyy", artist.other_names)
     end
 
-    should "update the category of the tag" do
+    should "update the category of the tag when created" do
       tag = FactoryGirl.create(:tag, :name => "abc")
       artist = FactoryGirl.create(:artist, :name => "abc")
+      tag.reload
+      assert_equal(Tag.categories.artist, tag.category)
+    end
+
+    should "update the category of the tag when renamed" do
+      tag = FactoryGirl.create(:tag, :name => "def")
+      artist = FactoryGirl.create(:artist, :name => "abc")
+      artist.name = "def"
+      artist.save
       tag.reload
       assert_equal(Tag.categories.artist, tag.category)
     end

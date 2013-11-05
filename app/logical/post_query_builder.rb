@@ -190,6 +190,12 @@ class PostQueryBuilder
       end
     end
 
+    if q[:pool] == "none"
+      relation = relation.where("posts.pool_string = ''")
+    elsif q[:pool] == "any"
+      relation = relation.where("posts.pool_string != ''")
+    end
+
     if q[:subscriptions]
       relation = add_tag_subscription_relation(q[:subscriptions], relation)
       has_constraints!
@@ -238,6 +244,12 @@ class PostQueryBuilder
     elsif q[:parent]
       relation = relation.where("(posts.id = ? or posts.parent_id = ?)", q[:parent].to_i, q[:parent].to_i)
       has_constraints!
+    end
+
+    if q[:child] == "none"
+      relation = relation.where("posts.has_children = FALSE")
+    elsif q[:child] == "any"
+      relation = relation.where("posts.has_children = TRUE")
     end
 
     if q[:rating] =~ /^q/
