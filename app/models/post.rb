@@ -11,7 +11,6 @@ class Post < ActiveRecord::Base
   after_save :apply_post_metatags, :on => :create
   before_save :merge_old_changes
   before_save :normalize_tags
-  before_save :create_tags
   before_save :update_tag_post_counts
   before_save :set_tag_counts
   before_validation :strip_source
@@ -24,6 +23,7 @@ class Post < ActiveRecord::Base
   belongs_to :uploader, :class_name => "User"
   belongs_to :parent, :class_name => "Post"
   has_one :upload, :dependent => :destroy
+  has_one :artist_commentary
   has_many :flags, :class_name => "PostFlag", :dependent => :destroy
   has_many :appeals, :class_name => "PostAppeal", :dependent => :destroy
   has_many :versions, :class_name => "PostVersion", :dependent => :destroy, :order => "post_versions.id ASC"
@@ -313,6 +313,7 @@ class Post < ActiveRecord::Base
     end
 
     def create_tags
+      reset_tag_array_cache
       set_tag_string(tag_array.map {|x| Tag.find_or_create_by_name(x).name}.uniq.sort.join(" "))
     end
 
@@ -404,6 +405,7 @@ class Post < ActiveRecord::Base
     end
 
     def normalize_tags
+      create_tags
       normalized_tags = Tag.scan_tags(tag_string)
       normalized_tags = filter_metatags(normalized_tags)
       normalized_tags = normalized_tags.map{|tag| tag.downcase}
