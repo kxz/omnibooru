@@ -155,6 +155,10 @@ class PostQueryBuilder
       relation = relation.where("posts.is_flagged = FALSE")
     elsif q[:status_neg] == "deleted"
       relation = relation.where("posts.is_deleted = FALSE")
+    elsif q[:status_neg] == "banned"
+      relation = relation.where("posts.is_banned = FALSE")
+    elsif q[:status_neg] == "active"
+      relation = relation.where("posts.is_pending = TRUE OR posts.is_deleted = TRUE OR posts.is_banned = TRUE")
     elsif CurrentUser.user.hide_deleted_posts? && !CurrentUser.admin_mode?
       relation = relation.where("posts.is_deleted = FALSE")
     end
@@ -229,6 +233,13 @@ class PostQueryBuilder
     if q[:noter_ids]
       q[:noter_ids].each do |noter_id|
         relation = relation.where(:id => Note.where("creator_id = ?", noter_id).select("post_id").uniq)
+      end
+      has_constraints!
+    end
+
+    if q[:artcomm_ids]
+      q[:artcomm_ids].each do |artcomm_id|
+        relation = relation.where(:id => ArtistCommentaryVersion.where("updater_id = ?", artcomm_id).select("post_id").uniq)
       end
       has_constraints!
     end
@@ -327,6 +338,9 @@ class PostQueryBuilder
 
     when "note_asc"
       relation = relation.order("posts.last_noted_at ASC, posts.id DESC").where("posts.last_noted_at is not null")
+
+    when "artcomm"
+      relation = relation.joins(:artist_commentary).order("artist_commentaries.updated_at DESC, posts.id DESC")
 
     when "mpixels", "mpixels_desc"
       # Use "w*h/1000000", even though "w*h" would give the same result, so this can use

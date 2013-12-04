@@ -23,7 +23,7 @@ class User < ActiveRecord::Base
   validates_format_of :name, :with => /\A[^\s:]+\Z/, :on => :create, :message => "cannot have whitespace or colons"
   validates_format_of :name, :with => /\A[^_].*[^_]\Z/, :on => :create, :message => "cannot begin or end with an underscore"
   validates_uniqueness_of :name, :case_sensitive => false
-  validates_uniqueness_of :email, :case_sensitive => false, :if => lambda {|rec| rec.email.present?}
+  validates_uniqueness_of :email, :case_sensitive => false, :if => lambda {|rec| rec.email.present? && rec.email_changed? }
   validates_length_of :password, :minimum => 5, :if => lambda {|rec| rec.new_record? || rec.password.present?}
   validates_inclusion_of :default_image_size, :in => %w(large original)
   validates_inclusion_of :per_page, :in => 1..100
@@ -518,7 +518,7 @@ class User < ActiveRecord::Base
       options[:except] ||= []
       options[:except] += hidden_attributes
       options[:methods] ||= []
-      options[:methods] += [:wiki_page_version_count, :artist_version_count, :pool_version_count, :forum_post_count, :comment_count, :appeal_count, :flag_count, :positive_feedback_count, :neutral_feedback_count, :negative_feedback_count]
+      options[:methods] += [:wiki_page_version_count, :artist_version_count, :artist_commentary_version_count, :pool_version_count, :forum_post_count, :comment_count, :appeal_count, :flag_count, :positive_feedback_count, :neutral_feedback_count, :negative_feedback_count]
       super(options)
     end
 
@@ -528,7 +528,7 @@ class User < ActiveRecord::Base
       options[:except] ||= []
       options[:except] += hidden_attributes
       options[:methods] ||= []
-      options[:methods] += [:wiki_page_version_count, :artist_version_count, :pool_version_count, :forum_post_count, :comment_count, :appeal_count, :flag_count, :positive_feedback_count, :neutral_feedback_count, :negative_feedback_count]
+      options[:methods] += [:wiki_page_version_count, :artist_version_count, :artist_commentary_version_count, :pool_version_count, :forum_post_count, :comment_count, :appeal_count, :flag_count, :positive_feedback_count, :neutral_feedback_count, :negative_feedback_count]
       super(options, &block)
     end
 
@@ -549,6 +549,10 @@ class User < ActiveRecord::Base
 
     def artist_version_count
       ArtistVersion.for_user(id).count
+    end
+
+    def artist_commentary_version_count
+      ArtistCommentaryVersion.for_user(id).count
     end
 
     def pool_version_count

@@ -76,6 +76,7 @@ protected
   def reset_current_user
     CurrentUser.user = nil
     CurrentUser.ip_addr = nil
+    CurrentUser.mobile_mode = false
   end
 
   def set_started_at_session
@@ -102,6 +103,10 @@ protected
   def normalize_search
     if request.get?
       params[:search] ||= {}
+      changed = params[:search].reject! {|k,v| v.blank?}
+      unless changed.nil?
+        redirect_to params
+      end
     end
   end
 

@@ -19,6 +19,7 @@ class DText
     str.gsub!(/\[i\](.+?)\[\/i\]/i, '<em>\1</em>')
     str.gsub!(/\[s\](.+?)\[\/s\]/i, '<s>\1</s>')
     str.gsub!(/\[u\](.+?)\[\/u\]/i, '<u>\1</u>')
+    str.gsub!(/\[tn\](.+?)\[\/tn\]/i, '<p class="tn">\1</p>')
 
     str = parse_links(str)
     str = parse_aliased_wiki_links(str)
@@ -212,11 +213,17 @@ class DText
 
       when /\[code\](?!\])/
         flags[:code] = true
+        stack << "pre"
         '<pre>'
 
       when /\[\/code\](?!\])/
         flags[:code] = false
-        '</pre>'
+        if stack.last == "pre"
+          stack.pop
+          "</pre>"
+        else
+          ""
+        end
 
       when /\[expand(?:\=([^\]]*))?\](?!\])/
         stack << "expandable"
@@ -255,7 +262,7 @@ class DText
       end
     end
 
-    sanitize(html.join("")).html_safe
+    html.join("").html_safe
   end
 
   def self.sanitize(text)

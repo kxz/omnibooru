@@ -118,28 +118,20 @@ class Post < ActiveRecord::Base
     end
 
     def file_url_for(user)
-      case user.default_image_size
-      when "large"
-        if image_width > Danbooru.config.large_image_width
-          large_file_url
-        else
-          file_url
-        end
-
+      if CurrentUser.mobile_mode?
+        large_file_url
+      elsif user.default_image_size == "large" && image_width > Danbooru.config.large_image_width
+        large_file_url
       else
         file_url
       end
     end
 
     def file_path_for(user)
-      case user.default_image_size
-      when "large"
-        if image_width > Danbooru.config.large_image_width
-          large_file_path
-        else
-          file_path
-        end
-
+      if CurrentUser.mobile_mode?
+        large_file_path
+      elsif user.default_image_size == "large" && image_width > Danbooru.config.large_image_width
+        large_file_path
       else
         file_path
       end
@@ -155,6 +147,14 @@ class Post < ActiveRecord::Base
   end
 
   module ImageMethods
+    def device_scale
+      if large_image_width > 320
+        320.0 / (large_image_width + 10)
+      else
+        1.0
+      end
+    end
+
     def twitter_card_supported?
       image_width.to_i >= 280 && image_height.to_i >= 150
     end
@@ -181,20 +181,16 @@ class Post < ActiveRecord::Base
     end
 
     def image_width_for(user)
-      case user.default_image_size
-      when "large"
+      if CurrentUser.mobile_mode? || user.default_image_size == "large"
         large_image_width
-
       else
         image_width
       end
     end
 
     def image_height_for(user)
-      case user.default_image_size
-      when "large"
+      if CurrentUser.mobile_mode? || user.default_image_size == "large"
         large_image_height
-
       else
         image_height
       end
@@ -293,10 +289,27 @@ class Post < ActiveRecord::Base
     end
 
     def normalized_source
-      if source =~ /pixiv\.net\/img(?:\d+\/img)?\//
-        img_id = source[/(\d+)(_s|_m|(_big)?_p\d+)?\.[\w\?]+\s*$/, 1]
+      case source
+      when %r{\Ahttp://img\d+\.pixiv\.net/img/[^\/]+/(\d+)}i, %r{\Ahttp://i\d\.pixiv\.net/img\d+/img/[^\/]+/(\d+)}i
+        "http://www.pixiv.net/member_illust.php?mode=medium&illust_id=#{$1}"
 
-        "http://www.pixiv.net/member_illust.php?mode=medium&illust_id=#{img_id}"
+      when %r{\Ahttp://lohas\.nicoseiga\.jp/priv/(\d+)\?e=\d+&h=[a-f0-9]+}i, %r{\Ahttp://lohas\.nicoseiga\.jp/priv/[a-f0-9]+/\d+/(\d+)}i
+        "http://seiga.nicovideo.jp/seiga/im#{$1}"
+
+      when %r{\Ahttp://d3j5vwomefv46c\.cloudfront\.net/photos/large/(\d+)\.}i
+        base_10_id = $1.to_i
+        base_36_id = base_10_id.to_s(36)
+        "http://twitpic.com/#{base_36_id}"
+
+      when %r{\Ahttp://(?:fc|th)\d{2}\.deviantart\.net/.+/[a-z0-9_]+_by_([a-z0-9_]+)-d([a-z0-9]+)\.}i
+        "http://#{$1}.deviantart.com/gallery/#/d#{$2}"
+
+      when %r{\Ahttp://www\.karabako\.net/images(?:ub)?/karabako_(\d+)(?:_\d+)?\.}i
+        "http://www.karabako.net/post/view/#{$1}"
+
+      when %r{\Ahttp://p\.twpl\.jp/show/orig/([a-z0-9]+)}i
+        "http://p.twipple.jp/#{$1}"
+
       else
         source
       end
@@ -310,11 +323,6 @@ class Post < ActiveRecord::Base
 
     def tag_array_was
       @tag_array_was ||= Tag.scan_tags(tag_string_was)
-    end
-
-    def create_tags
-      reset_tag_array_cache
-      set_tag_string(tag_array.map {|x| Tag.find_or_create_by_name(x).name}.uniq.sort.join(" "))
     end
 
     def increment_tag_post_counts
@@ -405,10 +413,11 @@ class Post < ActiveRecord::Base
     end
 
     def normalize_tags
-      create_tags
       normalized_tags = Tag.scan_tags(tag_string)
       normalized_tags = filter_metatags(normalized_tags)
       normalized_tags = normalized_tags.map{|tag| tag.downcase}
+      normalized_tags = remove_negated_tags(normalized_tags)
+      normalized_tags = normalized_tags.map {|x| Tag.find_or_create_by_name(x).name}
       normalized_tags = TagAlias.to_aliased(normalized_tags)
       normalized_tags = TagImplication.with_descendants(normalized_tags)
       normalized_tags = %w(tagme) if normalized_tags.empty?
@@ -416,9 +425,15 @@ class Post < ActiveRecord::Base
       set_tag_string(normalized_tags.uniq.sort.join(" "))
     end
 
+    def remove_negated_tags(tags)
+      negated_tags, tags = tags.partition {|x| x =~ /\A-/i}
+      negated_tags.map!{|x| x[1..-1]}
+      return tags - negated_tags
+    end
+
     def filter_metatags(tags)
       @pre_metatags, tags = tags.partition {|x| x =~ /\A(?:rating|parent):/i}
-      @post_metatags, tags = tags.partition {|x| x =~ /\A(?:-pool|pool|newpool|fav):/i}
+      @post_metatags, tags = tags.partition {|x| x =~ /\A(?:-pool|pool|newpool|fav|child):/i}
       apply_pre_metatags
       return tags
     end
@@ -453,6 +468,11 @@ class Post < ActiveRecord::Base
 
         when /^fav:(.+)$/i
           add_favorite!(CurrentUser.user)
+
+        when /^child:(.+)$/i
+          child = Post.find($1)
+          child.parent_id = id
+          child.save
         end
       end
     end

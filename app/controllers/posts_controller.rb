@@ -1,5 +1,5 @@
 class PostsController < ApplicationController
-  before_filter :member_only, :except => [:show, :show_seq, :index, :home]
+  before_filter :member_only, :except => [:show, :show_seq, :index, :home, :random]
   before_filter :builder_only, :only => [:copy_notes]
   after_filter :save_recent_tags, :only => [:update]
   respond_to :html, :xml, :json
@@ -13,7 +13,8 @@ class PostsController < ApplicationController
       @post = Post.find_by_md5(params[:md5])
       redirect_to post_path(@post)
     else
-      @post_set = PostSets::Post.new(tag_query, params[:page], params[:limit] || CurrentUser.user.per_page, params[:raw])
+      limit = params[:limit] || (params[:tags] =~ /(?:^|\s)limit:(\d+)(?:$|\s)/ && $1) || CurrentUser.user.per_page
+      @post_set = PostSets::Post.new(tag_query, params[:page], limit, params[:raw])
       @posts = @post_set.posts
       respond_with(@posts) do |format|
         format.atom
