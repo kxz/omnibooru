@@ -432,7 +432,7 @@ class Post < ActiveRecord::Base
     end
 
     def filter_metatags(tags)
-      @pre_metatags, tags = tags.partition {|x| x =~ /\A(?:rating|parent):/i}
+      @pre_metatags, tags = tags.partition {|x| x =~ /\A(?:rating|parent|-parent):/i}
       @post_metatags, tags = tags.partition {|x| x =~ /\A(?:-pool|pool|newpool|fav|child):/i}
       apply_pre_metatags
       return tags
@@ -484,6 +484,11 @@ class Post < ActiveRecord::Base
         case tag
         when /^parent:none$/i, /^parent:0$/i
           self.parent_id = nil
+
+        when /^-parent:(\d+)$/i
+          if parent_id == $1.to_i
+            self.parent_id = nil
+          end
 
         when /^parent:(\d+)$/i
           if $1.to_i != id && Post.exists?(["id = ?", $1.to_i])
@@ -727,7 +732,7 @@ class Post < ActiveRecord::Base
     def get_count_from_cache(tags)
       count = Cache.get(count_cache_key(tags))
 
-      if count.nil?
+      if count.nil? && !CurrentUser.safe_mode? && !CurrentUser.hide_deleted_posts?
         count = select_value_sql("SELECT post_count FROM tags WHERE name = ?", tags.to_s)
       end
 
@@ -747,6 +752,13 @@ class Post < ActiveRecord::Base
     end
 
     def count_cache_key(tags)
+      if CurrentUser.safe_mode?
+        tags = "#{tags} rating:s".strip
+      end
+      if CurrentUser.hide_deleted_posts?
+        tags = "#{tags} -status:deleted".strip
+      end
+
       "pfc:#{Cache.sanitize(tags)}"
     end
 
@@ -774,9 +786,7 @@ class Post < ActiveRecord::Base
 
     def fast_count_search(tags)
       count = Post.with_timeout(500, Danbooru.config.blank_tag_search_fast_count || 1_000_000) do
-        CurrentUser.without_safe_mode do
-          Post.tag_match(tags).count
-        end
+        Post.tag_match(tags).count
       end
       if count > 0
         set_count_in_cache(tags, count)
