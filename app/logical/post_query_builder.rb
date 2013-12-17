@@ -237,6 +237,13 @@ class PostQueryBuilder
       has_constraints!
     end
 
+    if q[:note_updater_ids]
+      q[:note_updater_ids].each do |note_updater_id|
+        relation = relation.where(:id => NoteVersion.where("updater_id = ?", note_updater_id).select("post_id").uniq)
+      end
+      has_constraints!
+    end
+
     if q[:artcomm_ids]
       q[:artcomm_ids].each do |artcomm_id|
         relation = relation.where(:id => ArtistCommentaryVersion.where("updater_id = ?", artcomm_id).select("post_id").uniq)
@@ -341,6 +348,9 @@ class PostQueryBuilder
 
     when "artcomm"
       relation = relation.joins(:artist_commentary).order("artist_commentaries.updated_at DESC, posts.id DESC")
+
+    when "artcomm_asc"
+      relation = relation.joins(:artist_commentary).order("artist_commentaries.updated_at ASC, posts.id DESC")
 
     when "mpixels", "mpixels_desc"
       # Use "w*h/1000000", even though "w*h" would give the same result, so this can use

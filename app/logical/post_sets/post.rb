@@ -18,12 +18,16 @@ module PostSets
       tag_array.slice(0, 25).join(" ").tr("_", " ")
     end
 
+    def unordered_tag_array
+      tag_array.reject{|tag| tag =~ /\Aorder:\S+/}
+    end
+
     def has_wiki?
-      tag_array.size == 1 && ::WikiPage.titled(tag_string).exists?
+      is_single_tag? && ::WikiPage.titled(tag_string).exists?
     end
 
     def wiki_page
-      if tag_array.any?
+      if is_single_tag?
         ::WikiPage.titled(tag_string).first
       else
         nil
@@ -31,7 +35,7 @@ module PostSets
     end
 
     def has_artist?
-      tag_array.any? && ::Artist.named(tag_string).active.exists?
+      is_single_tag? && ::Artist.named(tag_string).active.exists?
     end
 
     def artist
@@ -43,7 +47,7 @@ module PostSets
     end
 
     def has_pool?
-      tag_array.size == 1 && pool_name && pool
+      is_single_tag? && pool_name && pool
     end
 
     def pool

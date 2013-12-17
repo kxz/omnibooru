@@ -183,24 +183,30 @@ class PostTest < ActiveSupport::TestCase
     
     context "Deleting a post with" do
       context "a parent" do
-        should "not reset the has_children flag of the parent" do
+        should "not reassign favorites to the parent by default" do
           p1 = FactoryGirl.create(:post)
-          c1 = FactoryGirl.create(:post, :parent_id => p1.id)
-          c1.delete!
-          p1.reload
-          assert_equal(true, p1.has_children?)
-        end
-
-        should "not reassign favorites to the parent" do
-          p1 = FactoryGirl.create(:post)
-          c1 = FactoryGirl.create(:post, :parent_id => p1.id)
-          user = FactoryGirl.create(:user)
+          c1 = FactoryGirl.create(:post, :parent_id => p1.id, :score => 1)
+          user = FactoryGirl.create(:gold_user)
           c1.add_favorite!(user)
           c1.delete!
           p1.reload
           assert(Favorite.exists?(:post_id => c1.id, :user_id => user.id))
           assert(!Favorite.exists?(:post_id => p1.id, :user_id => user.id))
-          assert_equal(0, c1.score)
+          assert_equal(2, c1.score)
+          assert_equal(0, p1.score)
+        end
+
+        should "reassign favorites to the parent if specified" do
+          p1 = FactoryGirl.create(:post)
+          c1 = FactoryGirl.create(:post, :parent_id => p1.id, :score => 1)
+          user = FactoryGirl.create(:gold_user)
+          c1.add_favorite!(user)
+          c1.delete!(:move_favorites => true)
+          p1.reload
+          assert(!Favorite.exists?(:post_id => c1.id, :user_id => user.id), "Child should not still have favorites")
+          assert(Favorite.exists?(:post_id => p1.id, :user_id => user.id), "Parent should have favorites")
+          assert_equal(1, c1.score)
+          assert_equal(1, p1.score)
         end
 
         should "not update the parent's has_children flag" do
@@ -608,6 +614,33 @@ class PostTest < ActiveSupport::TestCase
         assert_equal(%w(tag1 tag2), post.tag_array_was)
       end
 
+      context "with large dimensions" do
+        setup do
+          @post.image_width = 10_000
+          @post.image_height = 10
+          @post.tag_string = ""
+          @post.save
+        end
+
+        should "have the appropriate dimension tags added automatically" do
+          assert_match(/incredibly_absurdres/, @post.tag_string)
+          assert_match(/absurdres/, @post.tag_string)
+          assert_match(/highres/, @post.tag_string)
+        end
+      end
+
+      context "with a large file size" do
+        setup do
+          @post.file_size = 11.megabytes
+          @post.tag_string = ""
+          @post.save
+        end
+
+        should "have the appropriate file size tags added automatically" do
+          assert_match(/huge_filesize/, @post.tag_string)
+        end
+      end
+
       context "that has been updated" do
         should "create a new version if it's the first version" do
           assert_difference("PostVersion.count", 1) do
@@ -813,6 +846,11 @@ class PostTest < ActiveSupport::TestCase
         should "normalize twipple links" do
           @post.source = "http://p.twpl.jp/show/orig/mI2c3"
           assert_equal("http://p.twipple.jp/mI2c3", @post.normalized_source)
+        end
+
+        should "normalize hentai foundry links" do
+          @post.source = "http://pictures.hentai-foundry.com//a/AnimeFlux/219123.jpg"
+          assert_equal("http://www.hentai-foundry.com/pictures/user/AnimeFlux/219123", @post.normalized_source)
         end
       end
     end
@@ -1119,6 +1157,19 @@ class PostTest < ActiveSupport::TestCase
       assert_equal(post1.id, relation.first.id)
     end
 
+    should "return posts for the <pool> metatag with a wildcard" do
+      post1 = FactoryGirl.create(:post)
+      post2 = FactoryGirl.create(:post)
+      post3 = FactoryGirl.create(:post)
+      pool1 = FactoryGirl.create(:pool, :name => "test_a")
+      pool2 = FactoryGirl.create(:pool, :name => "test_b")
+      post1.add_pool!(pool1)
+      post3.add_pool!(pool2)
+      relation = Post.tag_match("pool:test*")
+      assert_equal(2, relation.count)
+      assert_equal([post3.id, post1.id], relation.all.map!(&:id))
+    end
+
     should "return posts for the <user> metatag" do
       second_user = FactoryGirl.create(:user)
       post1 = FactoryGirl.create(:post, :uploader => CurrentUser.user)
@@ -1228,7 +1279,7 @@ class PostTest < ActiveSupport::TestCase
     should "return posts ordered by a particular attribute" do
       post1 = FactoryGirl.create(:post, :rating => "s")
       post2 = FactoryGirl.create(:post, :rating => "s")
-      post3 = FactoryGirl.create(:post, :rating => "e", :score => 5, :image_width => 1000)
+      post3 = FactoryGirl.create(:post, :rating => "e", :score => 5, :image_width => 10_000)
       relation = Post.tag_match("order:id")
       assert_equal(post1.id, relation.first.id)
       relation = Post.tag_match("order:mpixels")

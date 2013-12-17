@@ -26,7 +26,7 @@ class Post < ActiveRecord::Base
   has_one :artist_commentary
   has_many :flags, :class_name => "PostFlag", :dependent => :destroy
   has_many :appeals, :class_name => "PostAppeal", :dependent => :destroy
-  has_many :versions, :class_name => "PostVersion", :dependent => :destroy, :order => "post_versions.id ASC"
+  has_many :versions, :class_name => "PostVersion", :dependent => :destroy, :order => "post_versions.updated_at ASC, post_versions.id ASC"
   has_many :votes, :class_name => "PostVote", :dependent => :destroy
   has_many :notes, :dependent => :destroy
   has_many :comments, :order => "comments.id", :dependent => :destroy
@@ -49,8 +49,8 @@ class Post < ActiveRecord::Base
 
     def delete_remote_files
       RemoteFileManager.new(file_path).delete
-      RemoteFileManager.new(real_preview_file_path).delete
-      RemoteFileManager.new(ssd_preview_file_path).delete if Danbooru.config.ssd_path
+      RemoteFileManager.new(real_preview_file_path).delete if is_image?
+      RemoteFileManager.new(ssd_preview_file_path).delete if Danbooru.config.ssd_path && is_image?
       RemoteFileManager.new(large_file_path).delete if has_large?
     end
 
@@ -310,6 +310,9 @@ class Post < ActiveRecord::Base
       when %r{\Ahttp://p\.twpl\.jp/show/orig/([a-z0-9]+)}i
         "http://p.twipple.jp/#{$1}"
 
+      when %r{\Ahttp://pictures\.hentai-foundry\.com//a/([^/]+)/(\d+)\.}i
+        "http://www.hentai-foundry.com/pictures/user/#{$1}/#{$2}"
+
       else
         source
       end
@@ -421,6 +424,7 @@ class Post < ActiveRecord::Base
       normalized_tags = TagAlias.to_aliased(normalized_tags)
       normalized_tags = TagImplication.with_descendants(normalized_tags)
       normalized_tags = %w(tagme) if normalized_tags.empty?
+      normalized_tags = add_automatic_tags(normalized_tags)
       normalized_tags.sort!
       set_tag_string(normalized_tags.uniq.sort.join(" "))
     end
@@ -429,6 +433,37 @@ class Post < ActiveRecord::Base
       negated_tags, tags = tags.partition {|x| x =~ /\A-/i}
       negated_tags.map!{|x| x[1..-1]}
       return tags - negated_tags
+    end
+
+    def add_automatic_tags(tags)
+      return tags if !Danbooru.config.enable_dimension_autotagging
+
+      tags -= %w(incredibly_absurdres absurdres highres lowres huge_filesize)
+
+      if image_width >= 10_000 || image_height >= 10_000
+        tags << "incredibly_absurdres"
+      end
+      if image_width >= 3200 || image_height >= 2400
+        tags << "absurdres"
+      end
+      if image_width >= 1600 || image_height >= 1200
+        tags << "highres"
+      end
+      if image_width <= 500 && image_height <= 500
+        tags << "lowres"
+      end
+
+      if file_size >= 10.megabytes
+        tags << "huge_filesize"
+      end
+
+      if image_width >= 1024 && image_width.to_f / image_height >= 4
+        tags << "wide_image"
+      elsif image_height >= 1024 && image_height.to_f / image_width >= 4
+        tags << "tall_image"
+      end
+
+      return tags
     end
 
     def filter_metatags(tags)
@@ -623,7 +658,7 @@ class Post < ActiveRecord::Base
     end
 
     def favorited_users
-      favorited_user_ids.map {|id| User.find_by_id(id)}
+      favorited_user_ids.map {|id| User.find(id)}
     end
   end
 
@@ -755,7 +790,7 @@ class Post < ActiveRecord::Base
       if CurrentUser.safe_mode?
         tags = "#{tags} rating:s".strip
       end
-      if CurrentUser.hide_deleted_posts?
+      if CurrentUser.user && CurrentUser.hide_deleted_posts? && tags !~ /(?:^|\s)(?:-)?status:.+/
         tags = "#{tags} -status:deleted".strip
       end
 
@@ -894,12 +929,10 @@ class Post < ActiveRecord::Base
     def give_favorites_to_parent
       return if parent.nil?
 
-      favorited_user_ids.each do |user_id|
-        parent.add_favorite!(User.find(user_id))
-        remove_favorite!(User.find(user_id))
+      favorited_users.each do |user|
+        remove_favorite!(user)
+        parent.add_favorite!(user)
       end
-
-      update_column(:score, 0)
     end
 
     def post_is_not_its_own_parent
@@ -952,6 +985,7 @@ class Post < ActiveRecord::Base
         update_column(:is_pending, false)
         update_column(:is_flagged, false)
         update_column(:is_banned, true) if options[:ban] || has_tag?("banned_artist")
+        give_favorites_to_parent if options[:move_favorites]
 
         unless options[:without_mod_action]
           if options[:reason]

@@ -1,5 +1,6 @@
 class Tag < ActiveRecord::Base
-  METATAGS = "-user|user|-approver|approver|commenter|comm|noter|artcomm|-pool|pool|-fav|fav|ordfav|sub|md5|-rating|rating|-locked|locked|width|height|mpixels|score|favcount|filesize|source|-source|id|-id|date|age|order|limit|-status|status|tagcount|gentags|arttags|chartags|copytags|parent|-parent|child|pixiv_id|pixiv"
+  METATAGS = "-user|user|-approver|approver|commenter|comm|noter|noteupdater|artcomm|-pool|pool|-fav|fav|ordfav|sub|md5|-rating|rating|-locked|locked|width|height|mpixels|score|favcount|filesize|source|-source|id|-id|date|age|order|limit|-status|status|tagcount|gentags|arttags|chartags|copytags|parent|-parent|child|pixiv_id|pixiv"
+  SUBQUERY_METATAGS = "commenter|comm|noter|noteupdater|artcomm"
   attr_accessible :category, :as => [:moderator, :janitor, :contributor, :gold, :member, :anonymous, :default, :builder, :admin]
   attr_accessible :is_locked, :as => [:moderator, :janitor, :admin]
   has_one :wiki_page, :foreign_key => "title", :primary_key => "name"
@@ -375,6 +376,11 @@ class Tag < ActiveRecord::Base
             user_id = User.name_to_id($2)
             q[:noter_ids] << user_id unless user_id.blank?
 
+          when "noteupdater"
+            q[:note_updater_ids] ||= []
+            user_id = User.name_to_id($2)
+            q[:note_updater_ids] << user_id unless user_id.blank?
+
           when "artcomm"
             q[:artcomm_ids] ||= []
             user_id = User.name_to_id($2)
@@ -388,6 +394,9 @@ class Tag < ActiveRecord::Base
               q[:pool] = "none"
             elsif $2.downcase == "any"
               q[:pool] = "any"
+            elsif $2.include?("*")
+              pools = Pool.name_matches($2).all(:select => "id", :limit => Danbooru.config.tag_query_limit, :order => "post_count DESC")
+              q[:tags][:include] += pools.map!{|pool| "pool:#{pool.id}"}
             else
               q[:tags][:related] << "pool:#{Pool.name_to_id($2)}"
             end
