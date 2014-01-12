@@ -1,6 +1,6 @@
 class Artist < ActiveRecord::Base
   before_create :initialize_creator
-  before_save :normalize_name
+  before_validation :normalize_name
   after_save :create_version
   after_save :save_url_string
   after_save :categorize_tag
@@ -207,12 +207,7 @@ class Artist < ActiveRecord::Base
         CurrentUser.without_safe_mode do
           begin
             Post.tag_match(name).each do |post|
-              begin
-                post.flag!("Artist requested removal")
-              rescue PostFlag::Error
-                # swallow
-              end
-              post.delete!(:ban => true)
+              post.ban!
             end
           rescue Post::SearchError
             # swallow
