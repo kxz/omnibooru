@@ -118,6 +118,7 @@ class PostQueryBuilder
 
     relation = add_range_relation(q[:post_id], "posts.id", relation)
     relation = add_range_relation(q[:mpixels], "posts.image_width * posts.image_height / 1000000.0", relation)
+    relation = add_range_relation(q[:ratio], "ROUND(1.0 * posts.image_width / GREATEST(1, posts.image_height), 2)", relation)
     relation = add_range_relation(q[:width], "posts.image_width", relation)
     relation = add_range_relation(q[:height], "posts.image_height", relation)
     relation = add_range_relation(q[:score], "posts.score", relation)
@@ -130,7 +131,7 @@ class PostQueryBuilder
     relation = add_range_relation(q[:copyright_tag_count], "posts.tag_count_copyright", relation)
     relation = add_range_relation(q[:character_tag_count], "posts.tag_count_character", relation)
     relation = add_range_relation(q[:post_tag_count], "posts.tag_count", relation)
-    relation = add_range_relation(q[:pixiv_id], "posts.pixiv_id", relation) 
+    relation = add_range_relation(q[:pixiv_id], "posts.pixiv_id", relation)
 
     if q[:md5]
       relation = relation.where(["posts.md5 IN (?)", q[:md5]])
@@ -170,7 +171,7 @@ class PostQueryBuilder
       if q[:source] == "none%"
         relation = relation.where("(posts.source = '' OR posts.source IS NULL)")
       elsif q[:source] == "http%"
-        relation = relation.where("(lower(posts.source) like ?", "http%")
+        relation = relation.where("(lower(posts.source) like ?)", "http%")
       elsif q[:source] =~ /^%\.?pixiv(?:\.net(?:\/img)?)?(?:%\/|(?=%$))(.+)$/i
         relation = relation.where("SourcePattern(lower(posts.source)) LIKE lower(?) ESCAPE E'\\\\'", "pixiv/" + $1)
         has_constraints!
@@ -338,6 +339,12 @@ class PostQueryBuilder
 
     when "favcount_asc"
       relation = relation.order("posts.fav_count ASC, posts.id DESC")
+
+    when "change", "change_desc"
+      relation = relation.order("posts.updated_at DESC, posts.id DESC")
+
+    when "change_asc"
+      relation = relation.order("posts.updated_at ASC, posts.id DESC")
 
     when "comment", "comm"
       relation = relation.order("posts.last_commented_at DESC NULLS LAST, posts.id DESC")
