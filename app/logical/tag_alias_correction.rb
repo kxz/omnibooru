@@ -26,7 +26,7 @@ class TagAliasCorrection
       http.request_get(Danbooru::Application.routes.url_helpers.tag_alias_correction_path tag_alias_id, :format => 'json') do |res|
         if res === Net::HTTPSuccess
           json = JSON.parse(res.body)
-          statistics_hash["antecedent_cache"] = json["antecdent_cache"]
+          statistics_hash["antecedent_cache"] = json["antecedent_cache"]
           statistics_hash["consequent_cache"] = json["consequent_cache"]
         end
       end
