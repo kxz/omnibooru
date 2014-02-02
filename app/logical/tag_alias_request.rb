@@ -24,10 +24,11 @@ class TagAliasRequest
   end
 
   def create_forum_topic
+    alias_url = Danbooru::Application.routes.url_helpers.tag_aliases_path(:search => {:id => tag_alias.id})
     @forum_topic = ForumTopic.create(
       :title => "Tag alias: #{antecedent_name} -> #{consequent_name}",
       :original_post_attributes => {
-        :body => "create alias [[#{antecedent_name}]] -> [[#{consequent_name}]]\n\n\"Link to alias\":/tag_aliases?search[id]=#{tag_alias.id}\n\n#{reason}"
+        :body => "create alias [[#{antecedent_name}]] -> [[#{consequent_name}]]\n\n\"Link to alias\":#{alias_url}\n\n#{reason}"
       },
       :category_id => 1
     )
