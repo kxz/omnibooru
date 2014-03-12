@@ -202,6 +202,27 @@ class Artist < ActiveRecord::Base
   end
 
   module BanMethods
+    def unban!
+      Post.transaction do
+        CurrentUser.without_safe_mode do
+          ti = TagImplication.where(:antecedent_name => name, :consequent_name => "banned_artist").first
+          ti.destroy if ti
+
+          begin
+            Post.tag_match(name).each do |post|
+              post.unban!
+              fixed_tags = post.tag_string.sub(/(?:\A| )banned_artist(?:\Z| )/, " ").strip
+              post.update_attributes(:tag_string => fixed_tags)
+            end
+          rescue Post::SearchError
+            # swallow
+          end
+
+          update_column(:is_banned, false)
+        end
+      end
+    end
+
     def ban!
       Post.transaction do
         CurrentUser.without_safe_mode do
@@ -297,7 +318,7 @@ class Artist < ActiveRecord::Base
         q = q.banned
 
       when /status:active/
-        q = q.where("is_banned = false and is_deleted = false")
+        q = q.where("is_banned = false and is_active = true")
 
       when /./
         q = q.any_name_matches(params[:name])

@@ -1,7 +1,8 @@
 class ApiCacheGenerator
   def generate_tag_cache
-    cache_dir = "#{Rails.root}/public/cache"
-    File.open("#{cache_dir}/tags.json", "w") do |f|
+    path = File.expand_path(File.join(Rails.root, "..", "shared"))
+    FileUtils.mkdir_p("#{path}/system/cache")
+    File.open("#{path}/system/cache/tags.json", "w") do |f|
       f.print("[")
       Tag.without_timeout do
         Tag.find_each do |tag|
@@ -20,11 +21,11 @@ class ApiCacheGenerator
       f.seek(-2, IO::SEEK_END)
       f.print("]\n")
     end
-    Zlib::GzipWriter.open("#{cache_dir}/tags.json.gz") do |gz|
-      gz.write(IO.binread("#{cache_dir}/tags.json"))
+    Zlib::GzipWriter.open("#{path}/system/cache/tags.json.gz") do |gz|
+      gz.write(IO.binread("#{path}/system/cache/tags.json"))
       gz.close
     end
-    RemoteFileManager.new("#{cache_dir}/tags.json").distribute
-    RemoteFileManager.new("#{cache_dir}/tags.json.gz").distribute
+    RemoteFileManager.new("#{path}/system/cache/tags.json").distribute
+    RemoteFileManager.new("#{path}/shared/system/cache/tags.json.gz").distribute
   end
 end

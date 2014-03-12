@@ -63,6 +63,7 @@ Danbooru::Application.routes.draw do
     member do
       put :revert
       put :ban
+      put :unban
       post :undelete
     end
     collection do
@@ -180,6 +181,7 @@ Danbooru::Application.routes.draw do
   resources :artist_commentaries do
     collection do
       put :create_or_update
+      get :search
     end
     member do
       put :revert
@@ -201,9 +203,6 @@ Danbooru::Application.routes.draw do
     resource :correction, :only => [:create, :new, :show], :controller => "TagAliasCorrections"
     member do
       post :approve
-    end
-    collection do
-      get :general_search
     end
   end
   resource :tag_alias_request, :only => [:new, :create]
@@ -370,6 +369,7 @@ Danbooru::Application.routes.draw do
   match "/static/contact" => "static#contact", :as => "contact"
   match "/static/benchmark" => "static#benchmark"
   match "/static/name_change" => "static#name_change", :as => "name_change"
+  match "/meta_searches/tags" => "meta_searches#tags", :as => "meta_searches_tags"
 
   root :to => "posts#index"
 end

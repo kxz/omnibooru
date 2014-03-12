@@ -4,7 +4,7 @@ module Danbooru
   class Configuration
     # The version of this Danbooru.
     def version
-      "2.43.0"
+      "2.44.1"
     end
 
     # The name of this Danbooru.
@@ -80,11 +80,6 @@ module Danbooru
     # When calculating statistics based on the posts table, gather this many posts to sample from.
     def post_sample_size
       300
-    end
-
-    # If a solid state drive is availble, cache the thumbnails on the SSD to reduce disk seek times.
-    def ssd_path
-      nil
     end
 
     # Where the ad banners are stored in the file system

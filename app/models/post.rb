@@ -23,7 +23,7 @@ class Post < ActiveRecord::Base
   belongs_to :uploader, :class_name => "User"
   belongs_to :parent, :class_name => "Post"
   has_one :upload, :dependent => :destroy
-  has_one :artist_commentary
+  has_one :artist_commentary, :dependent => :destroy
   has_many :flags, :class_name => "PostFlag", :dependent => :destroy
   has_many :appeals, :class_name => "PostAppeal", :dependent => :destroy
   has_many :versions, :class_name => "PostVersion", :dependent => :destroy, :order => "post_versions.updated_at ASC, post_versions.id ASC"
@@ -32,7 +32,7 @@ class Post < ActiveRecord::Base
   has_many :comments, :order => "comments.id", :dependent => :destroy
   has_many :children, :class_name => "Post", :foreign_key => "parent_id", :order => "posts.id"
   has_many :disapprovals, :class_name => "PostDisapproval", :dependent => :destroy
-  has_many :favorites
+  has_many :favorites, :dependent => :destroy
   validates_uniqueness_of :md5
   validate :post_is_not_its_own_parent
   attr_accessible :source, :rating, :tag_string, :old_tag_string, :old_parent_id, :old_source, :old_rating, :last_noted_at, :parent_id, :as => [:member, :builder, :gold, :platinum, :contributor, :janitor, :moderator, :admin, :default]
@@ -42,23 +42,20 @@ class Post < ActiveRecord::Base
   module FileMethods
     def distribute_files
       RemoteFileManager.new(file_path).distribute
-      RemoteFileManager.new(real_preview_file_path).distribute if is_image?
-      RemoteFileManager.new(ssd_preview_file_path).distribute if Danbooru.config.ssd_path && is_image?
+      RemoteFileManager.new(preview_file_path).distribute if is_image?
       RemoteFileManager.new(large_file_path).distribute if has_large?
     end
 
     def delete_remote_files
       RemoteFileManager.new(file_path).delete
-      RemoteFileManager.new(real_preview_file_path).delete if is_image?
-      RemoteFileManager.new(ssd_preview_file_path).delete if Danbooru.config.ssd_path && is_image?
+      RemoteFileManager.new(preview_file_path).delete if is_image?
       RemoteFileManager.new(large_file_path).delete if has_large?
     end
 
     def delete_files
       FileUtils.rm_f(file_path)
       FileUtils.rm_f(large_file_path)
-      FileUtils.rm_f(ssd_preview_file_path) if Danbooru.config.ssd_path
-      FileUtils.rm_f(real_preview_file_path)
+      FileUtils.rm_f(preview_file_path)
     end
 
     def file_path_prefix
@@ -77,20 +74,8 @@ class Post < ActiveRecord::Base
       end
     end
 
-    def real_preview_file_path
-      "#{Rails.root}/public/data/preview/#{file_path_prefix}#{md5}.jpg"
-    end
-
-    def ssd_preview_file_path
-      "#{Danbooru.config.ssd_path}/public/data/preview/#{file_path_prefix}#{md5}.jpg"
-    end
-
     def preview_file_path
-      if Danbooru.config.ssd_path
-        ssd_preview_file_path
-      else
-        real_preview_file_path
-      end
+      "#{Rails.root}/public/data/preview/#{file_path_prefix}#{md5}.jpg"
     end
 
     def file_url
@@ -110,11 +95,7 @@ class Post < ActiveRecord::Base
         return "/booru/images/download-preview.png"
       end
 
-      if Danbooru.config.ssd_path
-        "/ssd/data/preview/#{file_path_prefix}#{md5}.jpg"
-      else
-        "/booru/data/preview/#{file_path_prefix}#{md5}.jpg"
-      end
+      "/booru/data/preview/#{file_path_prefix}#{md5}.jpg"
     end
 
     def file_url_for(user)
@@ -547,7 +528,7 @@ class Post < ActiveRecord::Base
     end
 
     def has_dup_tag?
-      has_tag?("duplicate") ? true : false
+      has_tag?("duplicate")
     end
 
     def tag_categories
@@ -624,7 +605,7 @@ class Post < ActiveRecord::Base
 
   module FavoriteMethods
     def clean_fav_string?
-      rand(100) < [Math.log(fav_string.size, 2), 5].min
+      rand(100) < 50
     end
 
     def clean_fav_string!
