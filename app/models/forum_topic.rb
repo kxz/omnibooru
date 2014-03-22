@@ -104,4 +104,53 @@ class ForumTopic < ActiveRecord::Base
   def hidden_attributes
     super + [:text_index]
   end
+
+  def read_by?(user, read_forum_topic_ids)
+    if read_forum_topic_ids.any? {|topic_id, timestamp| id.to_s == topic_id && updated_at.to_i > timestamp.to_i}
+      return false
+    end
+    if read_forum_topic_ids.any? {|topic_id, timestamp| id.to_s == topic_id && updated_at.to_i <= timestamp.to_i}
+      return true
+    end
+    return false if user.last_forum_read_at.nil?
+    return true if updated_at < user.last_forum_read_at
+    return false
+  end
+
+  def mark_as_read(read_forum_topic_ids)
+    hash = read_forum_topic_ids.inject({}) do |hash, x|
+      hash[x[0].to_s] = x[1].to_s
+      hash
+    end
+    hash[id.to_s] = updated_at.to_i.to_s
+    result = hash.to_a.flatten.join(" ")
+    if result.size > 3000
+      ids = result.scan(/\S+/)
+      result = ids[(ids.size / 2)..-1].join(" ")
+    end
+    update_last_forum_read_at(hash.keys)
+    result
+  end
+
+  def update_last_forum_read_at(read_forum_topic_ids)
+    query = ForumTopic.scoped
+    if CurrentUser.user.last_forum_read_at.present?
+      query = query.where("updated_at > ?", CurrentUser.last_forum_read_at)
+    end
+    if read_forum_topic_ids.any?
+      query = query.where("id not in (?)", read_forum_topic_ids)
+    end
+    query = query.order("updated_at asc")
+    topic = query.first
+    if topic
+      CurrentUser.user.update_attribute(:last_forum_read_at, topic.updated_at)
+    else
+      CurrentUser.user.update_attribute(:last_forum_read_at, Time.now)
+    end
+  end
+
+  def merge(topic)
+    ForumPost.update_all({:topic_id => id}, :id => topic.posts.map(&:id))
+    update_attribute(:is_deleted, true)
+  end
 end
