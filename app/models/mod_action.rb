@@ -1,9 +1,10 @@
 class ModAction < ActiveRecord::Base
   belongs_to :creator, :class_name => "User"
   before_validation :initialize_creator, :on => :create
+  attr_accessible :description
 
   def self.search(params = {})
-    q = scoped
+    q = where("true")
     return q if params.blank?
 
     if params[:creator_id].present?

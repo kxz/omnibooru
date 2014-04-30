@@ -124,7 +124,7 @@ class Dmail < ActiveRecord::Base
     end
 
     def search(params)
-      q = scoped
+      q = where("true")
       return q if params.blank?
 
       if params[:message_matches].present?
@@ -149,6 +149,12 @@ class Dmail < ActiveRecord::Base
 
       if params[:from_id].present?
         q = q.where("from_id = ?", params[:from_id].to_i)
+      end
+
+      if params[:read] == "true"
+        q = q.where("is_read = true")
+      elsif params[:read] == "false"
+        q = q.unread
       end
 
       q

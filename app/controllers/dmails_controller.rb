@@ -44,6 +44,7 @@ class DmailsController < ApplicationController
   def destroy
     @dmail = Dmail.find(params[:id])
     check_privilege(@dmail)
+    @dmail.mark_as_read!
     @dmail.destroy
     redirect_to dmails_path, :notice => "Message destroyed"
   end
@@ -52,6 +53,7 @@ class DmailsController < ApplicationController
     Dmail.visible.unread.each do |x|
       x.update_column(:is_read, true)
     end
+    CurrentUser.user.update_column(:has_mail, false)
   end
 
 private

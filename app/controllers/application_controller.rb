@@ -17,7 +17,7 @@ class ApplicationController < ActionController::Base
 
 protected
   def api_check
-    if request.format.to_s =~ /\/json|\/xml/
+    if request.format.to_s =~ /\/json|\/xml/ || params[:controller] == "iqdb"
       if ApiLimiter.throttled?(request.remote_ip)
         render :text => "421 User Throttled\n", :layout => false, :status => 421
         return false
@@ -69,6 +69,9 @@ protected
       fmt.json do
         render :json => {:success => false, :reason => "access denied"}.to_json, :status => 403
       end
+      fmt.js do
+        render :nothing => true, :status => 403
+      end
     end
   end
 
@@ -106,10 +109,15 @@ protected
 
   def normalize_search
     if request.get?
-      params[:search] ||= {}
-      changed = params[:search].reject! {|k,v| v.blank?}
-      unless changed.nil?
-        redirect_to params
+      if params[:search].blank?
+        params[:search] = {}
+      end
+
+      if params[:search].is_a?(Hash)
+        changed = params[:search].reject! {|k,v| v.blank?}
+        unless changed.nil?
+          redirect_to params
+        end
       end
     end
   end
@@ -120,9 +128,9 @@ protected
 
   def secure_cookies_check
     if request.ssl?
-      Danbooru::Application.config.session_store :cookie_store, :key => '_danbooru_session', :secure => true
+      Rails.application.config.session_store :cookie_store, :key => '_danbooru_session', :secure => true
     else
-      Danbooru::Application.config.session_store :cookie_store, :key => '_danbooru_session', :secure => false
+      Rails.application.config.session_store :cookie_store, :key => '_danbooru_session', :secure => false
     end
   end
 end

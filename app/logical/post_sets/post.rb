@@ -1,5 +1,5 @@
 module PostSets
-  class Post < Base
+  class Post < PostSets::Base
     attr_reader :tag_array, :page, :per_page, :raw
 
     def initialize(tags, page = 1, per_page = nil, raw = false)
@@ -35,11 +35,11 @@ module PostSets
     end
 
     def has_artist?
-      is_single_tag? && ::Artist.named(tag_string).active.exists?
+      is_single_tag? && artist.present? && artist.visible?
     end
 
     def artist
-      ::Artist.named(tag_string).active.first
+      @artist ||= ::Artist.named(tag_string).active.first
     end
 
     def pool_name
@@ -73,7 +73,7 @@ module PostSets
         else
           temp = ::Post.tag_match(tag_string).paginate(page, :count => ::Post.fast_count(tag_string), :limit => per_page)
         end
-        temp.all
+        temp.each # hack to force rails to eager load
         temp
       end
     end

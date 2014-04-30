@@ -8,7 +8,7 @@ class Artist < ActiveRecord::Base
   belongs_to :creator, :class_name => "User"
   has_many :members, :class_name => "Artist", :foreign_key => "group_name", :primary_key => "name"
   has_many :urls, :dependent => :destroy, :class_name => "ArtistUrl"
-  has_many :versions, :order => "artist_versions.id ASC", :class_name => "ArtistVersion"
+  has_many :versions, lambda {order("artist_versions.id ASC")}, :class_name => "ArtistVersion"
   has_one :wiki_page, :foreign_key => "title", :primary_key => "name"
   has_one :tag_alias, :foreign_key => "antecedent_name", :primary_key => "name"
   has_one :tag, :foreign_key => "name", :primary_key => "name"
@@ -30,10 +30,13 @@ class Artist < ActiveRecord::Base
           u = u.to_escaped_for_sql_like.gsub(/\*/, '%') + '%'
           artists += Artist.joins(:urls).where(["artists.is_active = TRUE AND artist_urls.normalized_url LIKE ? ESCAPE E'\\\\'", u]).limit(10).order("artists.name").all
           url = File.dirname(url) + "/"
-          break if url =~ /pixiv\.net\/(?:img\/)?$/
+          break if url =~ /pixiv\.net\/(?:img\/)?$/i
+          break if url =~ /lohas\.nicoseiga\.jp\/priv\/$/i
+          break if url =~ /media\.tumblr\.com\/[a-z0-9]+\/$/i
+          break if url =~ /deviantart\.net\//i
         end
 
-        artists.uniq_by {|x| x.name}.slice(0, 20)
+        artists.inject({}) {|h, x| h[x.name] = x; h}.values.slice(0, 20)
       end
     end
 
@@ -322,7 +325,7 @@ class Artist < ActiveRecord::Base
     end
 
     def search(params)
-      q = scoped
+      q = where("true")
       params = {} if params.blank?
 
       case params[:name]
@@ -379,6 +382,10 @@ class Artist < ActiveRecord::Base
         q = q.where("creator_id = ?", params[:creator_id].to_i)
       end
 
+      if params[:empty_only] == "true"
+        q = q.joins(:tag).where("tags.post_count = 0")
+      end
+
       q
     end
   end
@@ -430,5 +437,9 @@ class Artist < ActiveRecord::Base
 
   def deletable_by?(user)
     user.is_builder?
+  end
+
+  def visible?
+    !is_banned? || CurrentUser.user.is_janitor?
   end
 end

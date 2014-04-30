@@ -10,6 +10,7 @@ class TagImplication < ActiveRecord::Base
   validate :absence_of_circular_relation
   validate :antecedent_is_not_aliased
   validate :consequent_is_not_aliased
+  attr_accessible :antecedent_name, :consequent_name, :descendant_names, :forum_topic_id, :status, :forum_topic
 
   module DescendantMethods
     extend ActiveSupport::Concern
@@ -28,7 +29,7 @@ class TagImplication < ActiveRecord::Base
 
           until children.empty?
             all.concat(children)
-            children = TagImplication.where("antecedent_name IN (?) and status in (?)", children, ["active", "processing"]).all.map(&:consequent_name)
+            children = TagImplication.where("antecedent_name IN (?) and status in (?)", children, ["active", "processing"]).map(&:consequent_name)
           end
         end.sort.uniq
       end
@@ -78,7 +79,7 @@ class TagImplication < ActiveRecord::Base
     end
 
     def search(params)
-      q = scoped
+      q = where("true")
       return q if params.blank?
 
       if params[:id].present?

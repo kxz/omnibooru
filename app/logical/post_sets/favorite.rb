@@ -1,5 +1,5 @@
 module PostSets
-  class Favorite < Base
+  class Favorite < PostSets::Base
     attr_reader :user, :page, :favorites, :params
 
     def initialize(user_id, page = 1, params = {})
@@ -25,7 +25,7 @@ module PostSets
     end
 
     def posts
-      favorites.includes(:post).map(&:post).compact
+      @posts ||= favorites.includes(:post).map(&:post).compact
     end
 
     def presenter
