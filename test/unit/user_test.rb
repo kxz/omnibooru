@@ -13,7 +13,7 @@ class UserTest < ActiveSupport::TestCase
       CurrentUser.user = nil
       CurrentUser.ip_addr = nil
     end
-    
+
     context "promoting a user" do
       setup do
         CurrentUser.user = FactoryGirl.create(:moderator_user)
@@ -87,7 +87,7 @@ class UserTest < ActiveSupport::TestCase
     end
 
     should "limit post uploads" do
-      assert(!@user.can_upload?)
+      assert(@user.can_upload?)
       @user.update_column(:level, User::Levels::CONTRIBUTOR)
       assert(@user.can_upload?)
       @user.update_column(:level, User::Levels::MEMBER)
@@ -119,7 +119,7 @@ class UserTest < ActiveSupport::TestCase
     end
 
     should "limit comments" do
-      assert(!@user.can_comment?)
+      assert(@user.can_comment?)
       @user.update_column(:level, User::Levels::GOLD)
       assert(@user.can_comment?)
       @user.update_column(:level, User::Levels::MEMBER)
