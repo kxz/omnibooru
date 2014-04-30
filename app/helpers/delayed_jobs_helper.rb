@@ -45,7 +45,7 @@ module DelayedJobsHelper
       h(job.payload_object.args.flatten.join(" "))
 
     when "Upload#process!"
-      %{<a href="#{Danbooru::Application.routes.url_helpers.upload_path(job.payload_object.object.id)}">record</a>}
+      %{<a href="#{Rails.application.routes.url_helpers.upload_path(job.payload_object.object.id)}">record</a>}
 
     when "Tag#update_related"
       h(job.payload_object.name)

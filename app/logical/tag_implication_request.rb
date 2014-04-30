@@ -24,7 +24,7 @@ class TagImplicationRequest
   end
 
   def create_forum_topic
-    implication_url = Danbooru::Application.routes.url_helpers.tag_implications_path(:search => {:id => tag_implication.id})
+    implication_url = Rails.application.routes.url_helpers.tag_implications_path(:search => {:id => tag_implication.id})
     @forum_topic = ForumTopic.create(
       :title => "Tag implication: #{antecedent_name} -> #{consequent_name}",
       :original_post_attributes => {

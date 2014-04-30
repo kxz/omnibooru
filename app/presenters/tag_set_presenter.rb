@@ -93,7 +93,7 @@ private
   end
 
   def build_list_item(tag, template, options)
-    url = Danbooru::Application.routes.url_helpers
+    url = Rails.application.routes.url_helpers
 
     html = ""
     html << %{<li class="category-#{categories[tag]}">}

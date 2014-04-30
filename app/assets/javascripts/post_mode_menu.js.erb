@@ -17,17 +17,17 @@
   }
 
   Danbooru.PostModeMenu.show_notice = function(i) {
-    Danbooru.notice("Switched to tag script #" + i + ". To switch tag scripts, use the number keys.");    
+    Danbooru.notice("Switched to tag script #" + i + ". To switch tag scripts, use the number keys.");
   }
-  
+
   Danbooru.PostModeMenu.change_tag_script = function(e) {
     if ($("#mode-box select").val() === "tag-script") {
       var old_tag_script_id = Danbooru.Cookie.get("current_tag_script_id") || "1";
       var old_tag_script = $("#tag-script-field").val();
-      
+
       var new_tag_script_id = String.fromCharCode(e.which);
       var new_tag_script = Danbooru.Cookie.get("tag-script-" + new_tag_script_id);
-    
+
       $("#tag-script-field").val(new_tag_script);
       Danbooru.Cookie.put("current_tag_script_id", new_tag_script_id);
       if (old_tag_script_id != new_tag_script_id) {
@@ -134,7 +134,7 @@
   Danbooru.PostModeMenu.open_edit = function(post_id) {
     var $post = $("#post_" + post_id);
     $("#quick-edit-div").slideDown("fast");
-    $("#quick-edit-form").attr("action", "<%= Danbooru::Application.routes.url_helpers.posts_path %>/" + post_id + ".json");
+    $("#quick-edit-form").attr("action", "<%= Rails.application.routes.url_helpers.posts_path %>/" + post_id + ".json");
     $("#post_tag_string").val($post.data("tags") + " ").focus().selectEnd().height($("#post_tag_string")[0].scrollHeight);
   }
 

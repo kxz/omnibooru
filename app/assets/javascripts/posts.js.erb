@@ -219,7 +219,7 @@
       var other_post_id = parseInt(prompt("Enter the ID of the post to copy all notes to:"), 10);
 
       if (other_post_id !== null) {
-        $.ajax("<%= Danbooru::Application.routes.url_helpers.posts_path %>/" + current_post_id + "/copy_notes", {
+        $.ajax("<%= Rails.application.routes.url_helpers.posts_path %>/" + current_post_id + "/copy_notes", {
           type: "PUT",
           data: {
             other_post_id: other_post_id
@@ -319,7 +319,7 @@
       $image.attr("src", $link.attr("href"));
       $image.css("opacity", "0.25");
       $image.width($image.data("original-width"));
-      $image.height($image.data("original-height"));        
+      $image.height($image.data("original-height"));
       $image.on("load", function() {
         $image.css("opacity", "1");
         $("#image-resize-notice").hide();
@@ -443,7 +443,7 @@
   Danbooru.Post.vote = function(score, id) {
     Danbooru.notice("Voting...");
 
-    $.post("<%= Danbooru::Application.routes.url_helpers.posts_path %>/" + id + "/votes.js", {
+    $.post("<%= Rails.application.routes.url_helpers.posts_path %>/" + id + "/votes.js", {
        score: score
     });
   }
@@ -453,7 +453,7 @@
 
     $.ajax({
       type: "PUT",
-      url: "<%= Danbooru::Application.routes.url_helpers.posts_path %>/" + post_id + ".json",
+      url: "<%= Rails.application.routes.url_helpers.posts_path %>/" + post_id + ".json",
       data: params,
       success: function(data) {
         Danbooru.Post.notice_update("dec");
@@ -461,7 +461,7 @@
       },
       error: function(data) {
         Danbooru.Post.notice_update("dec");
-        Danbooru.error('There was an error updating <a href="<%= Danbooru::Application.routes.url_helpers.posts_path %>/' + post_id + '">post #' + post_id + '</a>');
+        Danbooru.error('There was an error updating <a href="<%= Rails.application.routes.url_helpers.posts_path %>/' + post_id + '">post #' + post_id + '</a>');
         $("#post_" + post_id).effect("shake", {distance: 5, times: 1}, 100);
       }
     });
@@ -470,7 +470,7 @@
   Danbooru.Post.approve = function(post_id) {
     $.ajax({
       type: "POST",
-      url: "<%= Danbooru::Application.routes.url_helpers.moderator_post_approval_path :format => :json %>",
+      url: "<%= Rails.application.routes.url_helpers.moderator_post_approval_path :format => :json %>",
       data: {"post_id": post_id},
       dataType: "json",
       success: function(data) {

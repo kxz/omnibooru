@@ -10,7 +10,7 @@
     date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
     var expires = "; expires=" + date.toGMTString();
     var secure = (window.location.protocol == "https:" ? "; secure" : "");
-    document.cookie = name + "=" + encodeURIComponent(value) + expires + secure + "; path=<%= Danbooru::Application.routes.url_helpers.root_path %>";
+    document.cookie = name + "=" + encodeURIComponent(value) + expires + secure + "; path=<%= Rails.application.routes.url_helpers.root_path %>";
   }
 
   Danbooru.Cookie.raw_get = function(name) {

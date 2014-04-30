@@ -20,7 +20,7 @@ class TagCorrection
 
   def fill_hash!
     Net::HTTP.start(hostname, 80) do |http|
-      http.request_get(Danbooru::Application.routes.url_helpers.tag_correction_path tag_id, :format => 'json') do |res|
+      http.request_get(Rails.application.routes.url_helpers.tag_correction_path tag_id, :format => 'json') do |res|
         if res === Net::HTTPSuccess
           json = JSON.parse(res.body)
           statistics_hash["category_cache"] = json["category_cache"]

@@ -24,7 +24,7 @@
       minLength: 1,
       source: function(req, resp) {
         $.ajax({
-          url: "<%= Danbooru::Application.routes.url_helpers.pools_path :format => :json %>",
+          url: "<%= Rails.application.routes.url_helpers.pools_path :format => :json %>",
           data: {
             "search[is_active]": "true",
             "search[name_matches]": req.term,

@@ -75,7 +75,7 @@ class DText
     str.gsub(/\[\[([^\|\]]+)\|([^\]]+)\]\]/m) do
       text = CGI.unescapeHTML($2)
       title = CGI.unescapeHTML($1).tr(" ", "_").downcase
-      %{<a href="#{Danbooru::Application.routes.url_helpers.show_or_new_wiki_pages_path(:title => title)}">#{h(text)}</a>}
+      %{<a href="#{Rails.application.routes.url_helpers.show_or_new_wiki_pages_path(:title => title)}">#{h(text)}</a>}
     end
   end
 
@@ -83,19 +83,19 @@ class DText
     str.gsub(/\[\[([^\]]+)\]\]/) do
       text = CGI.unescapeHTML($1)
       title = text.tr(" ", "_").downcase
-      %{<a href="#{Danbooru::Application.routes.url_helpers.show_or_new_wiki_pages_path(:title => title)}">#{h(text)}</a>}
+      %{<a href="#{Rails.application.routes.url_helpers.show_or_new_wiki_pages_path(:title => title)}">#{h(text)}</a>}
     end
   end
 
   def self.parse_post_links(str)
     str.gsub(/\{\{([^\}]+)\}\}/) do
       tags = CGI.unescapeHTML($1)
-      %{<a href="#{Danbooru::Application.routes.url_helpers.posts_path(:tags => tags)}">#{h(tags)}</a>}
+      %{<a href="#{Rails.application.routes.url_helpers.posts_path(:tags => tags)}">#{h(tags)}</a>}
     end
   end
 
   def self.parse_id_links(str)
-    url = Danbooru::Application.routes.url_helpers
+    url = Rails.application.routes.url_helpers
     str = str.gsub(/\bpost #(\d+)/i) do
       %{<a href="#{url.post_path($1)}">post \##{$1}</a>}
     end

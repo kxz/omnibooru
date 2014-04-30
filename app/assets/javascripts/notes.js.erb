@@ -386,21 +386,21 @@ Danbooru.Note = {
       var text = $textarea.val();
       $note_body.data("original-body", text);
       Danbooru.Note.Body.set_text($note_body, "Loading...");
-      $.get("<%= Danbooru::Application.routes.url_helpers.note_previews_path :format => :json %>", {body: text}).success(function(data) {
+      $.get("<%= Rails.application.routes.url_helpers.note_previews_path :format => :json %>", {body: text}).success(function(data) {
         Danbooru.Note.Body.set_text($note_body, data.body);
         $note_body.show();
       });
       $this.dialog("close");
 
       if (id.match(/\d/)) {
-        $.ajax("<%= Danbooru::Application.routes.url_helpers.notes_path %>/" + id + ".json", {
+        $.ajax("<%= Rails.application.routes.url_helpers.notes_path %>/" + id + ".json", {
           type: "PUT",
           data: Danbooru.Note.Edit.parameterize_note($note_box, $note_body),
           error: Danbooru.Note.Edit.error_handler,
           success: Danbooru.Note.Edit.success_handler
         });
       } else {
-        $.ajax("<%= Danbooru::Application.routes.url_helpers.notes_path :format => :json %>", {
+        $.ajax("<%= Rails.application.routes.url_helpers.notes_path :format => :json %>", {
           type: "POST",
           data: Danbooru.Note.Edit.parameterize_note($note_box, $note_body),
           error: Danbooru.Note.Edit.error_handler,
@@ -418,7 +418,7 @@ Danbooru.Note = {
       var $note_box = Danbooru.Note.Box.find(id);
       $note_box.find(".note-box-inner-border").addClass("unsaved");
       Danbooru.Note.Body.set_text($note_body, "Loading...");
-      $.get("<%= Danbooru::Application.routes.url_helpers.note_previews_path :format => :json %>", {body: text}).success(function(data) {
+      $.get("<%= Rails.application.routes.url_helpers.note_previews_path :format => :json %>", {body: text}).success(function(data) {
         Danbooru.Note.Body.set_text($note_body, data.body);
         $note_body.show();
       });
@@ -440,7 +440,7 @@ Danbooru.Note = {
       $this.dialog("close");
 
       if (id.match(/\d/)) {
-        $.ajax("<%= Danbooru::Application.routes.url_helpers.notes_path %>/" + id + ".js", {
+        $.ajax("<%= Rails.application.routes.url_helpers.notes_path %>/" + id + ".js", {
           type: "DELETE"
         });
       }
@@ -450,7 +450,7 @@ Danbooru.Note = {
       var $this = $(this);
       var id = $this.data("id");
       if (id.match(/\d/)) {
-        window.location.href = "<%= Danbooru::Application.routes.url_helpers.note_versions_path %>?search[note_id]=" + id;
+        window.location.href = "<%= Rails.application.routes.url_helpers.note_versions_path %>?search[note_id]=" + id;
       }
       $(this).dialog("close");
     }

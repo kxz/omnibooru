@@ -10,7 +10,7 @@ class PostPresenter < Presenter
       return ""
     end
 
-    path = options[:path_prefix] || Danbooru::Application.routes.url_helpers.posts_path
+    path = options[:path_prefix] || Rails.application.routes.url_helpers.posts_path
 
     html =  %{<article id="post_#{post.id}" class="#{preview_class(post)}" #{data_attributes(post)}>}
     if options[:tags].present?
