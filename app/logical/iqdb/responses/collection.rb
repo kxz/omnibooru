@@ -2,6 +2,8 @@ module Iqdb
   module Responses
     class Collection
       attr_reader :responses
+      include Enumerable
+      delegate :<=>, :each, :to => :matches
       
       def initialize(response_string)
         @responses = response_string.split(/\n/).map do |string|
@@ -10,11 +12,7 @@ module Iqdb
       end
 
       def matches
-        @matches ||= responses.select {|x| x.is_a?(Iqdb::Responses::Response_200) && x.score >= 90}
-      end
-
-      def empty?
-        matches.empty?
+        @matches ||= responses.select {|x| x.is_a?(Iqdb::Responses::Response_200) && x.score >= 80}
       end
 
       def errored?

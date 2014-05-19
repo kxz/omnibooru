@@ -5,6 +5,14 @@ module Sources
         url =~ /^https?:\/\/(?:.+?\.)?deviantart\.(?:com|net)/
       end
 
+      def referer_url(template)
+        if template.params[:ref] =~ /deviantart\.com\/art\//
+          template.params[:ref]
+        else
+          template.params[:url]
+        end
+      end
+
       def site_name
         "Deviant Art"
       end
@@ -50,7 +58,9 @@ module Sources
 
       def normalized_url
         @normalized_url ||= begin
-          if url =~ %r{\Ahttp://(?:fc|th)\d{2}\.deviantart\.net/.+/[a-z0-9_]+_by_[a-z0-9_]+-d([a-z0-9]+)\.}i
+          if url =~ %r{\Ahttp://(?:fc|th)\d{2}\.deviantart\.net/.+/[a-z0-9_]*_by_[a-z0-9_]+-d([a-z0-9]+)\.}i
+            "http://fav.me/d#{$1}"
+          elsif url =~ %r{\Ahttp://(?:fc|th)\d{2}\.deviantart\.net/.+/[a-f0-9]+-d([a-z0-9]+)\.}i
             "http://fav.me/d#{$1}"
           elsif url =~ %r{deviantart\.com/art/}
             url

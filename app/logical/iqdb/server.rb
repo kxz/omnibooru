@@ -7,6 +7,10 @@ module Iqdb
 
     attr_reader :hostname, :port, :socket
 
+    def self.default
+      new(*Danbooru.config.iqdb_hostname_and_port)
+    end
+
     def initialize(hostname, port)
       @hostname = hostname
       @port = port
@@ -49,7 +53,7 @@ module Iqdb
       request do
         socket.puts "query 0 #{flags} #{results} #{filename}"
         socket.puts "done"
-        responses = Responses::Collection.new(@socket.read)
+        responses = Responses::Collection.new(socket.read)
       end
     end
   end
