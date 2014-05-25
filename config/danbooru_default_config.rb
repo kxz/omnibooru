@@ -4,7 +4,7 @@ module Danbooru
   class Configuration
     # The version of this Danbooru.
     def version
-      "2.49.0"
+      "2.50.1"
     end
 
     # The name of this Danbooru.
@@ -309,6 +309,10 @@ module Danbooru
     def iqdb_file
       # /var/www/danbooru2/shared/iqdb.db
       nil
+    end
+
+    def shared_dir_path
+      "/var/www/danbooru2/shared"
     end
   end
 end
