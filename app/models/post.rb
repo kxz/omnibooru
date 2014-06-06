@@ -796,7 +796,7 @@ class Post < ActiveRecord::Base
       "pfc:#{Cache.sanitize(tags)}"
     end
 
-    def fast_count(tags = "")
+    def fast_count(tags = "", options = {})
       tags = tags.to_s.strip
 
       if tags.blank? && Danbooru.config.blank_tag_search_fast_count
@@ -804,12 +804,12 @@ class Post < ActiveRecord::Base
       elsif tags =~ /^rating:\S+$/
         count = Danbooru.config.blank_tag_search_fast_count
       elsif tags =~ /(?:#{Tag::METATAGS}):/
-        count = fast_count_search(tags)
+        count = fast_count_search(tags, options)
       else
         count = get_count_from_cache(tags)
 
         if count.to_i == 0
-          count = fast_count_search(tags)
+          count = fast_count_search(tags, options)
         end
       end
 
@@ -818,8 +818,8 @@ class Post < ActiveRecord::Base
       0
     end
 
-    def fast_count_search(tags)
-      count = Post.with_timeout(500, Danbooru.config.blank_tag_search_fast_count || 1_000_000) do
+    def fast_count_search(tags, options = {})
+      count = Post.with_timeout(options[:statement_timeout] || 500, Danbooru.config.blank_tag_search_fast_count || 1_000_000) do
         Post.tag_match(tags).count
       end
       if count > 0
@@ -861,7 +861,8 @@ class Post < ActiveRecord::Base
       def update_has_children_flag_for(post_id)
         return if post_id.nil?
         has_children = Post.where("parent_id = ?", post_id).exists?
-        execute_sql("UPDATE posts SET has_children = ? WHERE id = ?", has_children, post_id)
+        has_active_children = Post.where("parent_id = ? and is_deleted = ?", post_id, false).exists?
+        execute_sql("UPDATE posts SET has_children = ?, has_active_children = ? WHERE id = ?", has_children, has_active_children, post_id)
       end
     end
 
@@ -936,6 +937,13 @@ class Post < ActiveRecord::Base
 
     def parent_exists?
       Post.exists?(parent_id)
+    end
+
+    def has_visible_children?
+      return true if has_active_children?
+      return true if has_children? && CurrentUser.user.show_deleted_children?
+      return true if has_children? && is_deleted?
+      return false
     end
   end
 
@@ -1094,7 +1102,7 @@ class Post < ActiveRecord::Base
   module ApiMethods
     def hidden_attributes
       list = [:tag_index]
-      if !Danbooru.config.can_user_see_post?(CurrentUser.user, self)
+      if !visible?
         list += [:md5, :file_ext]
       end
       super + list
@@ -1102,7 +1110,7 @@ class Post < ActiveRecord::Base
 
     def method_attributes
       list = [:uploader_name, :has_large, :tag_string_artist, :tag_string_character, :tag_string_copyright, :tag_string_general]
-      if Danbooru.config.can_user_see_post?(CurrentUser.user, self)
+      if visible?
         list += [:file_url, :large_file_url, :preview_file_url]
       end
       list
@@ -1147,7 +1155,7 @@ class Post < ActiveRecord::Base
         "id" => id
       }
 
-      if Danbooru.config.can_user_see_post?(CurrentUser.user, self)
+      if visible?
         hash["file_url"] = file_url
         hash["preview_url"] = preview_file_url
         hash["md5"] = md5

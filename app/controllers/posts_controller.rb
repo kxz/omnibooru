@@ -29,8 +29,10 @@ class PostsController < ApplicationController
     @post = Post.find(params[:id])
     @post_flag = PostFlag.new(:post_id => @post.id)
     @post_appeal = PostAppeal.new(:post_id => @post.id)
-    @parent_post_set = PostSets::PostRelationship.new(@post.parent_id, :include_deleted => @post.is_deleted? || (@post.parent_id.present? && @post.parent.is_deleted?))
-    @children_post_set = PostSets::PostRelationship.new(@post.id, :include_deleted => @post.is_deleted?)
+    
+    include_deleted = @post.is_deleted? || (@post.parent_id.present? && @post.parent.is_deleted?) || CurrentUser.user.show_deleted_children?
+    @parent_post_set = PostSets::PostRelationship.new(@post.parent_id, :include_deleted => include_deleted)
+    @children_post_set = PostSets::PostRelationship.new(@post.id, :include_deleted => include_deleted)
     respond_with(@post)
   end
 
@@ -46,7 +48,7 @@ class PostsController < ApplicationController
   def update
     @post = Post.find(params[:id])
 
-    if Danbooru.config.can_user_see_post?(CurrentUser.user, @post)
+    if @post.visible?
       @post.update_attributes(params[:post], :as => CurrentUser.role)
     end
 
@@ -76,7 +78,7 @@ class PostsController < ApplicationController
     @post = Post.find(params[:id])
     @version = PostVersion.find(params[:version_id])
 
-    if Danbooru.config.can_user_see_post?(CurrentUser.user, @post)
+    if @post.visible?
       @post.revert_to!(@version)
     end
     
