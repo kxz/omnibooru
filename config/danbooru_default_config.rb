@@ -4,7 +4,7 @@ module Danbooru
   class Configuration
     # The version of this Danbooru.
     def version
-      "2.51.0"
+      "2.52.0"
     end
 
     # The name of this Danbooru.
@@ -285,6 +285,14 @@ module Danbooru
     end
 
     def pixa_password
+      nil
+    end
+
+    def nijie_login
+      nil
+    end
+
+    def nijie_password
       nil
     end
 

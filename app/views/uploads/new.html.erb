@@ -35,7 +35,11 @@
 
       <div class="input">
         <%= f.label :source %>
-        <%= f.text_field :source, :size => 50, :value => params[:url] %>
+        <% if params[:url].present? %>
+          <%= f.text_field :source, :size => 50, :value => params[:url] %>
+        <% else %>
+          <%= f.text_field :source, :size => 50 %>
+        <% end %>
         <%= button_tag "Artist", :id => "find-artist-button", :type => "button" %>
         <span class="hint">You can enter a URL to have <%= Danbooru.config.app_name %> automatically download and process it</span>
       </div>
@@ -60,10 +64,14 @@
         <%= f.text_field :parent_id %>
       </div>
 
-      <% if Danbooru.config.iqdb_hostname_and_port && params[:url] %>
-        <div class="input" id="iqdb-similar">
-          <p><em>Loading similar...</em></p>
-        </div>
+      <% if Danbooru.config.iqdb_hostname_and_port %>
+        <% if params[:url] %>
+          <div class="input" id="iqdb-similar">
+            <p><em>Loading similar...</em></p>
+          </div>
+        <% else %>
+          <div class="input" id="iqdb-similar" style="display: none;"></div>
+        <% end %>
       <% end %>
 
       <div class="input">
