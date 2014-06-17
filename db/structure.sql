@@ -742,6 +742,40 @@ ALTER SEQUENCE bans_id_seq OWNED BY bans.id;
 
 
 --
+-- Name: bulk_update_requests; Type: TABLE; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE TABLE bulk_update_requests (
+    id integer NOT NULL,
+    user_id integer NOT NULL,
+    forum_topic_id integer,
+    script text NOT NULL,
+    status character varying(255) DEFAULT 'pending'::character varying NOT NULL,
+    created_at timestamp without time zone,
+    updated_at timestamp without time zone
+);
+
+
+--
+-- Name: bulk_update_requests_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE bulk_update_requests_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: bulk_update_requests_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE bulk_update_requests_id_seq OWNED BY bulk_update_requests.id;
+
+
+--
 -- Name: comment_votes; Type: TABLE; Schema: public; Owner: -; Tablespace: 
 --
 
@@ -3094,6 +3128,13 @@ ALTER TABLE ONLY bans ALTER COLUMN id SET DEFAULT nextval('bans_id_seq'::regclas
 -- Name: id; Type: DEFAULT; Schema: public; Owner: -
 --
 
+ALTER TABLE ONLY bulk_update_requests ALTER COLUMN id SET DEFAULT nextval('bulk_update_requests_id_seq'::regclass);
+
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: -
+--
+
 ALTER TABLE ONLY comment_votes ALTER COLUMN id SET DEFAULT nextval('comment_votes_id_seq'::regclass);
 
 
@@ -4098,6 +4139,14 @@ ALTER TABLE ONLY artists
 
 ALTER TABLE ONLY bans
     ADD CONSTRAINT bans_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: bulk_update_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace: 
+--
+
+ALTER TABLE ONLY bulk_update_requests
+    ADD CONSTRAINT bulk_update_requests_pkey PRIMARY KEY (id);
 
 
 --
@@ -6765,4 +6814,6 @@ INSERT INTO schema_migrations (version) VALUES ('20140221213349');
 INSERT INTO schema_migrations (version) VALUES ('20140428015134');
 
 INSERT INTO schema_migrations (version) VALUES ('20140505000956');
+
+INSERT INTO schema_migrations (version) VALUES ('20140613004559');
 
