@@ -16,6 +16,22 @@ class User < ActiveRecord::Base
     ADMIN = 50
   end
 
+  BOOLEAN_ATTRIBUTES = {
+    :is_banned                         => 0x0001,
+    :has_mail                          => 0x0002,
+    :receive_email_notifications       => 0x0004,
+    :always_resize_images              => 0x0008,
+    :enable_post_navigation            => 0x0010,
+    :new_post_navigation_layout        => 0x0020,
+    :enable_privacy_mode               => 0x0040,
+    :enable_sequential_post_navigation => 0x0080,
+    :hide_deleted_posts                => 0x0100,
+    :style_usernames                   => 0x0200,
+    :enable_auto_complete              => 0x0400,
+    :show_deleted_children             => 0x0800,
+    :has_saved_searches                => 0x1000
+  }
+
   attr_accessor :password, :old_password
   attr_accessible :enable_privacy_mode, :enable_post_navigation, :new_post_navigation_layout, :password, :old_password, :password_confirmation, :password_hash, :email, :last_logged_in_at, :last_forum_read_at, :has_mail, :receive_email_notifications, :comment_threshold, :always_resize_images, :favorite_tags, :blacklisted_tags, :name, :ip_addr, :time_zone, :default_image_size, :enable_sequential_post_navigation, :per_page, :hide_deleted_posts, :style_usernames, :enable_auto_complete, :custom_style, :show_deleted_children, :as => [:moderator, :janitor, :contributor, :gold, :member, :anonymous, :default, :builder, :admin]
   attr_accessible :level, :as => :admin
@@ -35,6 +51,7 @@ class User < ActiveRecord::Base
   before_validation :set_per_page
   before_create :encrypt_password_on_create
   before_update :encrypt_password_on_update
+  before_create :initialize_default_boolean_attributes
   after_save :update_cache
   after_update :update_remote_cache
   before_create :promote_to_admin_if_first_user
@@ -45,6 +62,7 @@ class User < ActiveRecord::Base
   has_many :subscriptions, lambda {order("tag_subscriptions.name")}, :class_name => "TagSubscription", :foreign_key => "creator_id"
   has_many :note_versions, :foreign_key => "updater_id"
   has_many :dmails, lambda {order("dmails.id desc")}, :foreign_key => "owner_id"
+  has_many :saved_searches
   belongs_to :inviter, :class_name => "User"
   after_update :create_mod_action
 
@@ -57,7 +75,8 @@ class User < ActiveRecord::Base
     end
 
     def unban!
-      update_column(:is_banned, false)
+      self.is_banned = false
+      save
       ban.destroy
     end
   end
@@ -417,6 +436,20 @@ class User < ActiveRecord::Base
   end
 
   module LimitMethods
+    def max_saved_searches
+      if is_platinum?
+        1_000
+      elsif is_gold?
+        200
+      else
+        100
+      end
+    end
+
+    def show_saved_searches?
+      id < 1_000
+    end
+
     def can_upload?
       if is_contributor?
         true
@@ -518,11 +551,11 @@ class User < ActiveRecord::Base
 
   module ApiMethods
     def hidden_attributes
-      super + [:password_hash, :bcrypt_password_hash, :email, :email_verification_key, :time_zone, :updated_at, :receive_email_notifications, :last_logged_in_at, :last_forum_read_at, :has_mail, :default_image_size, :comment_threshold, :always_resize_images, :favorite_tags, :blacklisted_tags, :recent_tags, :enable_privacy_mode, :enable_post_navigation, :new_post_navigation_layout, :enable_sequential_post_navigation, :hide_deleted_posts, :per_page, :style_usernames, :enable_auto_complete, :custom_style, :show_deleted_children]
+      super + [:password_hash, :bcrypt_password_hash, :email, :email_verification_key, :time_zone, :updated_at, :receive_email_notifications, :last_logged_in_at, :last_forum_read_at, :has_mail, :default_image_size, :comment_threshold, :always_resize_images, :favorite_tags, :blacklisted_tags, :recent_tags, :enable_privacy_mode, :enable_post_navigation, :new_post_navigation_layout, :enable_sequential_post_navigation, :hide_deleted_posts, :per_page, :style_usernames, :enable_auto_complete, :custom_style, :show_deleted_children, :has_saved_searches]
     end
 
     def method_attributes
-      list = [:level_string]
+      list = [:is_banned, :level_string]
       if id == CurrentUser.user.id
         list += [:remaining_api_hourly_limit]
       end
@@ -697,6 +730,24 @@ class User < ActiveRecord::Base
   include CountMethods
   extend SearchMethods
 
+  BOOLEAN_ATTRIBUTES.each do |boolean_attribute, bit_flag|
+    define_method(boolean_attribute) do
+      bit_prefs & bit_flag > 0
+    end
+
+    define_method("#{boolean_attribute}?") do
+      bit_prefs & bit_flag > 0
+    end
+
+    define_method("#{boolean_attribute}=") do |val|
+      if val.to_s =~ /t|1|y/
+        self.bit_prefs |= bit_flag
+      else
+        self.bit_prefs &= ~bit_flag
+      end
+    end
+  end
+
   def initialize_default_image_size
     self.default_image_size = "large"
   end
@@ -711,5 +762,12 @@ class User < ActiveRecord::Base
     else
       ""
     end
+  end
+
+  def initialize_default_boolean_attributes
+    self.enable_post_navigation = true
+    self.new_post_navigation_layout = true
+    self.enable_sequential_post_navigation = true
+    self.enable_auto_complete = true
   end
 end

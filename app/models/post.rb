@@ -331,6 +331,17 @@ class Post < ActiveRecord::Base
         subdomain = $1
         filename = $2
         "http://#{subdomain}.wikia.com/wiki/File:#{filename}"
+        
+      when %r{\Ahttp://(?:(?:\d{1,3}\.){3}\d{1,3}):(?:\d{1,5})/h/([a-f0-9]{40})-(?:\d+-){3}(?:png|gif|(?:jpe?g?))/keystamp=\d+-[a-f0-9]{10}/([^/]+)}i
+        sha1hash = $1
+        filename = $2
+      "http://g.e-hentai.org/?f_shash=#{sha1hash}&fs_from=#{filename}"
+      
+      when %r{\Ahttp://e-shuushuu.net/images/\d{4}-(?:\d{2}-){2}(\d+)}i
+      "http://e-shuushuu.net/image/#{$1}"
+      
+      when %r{\Ahttp://jpg\.nijigen-daiaru\.com/(\d+)}i
+      "http://nijigen-daiaru.com/book.php?idb=#{$1}"
 
       else
         source

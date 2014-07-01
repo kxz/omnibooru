@@ -404,7 +404,7 @@
       if (e.target.hash === "#comments") {
         $("#comments").show();
         $("#edit").hide();
-      } else if (e.target.hash === "#edit") {
+      } else {
         $("#edit").show();
         $("#comments").hide();
         $("#post_tag_string").focus().selectEnd().height($("#post_tag_string")[0].scrollHeight);
@@ -496,6 +496,13 @@
         }
       }
     });
+  }
+
+  Danbooru.Post.save_search = function() {
+    $.post(
+      "/saved_searches.js",
+      {"saved_search[tag_query]": $("#tags").val()}
+    );
   }
 })();
 

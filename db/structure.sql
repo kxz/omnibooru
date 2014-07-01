@@ -2586,6 +2586,40 @@ ALTER SEQUENCE posts_id_seq OWNED BY posts.id;
 
 
 --
+-- Name: saved_searches; Type: TABLE; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE TABLE saved_searches (
+    id integer NOT NULL,
+    user_id integer,
+    tag_query text,
+    name text,
+    category character varying(255),
+    created_at timestamp without time zone,
+    updated_at timestamp without time zone
+);
+
+
+--
+-- Name: saved_searches_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE saved_searches_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: saved_searches_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE saved_searches_id_seq OWNED BY saved_searches.id;
+
+
+--
 -- Name: schema_migrations; Type: TABLE; Schema: public; Owner: -; Tablespace: 
 --
 
@@ -2932,19 +2966,15 @@ CREATE TABLE users (
     level integer DEFAULT 0 NOT NULL,
     email text DEFAULT ''::text,
     recent_tags text DEFAULT ''::text NOT NULL,
-    always_resize_images boolean DEFAULT false NOT NULL,
     inviter_id integer,
     created_at timestamp without time zone DEFAULT now() NOT NULL,
     last_logged_in_at timestamp without time zone DEFAULT now(),
     last_forum_read_at timestamp without time zone DEFAULT '1960-01-01 00:00:00'::timestamp without time zone,
-    has_mail boolean DEFAULT false NOT NULL,
-    receive_email_notifications boolean DEFAULT false NOT NULL,
     base_upload_limit integer,
     enable_autocomplete boolean DEFAULT true NOT NULL,
     comment_threshold integer DEFAULT 0 NOT NULL,
     updated_at timestamp without time zone,
     email_verification_key character varying(255),
-    is_banned boolean DEFAULT false NOT NULL,
     default_image_size character varying(255) DEFAULT 'large'::character varying NOT NULL,
     favorite_tags text,
     blacklisted_tags text,
@@ -2954,16 +2984,9 @@ CREATE TABLE users (
     favorite_count integer DEFAULT 0 NOT NULL,
     post_upload_count integer DEFAULT 0 NOT NULL,
     bcrypt_password_hash text,
-    enable_post_navigation boolean DEFAULT true NOT NULL,
-    new_post_navigation_layout boolean DEFAULT true NOT NULL,
-    enable_privacy_mode boolean DEFAULT false NOT NULL,
-    enable_sequential_post_navigation boolean DEFAULT true NOT NULL,
     per_page integer DEFAULT 20 NOT NULL,
-    hide_deleted_posts boolean DEFAULT false NOT NULL,
-    style_usernames boolean DEFAULT false NOT NULL,
-    enable_auto_complete boolean DEFAULT true NOT NULL,
     custom_style text,
-    show_deleted_children boolean DEFAULT false NOT NULL
+    bit_prefs bigint DEFAULT 0 NOT NULL
 );
 
 
@@ -3989,6 +4012,13 @@ ALTER TABLE ONLY posts ALTER COLUMN id SET DEFAULT nextval('posts_id_seq'::regcl
 -- Name: id; Type: DEFAULT; Schema: public; Owner: -
 --
 
+ALTER TABLE ONLY saved_searches ALTER COLUMN id SET DEFAULT nextval('saved_searches_id_seq'::regclass);
+
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: -
+--
+
 ALTER TABLE ONLY tag_aliases ALTER COLUMN id SET DEFAULT nextval('tag_aliases_id_seq'::regclass);
 
 
@@ -4331,6 +4361,14 @@ ALTER TABLE ONLY post_votes
 
 ALTER TABLE ONLY posts
     ADD CONSTRAINT posts_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: saved_searches_pkey; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace: 
+--
+
+ALTER TABLE ONLY saved_searches
+    ADD CONSTRAINT saved_searches_pkey PRIMARY KEY (id);
 
 
 --
@@ -6404,6 +6442,27 @@ CREATE INDEX index_posts_on_uploader_ip_addr ON posts USING btree (uploader_ip_a
 
 
 --
+-- Name: index_saved_searches_on_category; Type: INDEX; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE INDEX index_saved_searches_on_category ON saved_searches USING btree (category);
+
+
+--
+-- Name: index_saved_searches_on_tag_query; Type: INDEX; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE INDEX index_saved_searches_on_tag_query ON saved_searches USING btree (tag_query);
+
+
+--
+-- Name: index_saved_searches_on_user_id; Type: INDEX; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE INDEX index_saved_searches_on_user_id ON saved_searches USING btree (user_id);
+
+
+--
 -- Name: index_tag_aliases_on_antecedent_name; Type: INDEX; Schema: public; Owner: -; Tablespace: 
 --
 
@@ -6814,6 +6873,10 @@ INSERT INTO schema_migrations (version) VALUES ('20140221213349');
 INSERT INTO schema_migrations (version) VALUES ('20140428015134');
 
 INSERT INTO schema_migrations (version) VALUES ('20140505000956');
+
+INSERT INTO schema_migrations (version) VALUES ('20140603225334');
+
+INSERT INTO schema_migrations (version) VALUES ('20140604002414');
 
 INSERT INTO schema_migrations (version) VALUES ('20140613004559');
 
