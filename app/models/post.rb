@@ -44,13 +44,13 @@ class Post < ActiveRecord::Base
   module FileMethods
     def distribute_files
       RemoteFileManager.new(file_path).distribute
-      RemoteFileManager.new(preview_file_path).distribute if is_image?
+      RemoteFileManager.new(preview_file_path).distribute if has_preview?
       RemoteFileManager.new(large_file_path).distribute if has_large?
     end
 
     def delete_remote_files
       RemoteFileManager.new(file_path).delete
-      RemoteFileManager.new(preview_file_path).delete if is_image?
+      RemoteFileManager.new(preview_file_path).delete if has_preview?
       RemoteFileManager.new(large_file_path).delete if has_large?
     end
 
@@ -93,7 +93,7 @@ class Post < ActiveRecord::Base
     end
 
     def preview_file_url
-      if !is_image?
+      if !has_preview?
         return "/booru/images/download-preview.png"
       end
 
@@ -126,6 +126,18 @@ class Post < ActiveRecord::Base
 
     def is_flash?
       file_ext =~ /swf/i
+    end
+
+    def is_video?
+      file_ext =~ /webm/i
+    end
+
+    def has_preview?
+      is_image? || is_video?
+    end
+
+    def has_dimensions?
+      is_image? || is_flash? || is_video?
     end
   end
 
@@ -299,7 +311,7 @@ class Post < ActiveRecord::Base
       when %r{\Ahttps?://pictures\.hentai-foundry\.com//[^/]/([^/]+)/(\d+)\.}i
         "http://www.hentai-foundry.com/pictures/user/#{$1}/#{$2}"
 
-      when %r{\Ahttp://blog-imgs-\d+(?:-origin)?\.fc2\.com/[^/]/[^/]/[^/]/([^/]+)/([^.]+\.[^?]+)}i
+      when %r{\Ahttp://blog(?:(?:-imgs-)?\d*(?:-origin)?)?\.fc2\.com/(?:(?:[^/]/){3}|(?:[^/]/))([^/]+)/(?:file/)?([^\.]+\.[^\?]+)}i
         username = $1
         filename = $2
         "http://#{username}.blog.fc2.com/img/#{filename}/"
@@ -324,24 +336,50 @@ class Post < ActiveRecord::Base
       when %r{\Ahttp://static[1-6]?\.minitokyo\.net/(?:downloads|view)/(?:\d{2}/){2}(\d+)}i
         "http://gallery.minitokyo.net/download/#{$1}"
 
-      when %r{\Ahttp://(?:(?:s?img|cdn|www)\d?\.)?gelbooru\.com/{1,2}(?:images|samples)/\d+/(?:sample_)?([a-f0-9]{32})\.}i
-        "http://gelbooru.com/index.php?page=post&s=list&md5=#{$1}"
+      when %r{\Ahttp://(?:(?:s?img|cdn|www)\d?\.)?gelbooru\.com/{1,2}(?:images|samples)/\d+/(?:sample_)?(?:[a-f0-9]{32}|[a-f0-9]{40})\.}i
+        "http://gelbooru.com/index.php?page=post&s=list&md5=#{md5}"
 
-      when %r{\Ahttps?://(?:slot\d*\.)?im(?:g|ages)\d*\.wikia\.nocookie\.net/(?:_{2}cb\d{14}/)?([^/]+)/images/(?:(?:thumb|archive)?/)?[a-f0-9]/[a-f0-9]{2}/([^/]+)}i
+      when %r{\Ahttps?://(?:slot\d*\.)?im(?:g|ages)\d*\.wikia\.(?:nocookie\.net|com)/(?:_{2}cb\d{14}/)?([^/]+)(?:/[a-z]{2})?/images/(?:(?:thumb|archive)?/)?[a-f0-9]/[a-f0-9]{2}/(?:\d{14}(?:!|%21))?([^/]+)}i
         subdomain = $1
         filename = $2
         "http://#{subdomain}.wikia.com/wiki/File:#{filename}"
-        
+
       when %r{\Ahttp://(?:(?:\d{1,3}\.){3}\d{1,3}):(?:\d{1,5})/h/([a-f0-9]{40})-(?:\d+-){3}(?:png|gif|(?:jpe?g?))/keystamp=\d+-[a-f0-9]{10}/([^/]+)}i
         sha1hash = $1
         filename = $2
-      "http://g.e-hentai.org/?f_shash=#{sha1hash}&fs_from=#{filename}"
-      
+        "http://g.e-hentai.org/?f_shash=#{sha1hash}&fs_from=#{filename}"
+
       when %r{\Ahttp://e-shuushuu.net/images/\d{4}-(?:\d{2}-){2}(\d+)}i
-      "http://e-shuushuu.net/image/#{$1}"
-      
+        "http://e-shuushuu.net/image/#{$1}"
+
       when %r{\Ahttp://jpg\.nijigen-daiaru\.com/(\d+)}i
-      "http://nijigen-daiaru.com/book.php?idb=#{$1}"
+        "http://nijigen-daiaru.com/book.php?idb=#{$1}"
+
+      when %r{\Ahttps?://sozai\.doujinantena\.com/contents_jpg/([a-f0-9]{32})/}i
+        "http://doujinantena.com/page.php?id=#{$1}"
+
+      when %r{\Ahttp://rule34-(?:data-\d{3}|images)\.paheal\.net/(?:_images/)?([a-f0-9]{32})}i
+        "http://rule34.paheal.net/post/list/md5:#{$1}/1"
+
+      when %r{\Ahttp://shimmie\.katawa-shoujo\.com/image/(\d+)}i
+        "http://shimmie.katawa-shoujo.com/post/view/#{$1}"
+
+      when %r{\Ahttp://(?:(?:(?:img\d?|cdn)\.)?rule34\.xxx|img\.booru\.org/(?:rule34|r34))(?:/(?:img/rule34|r34))?/{1,2}images/\d+/(?:[a-f0-9]{32}|[a-f0-9]{40})\.}i
+        "http://rule34.xxx/index.php?page=post&s=list&md5=#{md5}"
+
+      when %r{\Ahttps?://(?:s3\.amazonaws\.com/imgly_production|img\.ly/system/uploads)/((?:\d{3}/){3}|\d+/)}i
+        imgly_id = $1
+        imgly_id = imgly_id.gsub(/[^0-9]/, '')
+        base_62 = imgly_id.to_i.encode62
+        "http://img.ly/#{base_62}"
+
+      when %r{(\Ahttp://.+)/diarypro/d(?:ata/upfile/|iary\.cgi\?mode=image&upfile=)(\d+)}i
+        base_url = $1
+        entry_no = $2
+        "#{base_url}/diarypro/diary.cgi?no=#{entry_no}"
+
+      when %r{\Ahttp://i(?:\d)?\.minus\.com/(?:i|j)([^\.]{12,})}i
+        "http://minus.com/i/#{$1}"
 
       else
         source

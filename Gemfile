@@ -1,4 +1,4 @@
-source 'http://gemcutter.org'
+source 'https://rubygems.org/'
 
 group :test do
   gem "shoulda"
@@ -40,6 +40,8 @@ gem 'awesome_print'
 gem 'statistics2'
 gem 'capistrano'
 gem 'capistrano-ext'
+gem 'radix62', '~> 1.0.1'
+gem 'streamio-ffmpeg'
 
 # needed for looser jpeg header compat
 gem 'ruby-imagespec', :require => "image_spec", :git => "https://github.com/r888888888/ruby-imagespec.git", :branch => "exif-fixes"

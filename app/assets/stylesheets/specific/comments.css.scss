@@ -1,4 +1,4 @@
-@import "../common/000_vars.css.scss";
+﻿@import "../common/000_vars.css.scss";
 
 div.comments-for-post {
   div.notices {
@@ -95,6 +95,24 @@ div#c-comments {
       margin-right: 30px;
       overflow: hidden;
       text-align: center;
+    }
+
+    div.post-preview {
+      &[data-tags~=animated], &[data-file-ext=swf], &[data-file-ext=webm] {
+        div.preview {
+          position: relative;
+
+          &:before {
+            content: "►";
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            color: white; 
+            background-color: rgba(0,0,0,0.5);
+            margin: 2px;
+          }
+        }
+      }
     }
 
     div.post {
