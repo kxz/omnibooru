@@ -528,6 +528,38 @@ ALTER SEQUENCE amazon_backups_id_seq OWNED BY amazon_backups.id;
 
 
 --
+-- Name: api_keys; Type: TABLE; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE TABLE api_keys (
+    id integer NOT NULL,
+    user_id integer NOT NULL,
+    key character varying(255) NOT NULL,
+    created_at timestamp without time zone,
+    updated_at timestamp without time zone
+);
+
+
+--
+-- Name: api_keys_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE api_keys_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: api_keys_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE api_keys_id_seq OWNED BY api_keys.id;
+
+
+--
 -- Name: artist_commentaries; Type: TABLE; Schema: public; Owner: -; Tablespace: 
 --
 
@@ -1992,6 +2024,71 @@ ALTER SEQUENCE forum_posts_id_seq OWNED BY forum_posts.id;
 
 
 --
+-- Name: forum_subscriptions; Type: TABLE; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE TABLE forum_subscriptions (
+    id integer NOT NULL,
+    user_id integer,
+    forum_topic_id integer,
+    last_read_at timestamp without time zone,
+    delete_key character varying(255)
+);
+
+
+--
+-- Name: forum_subscriptions_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE forum_subscriptions_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: forum_subscriptions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE forum_subscriptions_id_seq OWNED BY forum_subscriptions.id;
+
+
+--
+-- Name: forum_topic_visits; Type: TABLE; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE TABLE forum_topic_visits (
+    id integer NOT NULL,
+    user_id integer,
+    forum_topic_id integer,
+    last_read_at timestamp without time zone,
+    created_at timestamp without time zone,
+    updated_at timestamp without time zone
+);
+
+
+--
+-- Name: forum_topic_visits_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE forum_topic_visits_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: forum_topic_visits_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE forum_topic_visits_id_seq OWNED BY forum_topic_visits.id;
+
+
+--
 -- Name: forum_topics; Type: TABLE; Schema: public; Owner: -; Tablespace: 
 --
 
@@ -3109,6 +3206,13 @@ ALTER TABLE ONLY amazon_backups ALTER COLUMN id SET DEFAULT nextval('amazon_back
 -- Name: id; Type: DEFAULT; Schema: public; Owner: -
 --
 
+ALTER TABLE ONLY api_keys ALTER COLUMN id SET DEFAULT nextval('api_keys_id_seq'::regclass);
+
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: -
+--
+
 ALTER TABLE ONLY artist_commentaries ALTER COLUMN id SET DEFAULT nextval('artist_commentaries_id_seq'::regclass);
 
 
@@ -3900,6 +4004,20 @@ ALTER TABLE ONLY forum_posts ALTER COLUMN id SET DEFAULT nextval('forum_posts_id
 -- Name: id; Type: DEFAULT; Schema: public; Owner: -
 --
 
+ALTER TABLE ONLY forum_subscriptions ALTER COLUMN id SET DEFAULT nextval('forum_subscriptions_id_seq'::regclass);
+
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY forum_topic_visits ALTER COLUMN id SET DEFAULT nextval('forum_topic_visits_id_seq'::regclass);
+
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: -
+--
+
 ALTER TABLE ONLY forum_topics ALTER COLUMN id SET DEFAULT nextval('forum_topics_id_seq'::regclass);
 
 
@@ -4124,6 +4242,14 @@ ALTER TABLE ONLY amazon_backups
 
 
 --
+-- Name: api_keys_pkey; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace: 
+--
+
+ALTER TABLE ONLY api_keys
+    ADD CONSTRAINT api_keys_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: artist_commentaries_pkey; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace: 
 --
 
@@ -4225,6 +4351,22 @@ ALTER TABLE ONLY favorites
 
 ALTER TABLE ONLY forum_posts
     ADD CONSTRAINT forum_posts_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: forum_subscriptions_pkey; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace: 
+--
+
+ALTER TABLE ONLY forum_subscriptions
+    ADD CONSTRAINT forum_subscriptions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: forum_topic_visits_pkey; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace: 
+--
+
+ALTER TABLE ONLY forum_topic_visits
+    ADD CONSTRAINT forum_topic_visits_pkey PRIMARY KEY (id);
 
 
 --
@@ -4500,6 +4642,20 @@ CREATE INDEX index_advertisement_hits_on_created_at ON advertisement_hits USING 
 --
 
 CREATE INDEX index_advertisements_on_ad_type ON advertisements USING btree (ad_type);
+
+
+--
+-- Name: index_api_keys_on_key; Type: INDEX; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE UNIQUE INDEX index_api_keys_on_key ON api_keys USING btree (key);
+
+
+--
+-- Name: index_api_keys_on_user_id; Type: INDEX; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE UNIQUE INDEX index_api_keys_on_user_id ON api_keys USING btree (user_id);
 
 
 --
@@ -6078,6 +6234,41 @@ CREATE INDEX index_forum_posts_on_updated_at ON forum_posts USING btree (updated
 
 
 --
+-- Name: index_forum_subscriptions_on_forum_topic_id; Type: INDEX; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE INDEX index_forum_subscriptions_on_forum_topic_id ON forum_subscriptions USING btree (forum_topic_id);
+
+
+--
+-- Name: index_forum_subscriptions_on_user_id; Type: INDEX; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE INDEX index_forum_subscriptions_on_user_id ON forum_subscriptions USING btree (user_id);
+
+
+--
+-- Name: index_forum_topic_visits_on_forum_topic_id; Type: INDEX; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE INDEX index_forum_topic_visits_on_forum_topic_id ON forum_topic_visits USING btree (forum_topic_id);
+
+
+--
+-- Name: index_forum_topic_visits_on_last_read_at; Type: INDEX; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE INDEX index_forum_topic_visits_on_last_read_at ON forum_topic_visits USING btree (last_read_at);
+
+
+--
+-- Name: index_forum_topic_visits_on_user_id; Type: INDEX; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE INDEX index_forum_topic_visits_on_user_id ON forum_topic_visits USING btree (user_id);
+
+
+--
 -- Name: index_forum_topics_on_creator_id; Type: INDEX; Schema: public; Owner: -; Tablespace: 
 --
 
@@ -6879,4 +7070,10 @@ INSERT INTO schema_migrations (version) VALUES ('20140603225334');
 INSERT INTO schema_migrations (version) VALUES ('20140604002414');
 
 INSERT INTO schema_migrations (version) VALUES ('20140613004559');
+
+INSERT INTO schema_migrations (version) VALUES ('20140701224800');
+
+INSERT INTO schema_migrations (version) VALUES ('20140722225753');
+
+INSERT INTO schema_migrations (version) VALUES ('20140725003232');
 

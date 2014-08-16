@@ -137,7 +137,7 @@ class Post < ActiveRecord::Base
     end
 
     def has_dimensions?
-      is_image? || is_flash? || is_video?
+      image_width.present? && image_height.present?
     end
   end
 
@@ -324,7 +324,7 @@ class Post < ActiveRecord::Base
         day = $5
         "http://diary#{server_id}.fc2.com/cgi-sys/ed.cgi/#{username}?Y=#{year}&M=#{month}&D=#{day}"
 
-      when %r{\Ahttps?://s(?:content|photos)-[^/]+\.fbcdn\.net/hphotos-.+/\d+_(\d+)_\d+_[no]\.}i
+      when %r{\Ahttps?://(?:fbcdn-)?s(?:content|photos)-[^/]+\.(?:fbcdn|akamaihd)\.net/hphotos-.+/\d+_(\d+)_(?:\d+_){1,3}[no]\.}i
         "https://www.facebook.com/photo.php?fbid=#{$1}"
 
       when %r{\Ahttp://c(?:s|han|[1-4])\.sankakucomplex\.com/data(?:/sample)?/(?:[a-f0-9]{2}/){2}(?:sample-|preview)?([a-f0-9]{32})}i
@@ -380,6 +380,19 @@ class Post < ActiveRecord::Base
 
       when %r{\Ahttp://i(?:\d)?\.minus\.com/(?:i|j)([^\.]{12,})}i
         "http://minus.com/i/#{$1}"
+        
+      when %r{\Ahttps?://pic0[1-4]\.nijie\.info/nijie_picture/(?:diff/main/)?\d+_(\d+)_(?:\d+{10}|\d+_\d+{14})}i
+        "http://nijie.info/view.php?id=#{$1}"
+        
+      when %r{\Ahttps?://(?:o|image-proxy-origin)\.twimg\.com/\d/proxy\.jpg\?t=(\w+)&}i
+	str = Base64.decode64($1)
+	url = URI.extract(str, ['http', 'https'])
+	if (url[0] =~ /^https?:\/\/twitpic.com\/show\/large\/[a-z0-9]+/i)
+	  url[0].gsub!(/show\/large\//, "")
+	  index = url[0].rindex('.')
+	  url[0] = url[0][0..index-1]
+	end
+	"#{url[0]}"
 
       else
         source
@@ -508,27 +521,29 @@ class Post < ActiveRecord::Base
 
       tags -= %w(incredibly_absurdres absurdres highres lowres huge_filesize)
 
-      if image_width >= 10_000 || image_height >= 10_000
-        tags << "incredibly_absurdres"
-      end
-      if image_width >= 3200 || image_height >= 2400
-        tags << "absurdres"
-      end
-      if image_width >= 1600 || image_height >= 1200
-        tags << "highres"
-      end
-      if image_width <= 500 && image_height <= 500
-        tags << "lowres"
+      if has_dimensions?
+        if image_width >= 10_000 || image_height >= 10_000
+          tags << "incredibly_absurdres"
+        end
+        if image_width >= 3200 || image_height >= 2400
+          tags << "absurdres"
+        end
+        if image_width >= 1600 || image_height >= 1200
+          tags << "highres"
+        end
+        if image_width <= 500 && image_height <= 500
+          tags << "lowres"
+        end
+
+        if image_width >= 1024 && image_width.to_f / image_height >= 4
+          tags << "wide_image long_image"
+        elsif image_height >= 1024 && image_height.to_f / image_width >= 4
+          tags << "tall_image long_image"
+        end
       end
 
       if file_size >= 10.megabytes
         tags << "huge_filesize"
-      end
-
-      if image_width >= 1024 && image_width.to_f / image_height >= 4
-        tags << "wide_image long_image"
-      elsif image_height >= 1024 && image_height.to_f / image_width >= 4
-        tags << "tall_image long_image"
       end
 
       return tags

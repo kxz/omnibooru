@@ -11,6 +11,7 @@ class ForumTopic < ActiveRecord::Base
   belongs_to :updater, :class_name => "User"
   has_many :posts, lambda {order("forum_posts.id asc")}, :class_name => "ForumPost", :foreign_key => "topic_id", :dependent => :destroy
   has_one :original_post, lambda {order("forum_posts.id asc")}, :class_name => "ForumPost", :foreign_key => "topic_id"
+  has_many :subscriptions, :class_name => "ForumSubscription"
   before_validation :initialize_creator, :on => :create
   before_validation :initialize_updater
   before_validation :initialize_is_deleted, :on => :create
@@ -74,8 +75,52 @@ class ForumTopic < ActiveRecord::Base
     end
   end
 
+  module VisitMethods
+    def read_by?(user = nil)
+      user ||= CurrentUser.user
+
+      if user.last_forum_read_at && updated_at <= user.last_forum_read_at
+        return true
+      end
+
+      ForumTopicVisit.where("user_id = ? and forum_topic_id = ? and last_read_at >= ?", user.id, id, updated_at).exists?
+    end
+
+    def mark_as_read!(user = nil)
+      user ||= CurrentUser.user
+      
+      match = ForumTopicVisit.where(:user_id => user.id, :forum_topic_id => id).first
+      if match
+        match.update_attribute(:last_read_at, updated_at)
+      else
+        ForumTopicVisit.create(:user_id => user.id, :forum_topic_id => id, :last_read_at => updated_at)
+      end
+
+      # user.update_attribute(:last';¬≥÷_forum_read_at, ForumTopicVisit.where(:user_id => user.id, :forum_topic_id => id).minimum(:last_read_at) || updated_at)
+    end
+  end
+
+  module SubscriptionMethods
+    def update_subscription!(user)
+      user_subscription = subscriptions.where(:user_id => user.id).first
+
+      if user_subscription
+        user_subscription.update_attribute(:last_read_at, updated_at)
+      else
+        subscriptions.create(:user_id => user.id, :last_read_at => updated_at, :delete_key => SecureRandom.urlsafe_base64(10))
+      end
+    end
+
+    def notify_subscriptions!
+      ForumSubscription.where(:forum_topic_id => id).where("last_read_at < ?", updated_at).find_each do |subscription|
+        
+      end
+    end
+  end
+
   extend SearchMethods
   include CategoryMethods
+  include VisitMethods
 
   def editable_by?(user)
     creator_id == user.id || user.is_janitor?
@@ -94,7 +139,7 @@ class ForumTopic < ActiveRecord::Base
   end
 
   def last_page
-    (posts.count / Danbooru.config.posts_per_page.to_f).ceil
+    (response_count / Danbooru.config.posts_per_page.to_f).ceil
   end
 
   def presenter(forum_posts)
@@ -103,50 +148,6 @@ class ForumTopic < ActiveRecord::Base
   
   def hidden_attributes
     super + [:text_index]
-  end
-
-  def read_by?(user, read_forum_topic_ids)
-    if read_forum_topic_ids.any? {|topic_id, timestamp| id.to_s == topic_id && updated_at.to_i > timestamp.to_i}
-      return false
-    end
-    if read_forum_topic_ids.any? {|topic_id, timestamp| id.to_s == topic_id && updated_at.to_i <= timestamp.to_i}
-      return true
-    end
-    return false if user.last_forum_read_at.nil?
-    return true if updated_at < user.last_forum_read_at
-    return false
-  end
-
-  def mark_as_read(read_forum_topic_ids)
-    hash = read_forum_topic_ids.inject({}) do |hash, x|
-      hash[x[0].to_s] = x[1].to_s
-      hash
-    end
-    hash[id.to_s] = updated_at.to_i.to_s
-    result = hash.to_a.flatten.join(" ")
-    while result.size > 500
-      ids = result.scan(/\S+/)
-      result = ids[(ids.size / 2)..-1].join(" ")
-    end
-    update_last_forum_read_at(hash.keys)
-    result
-  end
-
-  def update_last_forum_read_at(read_forum_topic_ids)
-    query = ForumTopic.where("true")
-    if CurrentUser.user.last_forum_read_at.present?
-      query = query.where("updated_at >= ?", CurrentUser.last_forum_read_at)
-    end
-    if read_forum_topic_ids.any?
-      query = query.where("id not in (?)", read_forum_topic_ids)
-    end
-    query = query.order("updated_at asc")
-    topic = query.first
-    if topic
-      CurrentUser.user.update_attribute(:last_forum_read_at, topic.updated_at)
-    else
-      CurrentUser.user.update_attribute(:last_forum_read_at, Time.now)
-    end
   end
 
   def merge(topic)

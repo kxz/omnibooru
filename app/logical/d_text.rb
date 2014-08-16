@@ -108,8 +108,11 @@ class DText
     str = str.gsub(/\bforum #(\d+)/i) do
       %{<a href="#{url.forum_post_path($1)}">forum \##{$1}</a>}
     end
-    str = str.gsub(/\btopic #(\d+)(?:\/p(\d+))?/i) do
-      %{<a href="#{url.forum_topic_path($1, page: $2)}">topic \##{$1}</a>}
+    str = str.gsub(/\btopic #(\d+)(?!\/p\d|\d)/i) do
+      %{<a href="#{url.forum_topic_path($1)}">topic \##{$1}</a>}
+    end
+    str = str.gsub(/\btopic #(\d+)\/p(\d+)/i) do
+      %{<a href="#{url.forum_topic_path($1, page: $2)}">topic \##{$1}/p#{$2}</a>}
     end
     str = str.gsub(/\bcomment #(\d+)/i) do
       %{<a href="#{url.comment_path($1)}">comment \##{$1}</a>}

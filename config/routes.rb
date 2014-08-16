@@ -59,6 +59,7 @@ Rails.application.routes.draw do
   resources :advertisements do
     resources :hits, :controller => "advertisement_hits", :only => [:create]
   end
+  resources :api_keys, :only => [:new, :create]
   resources :artists do
     member do
       put :revert
@@ -124,6 +125,7 @@ Rails.application.routes.draw do
     collection do
       post :mark_all_as_read
     end
+    resource :visit, :controller => "forum_topic_visits"
   end
   resources :ip_bans
   resources :iqdb_queries, :only => [:create]
@@ -209,7 +211,7 @@ Rails.application.routes.draw do
     resource :correction, :only => [:new, :create, :show], :controller => "tag_corrections"
   end
   resources :tag_aliases do
-    resource :correction, :only => [:create, :new, :show], :controller => "tag_alias_corrections"
+    resource :correction, :controller => "tag_alias_corrections"
     member do
       post :approve
     end
