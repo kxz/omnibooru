@@ -24,10 +24,24 @@ class FavoritesController < ApplicationController
     else
       @error_msg = "You can only keep up to #{CurrentUser.favorite_limit} favorites. Upgrade your account to save more."
     end
+
+    respond_with(@post) do |format|
+      format.html do
+        redirect_to(mobile_post_path(@post))
+      end
+      format.js
+    end
   end
 
   def destroy
     @post = Post.find(params[:id])
     @post.remove_favorite!(CurrentUser.user)
+
+    respond_with(@post) do |format|
+      format.html do
+        redirect_to(mobile_post_path(@post))
+      end
+      format.js
+    end
   end
 end
