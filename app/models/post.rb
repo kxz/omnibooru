@@ -288,6 +288,9 @@ class Post < ActiveRecord::Base
       when %r{\Ahttp://img\d+\.pixiv\.net/img/[^\/]+/(\d+)}i, %r{\Ahttp://i\d\.pixiv\.net/img\d+/img/[^\/]+/(\d+)}i
         "http://www.pixiv.net/member_illust.php?mode=medium&illust_id=#{$1}"
 
+      when %r{\Ahttp://i\d\.pixiv\.net/img-original/img/(?:\d+\/)+(\d+)_p}, %r{\Ahttp://i\d\.pixiv\.net/c/\d+x\d+/img-master/img/(?:\d+\/)+(\d+)_p}
+        "http://www.pixiv.net/member_illust.php?mode=medium&illust_id=#{$1}"
+
       when %r{\Ahttp://lohas\.nicoseiga\.jp/priv/(\d+)\?e=\d+&h=[a-f0-9]+}i, %r{\Ahttp://lohas\.nicoseiga\.jp/priv/[a-f0-9]+/\d+/(\d+)}i
         "http://seiga.nicovideo.jp/seiga/im#{$1}"
 
@@ -502,10 +505,10 @@ class Post < ActiveRecord::Base
       normalized_tags = normalized_tags.map{|tag| tag.downcase}
       normalized_tags = remove_negated_tags(normalized_tags)
       normalized_tags = normalized_tags.map {|x| Tag.find_or_create_by_name(x).name}
-      normalized_tags = TagAlias.to_aliased(normalized_tags)
-      normalized_tags = TagImplication.with_descendants(normalized_tags)
       normalized_tags = %w(tagme) if normalized_tags.empty?
       normalized_tags = add_automatic_tags(normalized_tags)
+      normalized_tags = TagAlias.to_aliased(normalized_tags)
+      normalized_tags = TagImplication.with_descendants(normalized_tags)
       normalized_tags.sort!
       set_tag_string(normalized_tags.uniq.sort.join(" "))
     end
@@ -519,7 +522,7 @@ class Post < ActiveRecord::Base
     def add_automatic_tags(tags)
       return tags if !Danbooru.config.enable_dimension_autotagging
 
-      tags -= %w(incredibly_absurdres absurdres highres lowres huge_filesize)
+      tags -= %w(incredibly_absurdres absurdres highres lowres huge_filesize flash webm)
 
       if has_dimensions?
         if image_width >= 10_000 || image_height >= 10_000
@@ -536,14 +539,24 @@ class Post < ActiveRecord::Base
         end
 
         if image_width >= 1024 && image_width.to_f / image_height >= 4
-          tags << "wide_image long_image"
+          tags << "wide_image"
+          tags << "long_image"
         elsif image_height >= 1024 && image_height.to_f / image_width >= 4
-          tags << "tall_image long_image"
+          tags << "tall_image"
+          tags << "long_image"
         end
       end
 
       if file_size >= 10.megabytes
         tags << "huge_filesize"
+      end
+
+      if file_ext == "swf"
+        tags << "flash"
+      end
+
+      if file_ext == "webm"
+        tags << "webm"
       end
 
       return tags
@@ -1370,6 +1383,10 @@ class Post < ActiveRecord::Base
       elsif source =~ %r!http://img\d+\.pixiv\.net/img/[^\/]+/(\d+)!
         self.pixiv_id = $1
       elsif source =~ %r!http://i\d\.pixiv\.net/img\d+/img/[^\/]+/(\d+)!
+        self.pixiv_id = $1
+      elsif source =~ %r!http://i\d\.pixiv\.net/img-original/img/(?:\d+\/)+(\d+)_p!
+        self.pixiv_id = $1
+      elsif source =~ %r!http://i\d\.pixiv\.net/c/\d+x\d+/img-master/img/(?:\d+\/)+(\d+)_p!
         self.pixiv_id = $1
       elsif source =~ /pixiv\.net/ && source =~ /illust_id=(\d+)/
         self.pixiv_id = $1
