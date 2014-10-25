@@ -26,6 +26,7 @@ class Post < ActiveRecord::Base
   belongs_to :parent, :class_name => "Post"
   has_one :upload, :dependent => :destroy
   has_one :artist_commentary, :dependent => :destroy
+  has_one :pixiv_ugoira_frame_data, :class_name => "PixivUgoiraFrameData", :dependent => :destroy
   has_many :flags, :class_name => "PostFlag", :dependent => :destroy
   has_many :appeals, :class_name => "PostAppeal", :dependent => :destroy
   has_many :versions, lambda {order("post_versions.updated_at ASC, post_versions.id ASC")}, :class_name => "PostVersion", :dependent => :destroy
@@ -70,9 +71,17 @@ class Post < ActiveRecord::Base
 
     def large_file_path
       if has_large?
-        "#{Rails.root}/public/data/sample/#{file_path_prefix}#{Danbooru.config.large_image_prefix}#{md5}.jpg"
+        "#{Rails.root}/public/data/sample/#{file_path_prefix}#{Danbooru.config.large_image_prefix}#{md5}.#{large_file_ext}"
       else
         file_path
+      end
+    end
+
+    def large_file_ext
+      if is_ugoira?
+        "webm"
+      else
+        "jpg"
       end
     end
 
@@ -86,7 +95,7 @@ class Post < ActiveRecord::Base
 
     def large_file_url
       if has_large?
-        "/booru/data/sample/#{file_path_prefix}#{Danbooru.config.large_image_prefix}#{md5}.jpg"
+        "/booru/data/sample/#{file_path_prefix}#{Danbooru.config.large_image_prefix}#{md5}.#{large_file_ext}"
       else
         file_url
       end
@@ -132,8 +141,12 @@ class Post < ActiveRecord::Base
       file_ext =~ /webm/i
     end
 
+    def is_ugoira?
+      file_ext =~ /zip/i
+    end
+
     def has_preview?
-      is_image? || is_video?
+      is_image? || is_video? || is_ugoira?
     end
 
     def has_dimensions?
@@ -155,7 +168,7 @@ class Post < ActiveRecord::Base
     end
 
     def has_large?
-      is_image? && image_width.present? && image_width > Danbooru.config.large_image_width
+      is_ugoira? || (is_image? && image_width.present? && image_width > Danbooru.config.large_image_width)
     end
 
     def has_large
@@ -288,7 +301,7 @@ class Post < ActiveRecord::Base
       when %r{\Ahttp://img\d+\.pixiv\.net/img/[^\/]+/(\d+)}i, %r{\Ahttp://i\d\.pixiv\.net/img\d+/img/[^\/]+/(\d+)}i
         "http://www.pixiv.net/member_illust.php?mode=medium&illust_id=#{$1}"
 
-      when %r{\Ahttp://i\d\.pixiv\.net/img-original/img/(?:\d+\/)+(\d+)_p}, %r{\Ahttp://i\d\.pixiv\.net/c/\d+x\d+/img-master/img/(?:\d+\/)+(\d+)_p}
+      when %r{\Ahttp://i\d\.pixiv\.net/img-original/img/(?:\d+\/)+(\d+)_p}i, %r{\Ahttp://i\d\.pixiv\.net/c/\d+x\d+/img-master/img/(?:\d+\/)+(\d+)_p}i
         "http://www.pixiv.net/member_illust.php?mode=medium&illust_id=#{$1}"
 
       when %r{\Ahttp://lohas\.nicoseiga\.jp/priv/(\d+)\?e=\d+&h=[a-f0-9]+}i, %r{\Ahttp://lohas\.nicoseiga\.jp/priv/[a-f0-9]+/\d+/(\d+)}i
@@ -383,10 +396,10 @@ class Post < ActiveRecord::Base
 
       when %r{\Ahttp://i(?:\d)?\.minus\.com/(?:i|j)([^\.]{12,})}i
         "http://minus.com/i/#{$1}"
-        
+
       when %r{\Ahttps?://pic0[1-4]\.nijie\.info/nijie_picture/(?:diff/main/)?\d+_(\d+)_(?:\d+{10}|\d+_\d+{14})}i
         "http://nijie.info/view.php?id=#{$1}"
-        
+
       when %r{\Ahttps?://(?:o|image-proxy-origin)\.twimg\.com/\d/proxy\.jpg\?t=(\w+)&}i
 	str = Base64.decode64($1)
 	url = URI.extract(str, ['http', 'https'])
@@ -424,12 +437,10 @@ class Post < ActiveRecord::Base
       decrement_tags = tag_array_was - tag_array
       increment_tags = tag_array - tag_array_was
       if increment_tags.any?
-        Tag.where(:name => increment_tags).update_all("post_count = post_count + 1")
-        Post.expire_cache_for_all(increment_tags)
+        Tag.delay(:queue => "default").increment_post_counts(increment_tags)
       end
       if decrement_tags.any?
-        Tag.where(:name => decrement_tags).update_all("post_count = post_count - 1")
-        Post.expire_cache_for_all(decrement_tags)
+        Tag.delay(:queue => "default").decrement_post_counts(decrement_tags)
       end
       Post.expire_cache_for_all([""]) if new_record? || id <= 100_000
     end
@@ -636,7 +647,7 @@ class Post < ActiveRecord::Base
     end
 
     def has_tag?(tag)
-      tag_string =~ /(?:^| )#{tag}(?:$| )/
+      !!(tag_string =~ /(?:^| )#{tag}(?:$| )/)
     end
 
     def has_dup_tag?
@@ -1042,6 +1053,10 @@ class Post < ActiveRecord::Base
       return true if has_children? && is_deleted?
       return false
     end
+
+    def has_visible_children
+      has_visible_children?
+    end
   end
 
   module DeletionMethods
@@ -1207,7 +1222,7 @@ class Post < ActiveRecord::Base
     end
 
     def method_attributes
-      list = [:uploader_name, :has_large, :tag_string_artist, :tag_string_character, :tag_string_copyright, :tag_string_general]
+      list = [:uploader_name, :has_large, :tag_string_artist, :tag_string_character, :tag_string_copyright, :tag_string_general, :has_visible_children]
       if visible?
         list += [:file_url, :large_file_url, :preview_file_url]
       end

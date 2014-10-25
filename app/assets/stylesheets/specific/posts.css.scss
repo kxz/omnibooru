@@ -22,7 +22,7 @@ article.post-preview {
     margin: auto;
   }
 
-  &[data-tags~=animated]:before, &[data-file-ext=swf]:before, &[data-file-ext=webm]:before {
+  &[data-tags~=animated]:before, &[data-file-ext=swf]:before, &[data-file-ext=webm]:before, &[data-file-ext=zip]:before {
     content: "►";
     position: absolute;
     width: 20px;
@@ -183,6 +183,22 @@ a.blacklisted-active {
 }
 
 div#c-posts {
+
+  #ugoira-controls {
+    div#seek-slider {
+      margin-top: 0.5em;
+      float: right;
+    }
+
+    #save-video-link {
+      margin: 0.5em 0;
+    }
+
+    button {
+      margin-top: 0.3em;
+    }
+  }
+
   div.notice {
     font-size: 0.8em;
     padding: 0.5em;

@@ -157,8 +157,9 @@ GEM
     raindrops (0.13.0)
     rake (10.3.2)
     ref (1.0.5)
-    rmagick (2.13.2)
+    rmagick (2.13.3)
     ruby-prof (0.14.2)
+    rubyzip (1.1.6)
     safe_yaml (1.0.2)
     sanitize (2.1.0)
       nokogiri (>= 1.4.4)
@@ -261,6 +262,7 @@ DEPENDENCIES
   rmagick
   ruby-imagespec!
   ruby-prof
+  rubyzip
   sanitize
   sass-rails (~> 4.0.0)
   shoulda

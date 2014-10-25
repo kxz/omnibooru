@@ -1,5 +1,6 @@
 Rails.application.config.assets.precompile += %w(
   stupidtable.js
+  ugoira_player.js
   ui-bg_flat_75_ffffff_40x100.png
   ui-bg_highlight-soft_75_cccccc_1x100.png
   ui-bg_highlight-soft_75_e6e6e6_1x100.png

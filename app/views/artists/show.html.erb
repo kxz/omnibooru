@@ -1,6 +1,6 @@
 <div id="c-artists">
   <div id="a-show">
-    <h1>Artist: <%= @artist.name.tr("_", " ") %></h1>
+    <h1>Artist: <%= link_to @artist.pretty_name, posts_path(:tags => @artist.name), :class => "tag-type-#{@artist.category_name}" %></h1>
 
     <% if @artist.notes.present? && (!@artist.is_banned? || CurrentUser.user.is_member?) %>
       <div class="prose">
@@ -37,13 +37,6 @@
           <% end %>
         <% end %>
       </ul>
-    </div>
-
-    <div class="recent-posts">
-      <h1>Recent Posts</h1>
-      <div style="margin: 1em 0;">
-        <%= @post_set.presenter.post_previews_html(self) %>
-      </div>
     </div>
 
     <%= render "secondary_links" %>

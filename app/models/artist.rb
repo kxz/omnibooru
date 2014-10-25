@@ -22,6 +22,7 @@ class Artist < ActiveRecord::Base
 
     module ClassMethods
       def find_all_by_url(url)
+        url = Sources::Site.new(url).normalize_for_artist_finder!
         url = ArtistUrl.normalize(url)
         artists = []
 
@@ -32,7 +33,7 @@ class Artist < ActiveRecord::Base
           url = File.dirname(url) + "/"
           break if url =~ /pixiv\.net\/(?:img\/)?$/i
           break if url =~ /lohas\.nicoseiga\.jp\/priv\/$/i
-          break if url =~ /media\.tumblr\.com\/[a-z0-9]+\/$/i
+          break if url =~ /(?:data|media)\.tumblr\.com\/[a-z0-9]+\/$/i
           break if url =~ /deviantart\.net\//i
         end
 
@@ -74,6 +75,10 @@ class Artist < ActiveRecord::Base
 
     def normalize_name
       self.name = Artist.normalize_name(name)
+    end
+
+    def pretty_name
+      name.tr("_", " ")
     end
 
     def other_names_array
@@ -220,6 +225,10 @@ class Artist < ActiveRecord::Base
 
     def tag_alias_name
       TagAlias.active.find_by_antecedent_name(name).consequent_name
+    end
+
+    def category_name
+      Tag.category_for(name)
     end
 
     def categorize_tag
