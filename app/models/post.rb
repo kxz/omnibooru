@@ -152,6 +152,10 @@ class Post < ActiveRecord::Base
     def has_dimensions?
       image_width.present? && image_height.present?
     end
+
+    def has_ugoira_webm?
+      created_at < 1.minute.ago || File.exists?(preview_file_path) 
+    end
   end
 
   module ImageMethods
@@ -172,7 +176,7 @@ class Post < ActiveRecord::Base
     end
 
     def has_large
-      has_large?
+      !!has_large?
     end
 
     def large_image_width
@@ -214,12 +218,12 @@ class Post < ActiveRecord::Base
       !is_status_locked? && (is_pending? || is_flagged? || is_deleted?) && approver_id != CurrentUser.id
     end
 
-    def flag!(reason)
+    def flag!(reason, options = {})
       if is_status_locked?
         raise PostFlag::Error.new("Post is locked and cannot be flagged")
       end
 
-      flag = flags.create(:reason => reason, :is_resolved => false)
+      flag = flags.create(:reason => reason, :is_resolved => false, :is_deletion => options[:is_deletion])
 
       if flag.errors.any?
         raise PostFlag::Error.new(flag.errors.full_messages.join("; "))
@@ -301,7 +305,9 @@ class Post < ActiveRecord::Base
       when %r{\Ahttp://img\d+\.pixiv\.net/img/[^\/]+/(\d+)}i, %r{\Ahttp://i\d\.pixiv\.net/img\d+/img/[^\/]+/(\d+)}i
         "http://www.pixiv.net/member_illust.php?mode=medium&illust_id=#{$1}"
 
-      when %r{\Ahttp://i\d\.pixiv\.net/img-original/img/(?:\d+\/)+(\d+)_p}i, %r{\Ahttp://i\d\.pixiv\.net/c/\d+x\d+/img-master/img/(?:\d+\/)+(\d+)_p}i
+      when %r{\Ahttp://i\d+\.pixiv\.net/img-original/img/(?:\d+\/)+(\d+)_p}i,
+           %r{\Ahttp://i\d+\.pixiv\.net/c/\d+x\d+/img-master/img/(?:\d+\/)+(\d+)_p}i,
+           %r{\Ahttp://i\d+\.pixiv\.net/img-zip-ugoira/img/(?:\d+\/)+(\d+)_ugoira\d+x\d+\.zip}i
         "http://www.pixiv.net/member_illust.php?mode=medium&illust_id=#{$1}"
 
       when %r{\Ahttp://lohas\.nicoseiga\.jp/priv/(\d+)\?e=\d+&h=[a-f0-9]+}i, %r{\Ahttp://lohas\.nicoseiga\.jp/priv/[a-f0-9]+/\d+/(\d+)}i
@@ -562,12 +568,16 @@ class Post < ActiveRecord::Base
         tags << "huge_filesize"
       end
 
-      if file_ext == "swf"
+      if is_flash?
         tags << "flash"
       end
 
-      if file_ext == "webm"
+      if is_video?
         tags << "webm"
+      end
+
+      if is_ugoira?
+        tags << "ugoira"
       end
 
       return tags
@@ -1229,8 +1239,14 @@ class Post < ActiveRecord::Base
       list
     end
 
+    def associated_attributes
+      [ :pixiv_ugoira_frame_data ]
+    end
+
     def serializable_hash(options = {})
       options ||= {}
+      options[:include] ||= []
+      options[:include] += associated_attributes
       options[:except] ||= []
       options[:except] += hidden_attributes
       unless options[:builder]
@@ -1404,6 +1420,8 @@ class Post < ActiveRecord::Base
       elsif source =~ %r!http://i\d\.pixiv\.net/c/\d+x\d+/img-master/img/(?:\d+\/)+(\d+)_p!
         self.pixiv_id = $1
       elsif source =~ /pixiv\.net/ && source =~ /illust_id=(\d+)/
+        self.pixiv_id = $1
+      elsif source =~ %r!http://i\d\.pixiv\.net/img-zip-ugoira/img/(?:\d+\/)+(\d+)_ugoira!
         self.pixiv_id = $1
       else
         self.pixiv_id = nil

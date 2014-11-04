@@ -14,7 +14,7 @@ class Upload < ActiveRecord::Base
   validate :uploader_is_not_limited, :on => :create
   validate :file_or_source_is_present, :on => :create
   validate :rating_given
-  attr_accessible :file, :image_width, :image_height, :file_ext, :md5, :file_size, :as_pending, :source, :file_path, :content_type, :rating, :tag_string, :status, :backtrace, :post_id, :md5_confirmation, :parent_id
+  attr_accessible :file, :image_width, :image_height, :file_ext, :md5, :file_size, :as_pending, :source, :file_path, :content_type, :rating, :tag_string, :status, :backtrace, :post_id, :md5_confirmation, :parent_id, :server
 
   module ValidationMethods
     def uploader_is_not_limited
@@ -91,7 +91,7 @@ class Upload < ActiveRecord::Base
       CurrentUser.scoped(uploader, uploader_ip_addr) do
         update_attribute(:status, "processing")
         if is_downloadable?
-          download_from_source(temp_file_path)
+          self.source = download_from_source(temp_file_path)
         end
         validate_file_exists
         self.content_type = file_header_to_content_type(file_path)
@@ -113,7 +113,7 @@ class Upload < ActiveRecord::Base
         post.distribute_files
         if post.save
           CurrentUser.increment!(:post_upload_count)
-          ugoira_service.process(post) if is_ugoira?
+          ugoira_service.save_frame_data(post) if is_ugoira?
           update_attributes(:status => "completed", :post_id => post.id)
         else
           update_attribute(:status, "error: " + post.errors.full_messages.join(", "))
@@ -139,13 +139,7 @@ class Upload < ActiveRecord::Base
       update_attributes(:status => "error: #{x.class} - #{x.message}", :backtrace => x.backtrace.join("\n"))
       
     ensure
-      if async_conversion?
-        # need to delay this because we have to process the file
-        # before deleting it
-        delay(:queue => Socket.gethostname).delete_temp_file(temp_file_path) 
-      else
-        delete_temp_file
-      end
+      delete_temp_file
     end
 
     def async_conversion?
@@ -256,6 +250,7 @@ class Upload < ActiveRecord::Base
         self.image_width = video.width
         self.image_height = video.height
       elsif is_ugoira?
+        ugoira_service.calculate_dimensions(file_path)
         self.image_width = ugoira_service.width
         self.image_height = ugoira_service.height
       else
@@ -372,6 +367,7 @@ class Upload < ActiveRecord::Base
       download = Downloads::File.new(source, destination_path)
       download.download!
       ugoira_service.load(download.data)
+      download.source
     end
   end
 
@@ -422,6 +418,10 @@ class Upload < ActiveRecord::Base
     def initialize_uploader
       self.uploader_id = CurrentUser.user.id
       self.uploader_ip_addr = CurrentUser.ip_addr
+    end
+
+    def uploader_name
+      User.id_to_name(uploader_id)
     end
   end
 
@@ -495,10 +495,6 @@ class Upload < ActiveRecord::Base
   include VideoMethods
   extend SearchMethods
   include ApiMethods
-
-  def uploader_name
-    User.id_to_name(uploader_id)
-  end
 
   def presenter
     @presenter ||= UploadPresenter.new(self)

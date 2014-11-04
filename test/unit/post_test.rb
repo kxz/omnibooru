@@ -641,6 +641,42 @@ class PostTest < ActiveSupport::TestCase
         end
       end
 
+      context "with a .zip file extension" do
+        setup do
+          @post.file_ext = "zip"
+          @post.tag_string = ""
+          @post.save
+        end
+
+        should "have the appropriate file type tag added automatically" do
+          assert_match(/ugoira/, @post.tag_string)
+        end
+      end
+
+      context "with a .webm file extension" do
+        setup do
+          @post.file_ext = "webm"
+          @post.tag_string = ""
+          @post.save
+        end
+
+        should "have the appropriate file type tag added automatically" do
+          assert_match(/webm/, @post.tag_string)
+        end
+      end
+
+      context "with a .swf file extension" do
+        setup do
+          @post.file_ext = "swf"
+          @post.tag_string = ""
+          @post.save
+        end
+
+        should "have the appropriate file type tag added automatically" do
+          assert_match(/flash/, @post.tag_string)
+        end
+      end
+
       context "that has been updated" do
         should "create a new version if it's the first version" do
           assert_difference("PostVersion.count", 1) do
@@ -817,8 +853,18 @@ class PostTest < ActiveSupport::TestCase
         should "normalize pixiv links" do
           @post.source = "http://i2.pixiv.net/img12/img/zenze/39749565.png"
           assert_equal("http://www.pixiv.net/member_illust.php?mode=medium&illust_id=39749565", @post.normalized_source)
+
           @post.source = "http://i1.pixiv.net/img53/img/themare/39735353_big_p1.jpg"
           assert_equal("http://www.pixiv.net/member_illust.php?mode=medium&illust_id=39735353", @post.normalized_source)
+
+          @post.source = "http://i1.pixiv.net/c/150x150/img-master/img/2010/11/30/08/39/58/14901720_p0_master1200.jpg"
+          assert_equal("http://www.pixiv.net/member_illust.php?mode=medium&illust_id=14901720", @post.normalized_source)
+
+          @post.source = "http://i1.pixiv.net/img-original/img/2010/11/30/08/39/58/14901720_p0.png"
+          assert_equal("http://www.pixiv.net/member_illust.php?mode=medium&illust_id=14901720", @post.normalized_source)
+
+          @post.source = "http://i2.pixiv.net/img-zip-ugoira/img/2014/08/05/06/01/10/44524589_ugoira1920x1080.zip"
+          assert_equal("http://www.pixiv.net/member_illust.php?mode=medium&illust_id=44524589", @post.normalized_source)
         end
 
         should "normalize nicoseiga links" do
@@ -1218,6 +1264,8 @@ class PostTest < ActiveSupport::TestCase
       post = FactoryGirl.create(:post, :source => url)
       assert_equal(1, Post.tag_match("source:*.pixiv.net/img*/artist-name/*").count)
       assert_equal(0, Post.tag_match("source:*.pixiv.net/img*/artist-fake/*").count)
+      assert_equal(1, Post.tag_match("source:http://*.pixiv.net/img*/img/artist-name/*").count)
+      assert_equal(0, Post.tag_match("source:http://*.pixiv.net/img*/img/artist-fake/*").count)
       assert_equal(1, Post.tag_match("source:pixiv/artist-name/*").count)
       assert_equal(0, Post.tag_match("source:pixiv/artist-fake/*").count)
     end
@@ -1288,6 +1336,19 @@ class PostTest < ActiveSupport::TestCase
       assert_equal(post3.id, relation.first.id)
       relation = Post.tag_match("order:landscape")
       assert_equal(post3.id, relation.first.id)
+    end
+
+    should "return posts for a filesize search" do
+      post = FactoryGirl.create(:post, :file_size => 1.megabyte)
+      assert_equal(1, Post.tag_match("filesize:1mb").count)
+      assert_equal(1, Post.tag_match("filesize:1000kb").count)
+      assert_equal(1, Post.tag_match("filesize:1048576b").count)
+    end
+
+    should "not perform fuzzy matching for an exact filesize search" do
+      post = FactoryGirl.create(:post, :file_size => 1.megabyte)
+      assert_equal(0, Post.tag_match("filesize:1048000b").count)
+      assert_equal(0, Post.tag_match("filesize:1048000").count)
     end
 
     should "fail for more than 6 tags" do
