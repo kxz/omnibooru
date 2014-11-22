@@ -8,12 +8,8 @@
       <fieldset id="basic-settings-section">
         <div class="input">
           <label>Name</label>
-          
-          <% if CurrentUser.user.is_gold? %>
-            <p><%= link_to "Request a name change", new_user_name_change_request_path %></p>
-          <% else %>
-            <p>You must <%= link_to "upgrade your account", upgrade_information_users_path %> to request a name change</p>
-          <% end %>
+
+          <p><%= link_to "Request a name change", new_user_name_change_request_path %></p>
         </div>
 
         <div class="input">
@@ -24,7 +20,7 @@
             <% else %>
               <em>blank</em>
             <% end %>
-            &ndash; 
+            &ndash;
             <%= link_to "Change your email", new_maintenance_user_email_change_path %>
           </p>
         </div>
@@ -36,14 +32,14 @@
         <%= f.input :comment_threshold, :hint => "Comments below this score will be hidden by default" %>
 
         <%= f.input :default_image_size, :hint => "Show original image or show resized #{Danbooru.config.large_image_width} pixel version", :label => "Default image width", :collection => [["850px", "large"], ["original", "original"]], :include_blank => false %>
-        
+
         <% if CurrentUser.user.is_gold? %>
           <%= f.input :per_page, :label => "Posts per page", :as => :select, :collection => (1..100), :include_blank => false %>
         <% end %>
-        
+
         <%= f.input :blacklisted_tags, :hint => "Put any tag combinations you never want to see here. Each combination should go on a separate line. <a href='/wiki_pages/help:blacklists'>View help.</a>".html_safe, :input_html => {:size => "40x5"} %>
       </fieldset>
-      
+
       <fieldset id="advanced-settings-section">
         <%= f.input :style_usernames, :as => :select, :label => "Colored usernames", :hint => "Color each user's name depending on their level", :include_blank => false, :collection => [["Yes", "true"], ["No", "false"]] %>
 
@@ -72,7 +68,7 @@
 
       <fieldset id="change-password-section">
         <%= f.input :password, :hint => "Leave blank if you don't want to change your password", :label => "New password", :input_html => {:autocomplete => "off"} %>
-        
+
         <%= f.input :old_password, :as => :password, :input_html => {:autocomplete => "off"} %>
       </fieldset>
 

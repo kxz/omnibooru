@@ -22,7 +22,7 @@ class FavoritesController < ApplicationController
       @post = Post.find(params[:post_id])
       @post.add_favorite!(CurrentUser.user)
     else
-      @error_msg = "You can only keep up to #{CurrentUser.favorite_limit} favorites. Upgrade your account to save more."
+      @error_msg = "You can only keep up to #{CurrentUser.favorite_limit} favorites."
     end
 
     respond_with(@post) do |format|

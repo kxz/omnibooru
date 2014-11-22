@@ -4,12 +4,16 @@ module Danbooru
   class Configuration
     # The version of this Danbooru.
     def version
-      "2.62.2"
+      "2.63.0"
     end
 
     # The name of this Danbooru.
     def app_name
-      "Danbooru"
+      if CurrentUser.safe_mode?
+        "Safebooru"
+      else
+        "Danbooru"
+      end
     end
 
     # The hostname of the server.
@@ -137,7 +141,7 @@ module Danbooru
 
     # Maximum size of an upload.
     def max_file_size
-      25.megabytes
+      30.megabytes
     end
 
     def member_comment_time_threshold

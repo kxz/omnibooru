@@ -100,7 +100,6 @@
         <li><%= link_to("Feedback", user_feedbacks_path) %></li>
         <li><%= link_to("Signup", new_user_path) %></li>
         <li><%= link_to("Terms of Service", terms_of_service_path) %></li>
-        <li><%= link_to("Upgrade Information", upgrade_information_users_path) %></li>
       </ul>
       <ul>
         <li><h1>Admin</h1></li>
@@ -113,6 +112,7 @@
           <li><%= link_to("IP Bans", ip_bans_path) %></li>
           <li><%= link_to("News Updates", news_updates_path) %></li>
           <li><%= link_to("Alias & Implication Import", new_admin_alias_and_implication_import_path) %></li>
+          <li><%= link_to("Admin Dashboard", admin_dashboard_path) %></li>
         <% end %>
 
         <% if Danbooru.config.is_user_advertiser?(CurrentUser.user) %>
