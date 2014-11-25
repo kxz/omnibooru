@@ -919,6 +919,38 @@ ALTER SEQUENCE delayed_jobs_id_seq OWNED BY delayed_jobs.id;
 
 
 --
+-- Name: dmail_filters; Type: TABLE; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE TABLE dmail_filters (
+    id integer NOT NULL,
+    user_id integer NOT NULL,
+    words text NOT NULL,
+    created_at timestamp without time zone,
+    updated_at timestamp without time zone
+);
+
+
+--
+-- Name: dmail_filters_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE dmail_filters_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: dmail_filters_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE dmail_filters_id_seq OWNED BY dmail_filters.id;
+
+
+--
 -- Name: dmails; Type: TABLE; Schema: public; Owner: -; Tablespace: 
 --
 
@@ -3314,6 +3346,13 @@ ALTER TABLE ONLY delayed_jobs ALTER COLUMN id SET DEFAULT nextval('delayed_jobs_
 -- Name: id; Type: DEFAULT; Schema: public; Owner: -
 --
 
+ALTER TABLE ONLY dmail_filters ALTER COLUMN id SET DEFAULT nextval('dmail_filters_id_seq'::regclass);
+
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: -
+--
+
 ALTER TABLE ONLY dmails ALTER COLUMN id SET DEFAULT nextval('dmails_id_seq'::regclass);
 
 
@@ -4368,6 +4407,14 @@ ALTER TABLE ONLY delayed_jobs
 
 
 --
+-- Name: dmail_filters_pkey; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace: 
+--
+
+ALTER TABLE ONLY dmail_filters
+    ADD CONSTRAINT dmail_filters_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: dmails_pkey; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace: 
 --
 
@@ -4828,6 +4875,13 @@ CREATE INDEX index_comments_on_post_id ON comments USING btree (post_id);
 --
 
 CREATE INDEX index_delayed_jobs_on_run_at ON delayed_jobs USING btree (run_at);
+
+
+--
+-- Name: index_dmail_filters_on_user_id; Type: INDEX; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE UNIQUE INDEX index_dmail_filters_on_user_id ON dmail_filters USING btree (user_id);
 
 
 --
@@ -7133,4 +7187,6 @@ INSERT INTO schema_migrations (version) VALUES ('20140725003232');
 INSERT INTO schema_migrations (version) VALUES ('20141009231234');
 
 INSERT INTO schema_migrations (version) VALUES ('20141017231608');
+
+INSERT INTO schema_migrations (version) VALUES ('20141120045943');
 
