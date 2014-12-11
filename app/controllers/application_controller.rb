@@ -14,6 +14,7 @@ class ApplicationController < ActionController::Base
 
   rescue_from User::PrivilegeError, :with => :access_denied
   rescue_from Danbooru::Paginator::PaginationError, :with => :render_pagination_limit
+  rescue_from Exception, :with => :rescue_exception
 
 protected
   def api_check
@@ -31,11 +32,9 @@ protected
     @exception = exception
 
     if exception.is_a?(::ActiveRecord::StatementInvalid) && exception.to_s =~ /statement timeout/
-      @exception = nil
       @error_message = "The database timed out running your query."
       render :template => "static/error", :status => 500
     elsif exception.is_a?(::ActiveRecord::RecordNotFound)
-      @exception = nil
       @error_message = "That record was not found"
       render :template => "static/error", :status => 404
     else

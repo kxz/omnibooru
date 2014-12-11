@@ -6,7 +6,7 @@ module Sources
     delegate :get, :referer_url, :site_name, :artist_name, :profile_url, :image_url, :tags, :artist_record, :unique_id, :page_count, :file_url, :ugoira_frame_data, :to => :strategy
 
     def self.strategies
-      [Strategies::Pixiv, Strategies::NicoSeiga, Strategies::DeviantArt, Strategies::Nijie]
+      [Strategies::Pixiv, Strategies::NicoSeiga, Strategies::DeviantArt, Strategies::Nijie, Strategies::Twitter]
     end
 
     def initialize(url)
@@ -20,16 +20,18 @@ module Sources
       end
     end
 
+    def normalized_for_artist_finder?
+      available? && strategy.normalized_for_artist_finder?
+    end
+
     def normalize_for_artist_finder!
-      if available?
-        begin
-          return strategy.normalize_for_artist_finder!
-        rescue Sources::Error
-          return url
-        end
+      if available? && strategy.normalizable_for_artist_finder?
+        strategy.normalize_for_artist_finder!
       else
-        return url
+        url
       end
+    rescue
+      url
     end
 
     def translated_tags

@@ -22,9 +22,10 @@ class Artist < ActiveRecord::Base
 
     module ClassMethods
       def find_all_by_url(url)
-        url = Sources::Site.new(url).normalize_for_artist_finder!
         url = ArtistUrl.normalize(url)
         artists = []
+
+        # return [] unless Sources::Site.new(url).normalized_for_artist_finder?
 
         while artists.empty? && url.size > 10
           u = url.sub(/\/+$/, "") + "/"
@@ -43,9 +44,14 @@ class Artist < ActiveRecord::Base
 
     def save_url_string
       if @url_string
-        urls.clear
+        prev = urls.map(&:url)
+        curr = @url_string.scan(/\S+/)
 
-        @url_string.scan(/\S+/).each do |url|
+        (prev - curr).each do |url|
+          urls.where(:url => url).destroy_all
+        end
+
+        (curr - prev).each do |url|
           urls.create(:url => url)
         end
       end
@@ -362,8 +368,11 @@ class Artist < ActiveRecord::Base
       end
 
       params[:order] ||= params.delete(:sort)
-      if params[:order] == "name"
+      case params[:order]
+      when "name"
         q = q.reorder("name")
+      when "updated_at"
+        q = q.reorder("updated_at desc")
       else
         q = q.reorder("id desc")
       end
