@@ -211,12 +211,18 @@ module Sources
       end
 
       def get_image_url_from_page(page, is_manga)
-        elements = page.search("div.works_display a img").find_all do |node|
-          node["src"] !~ /source\.pixiv\.net/
+        if is_manga
+          elements = page.search("div.works_display a img").find_all do |node|
+            node["src"] !~ /source\.pixiv\.net/
+          end
+        else
+          elements = page.search("div.works_display div img.big")
+          elements = page.search("div.works_display div img") if elements.empty?
         end
 
         if elements.any?
-          thumbnail_url = elements.first.attr("src")
+          element = elements.first
+          thumbnail_url = element.attr("src") || element.attr("data-src")
           return rewrite_thumbnails(thumbnail_url, is_manga)
         else
           raise Sources::Error.new("Couldn't find image thumbnail URL in page: #{normalized_url}")
