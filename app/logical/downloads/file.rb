@@ -3,12 +3,13 @@ module Downloads
     class Error < Exception ; end
 
     attr_reader :data, :options
-    attr_accessor :source, :content_type, :file_path
+    attr_accessor :source, :original_source, :content_type, :file_path
 
     def initialize(source, file_path, options = {})
       # source can potentially get rewritten in the course
       # of downloading a file, so check it again
       @source = source
+      @original_source = source
 
       # where to save the download
       @file_path = file_path
@@ -40,7 +41,9 @@ module Downloads
     end
 
     def after_download(src)
-      fix_image_board_sources(src)
+      src = fix_image_board_sources(src)
+      src = fix_twitter_sources(src)
+      src
     end
 
     def http_get_streaming(src, datums = {}, options = {})
@@ -102,6 +105,14 @@ module Downloads
     def fix_image_board_sources(src)
       if src =~ /i\.4cdn\.org|\/src\/\d{12,}|urnc\.yi\.org|yui\.cynthia\.bne\.jp/
         "Image board"
+      else
+        src
+      end
+    end
+
+    def fix_twitter_sources(src)
+      if src =~ %r!^https?://pbs\.twimg\.com/! && original_source =~ %r!^https?://twitter\.com/!
+        original_source
       else
         src
       end

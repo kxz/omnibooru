@@ -313,7 +313,7 @@ class Post < ActiveRecord::Base
       when %r{\Ahttp://lohas\.nicoseiga\.jp/priv/(\d+)\?e=\d+&h=[a-f0-9]+}i, %r{\Ahttp://lohas\.nicoseiga\.jp/priv/[a-f0-9]+/\d+/(\d+)}i
         "http://seiga.nicovideo.jp/seiga/im#{$1}"
 
-      when %r{\Ahttps?://d3j5vwomefv46c\.cloudfront\.net/photos/large/(\d+)\.}i
+      when %r{\Ahttps?://(?:d3j5vwomefv46c|dn3pm25xmtlyu)\.cloudfront\.net/photos/large/(\d+)\.}i
         base_10_id = $1.to_i
         base_36_id = base_10_id.to_s(36)
         "http://twitpic.com/#{base_36_id}"
@@ -362,6 +362,11 @@ class Post < ActiveRecord::Base
         "http://gelbooru.com/index.php?page=post&s=list&md5=#{md5}"
 
       when %r{\Ahttps?://(?:slot\d*\.)?im(?:g|ages)\d*\.wikia\.(?:nocookie\.net|com)/(?:_{2}cb\d{14}/)?([^/]+)(?:/[a-z]{2})?/images/(?:(?:thumb|archive)?/)?[a-f0-9]/[a-f0-9]{2}/(?:\d{14}(?:!|%21))?([^/]+)}i
+        subdomain = $1
+        filename = $2
+        "http://#{subdomain}.wikia.com/wiki/File:#{filename}"
+        
+      when %r{\Ahttps?://vignette(?:\d*)\.wikia\.nocookie\.net/([^/]+)/images/[a-f0-9]/[a-f0-9]{2}/([^/]+)}i
         subdomain = $1
         filename = $2
         "http://#{subdomain}.wikia.com/wiki/File:#{filename}"
