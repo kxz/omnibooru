@@ -35,6 +35,11 @@
 
   <% if CurrentUser.is_builder? %>
     <div class="input">
+      <%= f.label :has_embedded_notes, "Embed notes" %>
+      <%= f.check_box :has_embedded_notes %>
+    </div>
+
+    <div class="input">
       <%= f.label :blank, "Lock" %>
 
       <fieldset class="locks">

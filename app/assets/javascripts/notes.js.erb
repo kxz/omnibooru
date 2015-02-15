@@ -4,8 +4,15 @@ Danbooru.Note = {
       var $inner_border = $('<div/>');
       $inner_border.addClass("note-box-inner-border");
 
+      var opacity = 0;
+      if (Danbooru.Note.embed) {
+        opacity = 0.95
+      } else {
+        opacity = 0.5
+      }
+
       $inner_border.css({
-        opacity: 0.5,
+        opacity: opacity,
         "-ms-filter": "progid:DXImageTransform.Microsoft.Alpha(Opacity=50)",
         "filter": "alpha(opacity=50)",
         zoom: 1
@@ -13,12 +20,39 @@ Danbooru.Note = {
 
       var $note_box = $('<div/>');
       $note_box.addClass("note-box");
+
+      if (Danbooru.Note.embed) {
+        $note_box.addClass("embedded");
+      }
+
       $note_box.data("id", String(id));
       $note_box.attr("data-id", String(id));
-      $note_box.draggable({containment: $("#image")});
+      $note_box.draggable({
+        containment: $("#image"),
+        stop: function(e, ui) {
+          var $image = $("#image");
+          var ratio = $image.width() / parseFloat($image.data("original-width"));
+          var new_x = parseFloat($note_box.css("left"));
+          var new_y = parseFloat($note_box.css("top"));
+          new_x = parseInt(new_x / ratio);
+          new_y = parseInt(new_y / ratio);
+          $note_box.data("x", new_x);
+          $note_box.data("y", new_y);
+        }
+      });
       $note_box.resizable({
         containment: $("#image"),
-        handles: "se"
+        handles: "se",
+        stop: function(e, ui) {
+          var $image = $("#image");
+          var ratio = $image.width() / parseFloat($image.data("original-width"));
+          var new_width = parseFloat($note_box.css("width"));
+          var new_height = parseFloat($note_box.css("height"));
+          new_width = parseInt(new_width / ratio);
+          new_height = parseInt(new_height / ratio);
+          $note_box.data("width", new_width);
+          $note_box.data("height", new_height);
+        }
       });
       $note_box.css({position: "absolute"});
       $note_box.append($inner_border);
@@ -96,6 +130,14 @@ Danbooru.Note = {
         height: $note_box.height() - 2,
         width: $note_box.width() - 2
       });
+
+      if ($inner_border.width() >= $note_box.width() - 2) {
+        $note_box.width($inner_border.width() + 2);
+      }
+
+      if ($inner_border.height() >= $note_box.height() - 2) {
+        $note_box.height($inner_border.height() + 2);
+      }
     },
 
     scale: function($note_box) {
@@ -115,11 +157,15 @@ Danbooru.Note = {
       var container = document.getElementById('note-container');
       // Hide notes while rescaling, to prevent unnecessary reflowing
       var was_visible = container.style.display != 'none';
-      if (was_visible) container.style.display = 'none';
+      if (was_visible) {
+        container.style.display = 'none';
+      }
       $(".note-box").each(function(i, v) {
         Danbooru.Note.Box.scale($(v));
       });
-      if (was_visible) container.style.display = 'block';
+      if (was_visible) {
+        container.style.display = 'block';
+      }
     },
 
     toggle_all: function() {
@@ -241,8 +287,11 @@ Danbooru.Note = {
       }
     },
 
-    set_text: function($note_body, text) {
+    set_text: function($note_body, $note_box, text) {
       Danbooru.Note.Body.display_text($note_body, text);
+      if (Danbooru.Note.embed) {
+        Danbooru.Note.Body.display_text($note_box.children("div"), text);
+      }
       Danbooru.Note.Body.resize($note_body);
       Danbooru.Note.Body.bound_position($note_body);
     },
@@ -295,6 +344,10 @@ Danbooru.Note = {
       $(".note-box").resizable("disable");
       $(".note-box").draggable("disable");
 
+      if (Danbooru.Note.embed) {
+        $(".note-box").css("opacity", "0.5");
+      }
+
       $textarea = $('<textarea></textarea>');
       $textarea.css({
         width: "97%",
@@ -336,6 +389,10 @@ Danbooru.Note = {
         Danbooru.Note.editing = false;
         $(".note-box").resizable("enable");
         $(".note-box").draggable("enable");
+
+        if (Danbooru.Note.embed) {
+          $(".note-box").css("opacity", "0.95");
+        }
       });
 
       $textarea.selectEnd();
@@ -390,9 +447,9 @@ Danbooru.Note = {
       var $note_box = Danbooru.Note.Box.find(id);
       var text = $textarea.val();
       $note_body.data("original-body", text);
-      Danbooru.Note.Body.set_text($note_body, "Loading...");
+      Danbooru.Note.Body.set_text($note_body, $note_box, "Loading...");
       $.get("<%= Rails.application.routes.url_helpers.note_previews_path :format => :json %>", {body: text}).success(function(data) {
-        Danbooru.Note.Body.set_text($note_body, data.body);
+        Danbooru.Note.Body.set_text($note_body, $note_box, data.body);
         $note_body.show();
       });
       $this.dialog("close");
@@ -422,9 +479,9 @@ Danbooru.Note = {
       var text = $textarea.val();
       var $note_box = Danbooru.Note.Box.find(id);
       $note_box.find(".note-box-inner-border").addClass("unsaved");
-      Danbooru.Note.Body.set_text($note_body, "Loading...");
+      Danbooru.Note.Body.set_text($note_body, $note_box, "Loading...");
       $.get("<%= Rails.application.routes.url_helpers.note_previews_path :format => :json %>", {body: text}).success(function(data) {
-        Danbooru.Note.Body.set_text($note_body, data.body);
+        Danbooru.Note.Body.set_text($note_body, $note_box, data.body);
         $note_body.show();
       });
     },
@@ -636,6 +693,9 @@ Danbooru.Note = {
     $note_body.data("original-body", text);
     Danbooru.Note.Box.scale($note_box);
     Danbooru.Note.Body.display_text($note_body, text);
+    if (Danbooru.Note.embed) {
+      Danbooru.Note.Body.display_text($note_box.children("div"), text);
+    }
   },
 
   create: function(x, y, w, h) {
@@ -687,6 +747,7 @@ $(function() {
       $("#translate").bind("click", Danbooru.Note.TranslationMode.toggle);
       $(document).bind("keypress", "n", Danbooru.Note.TranslationMode.toggle);
     }
+    Danbooru.Note.embed = (Danbooru.meta("post-has-embedded-notes") === "true");
     Danbooru.Note.load_all();
     $("#image").bind("click", Danbooru.Note.Box.toggle_all);
   }

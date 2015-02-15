@@ -2722,7 +2722,8 @@ CREATE TABLE posts (
     is_banned boolean DEFAULT false NOT NULL,
     pixiv_id integer,
     last_commented_at timestamp without time zone,
-    has_active_children boolean DEFAULT false
+    has_active_children boolean DEFAULT false,
+    bit_flags bigint DEFAULT 0 NOT NULL
 );
 
 
@@ -7186,4 +7187,6 @@ INSERT INTO schema_migrations (version) VALUES ('20141120045943');
 INSERT INTO schema_migrations (version) VALUES ('20150119191042');
 
 INSERT INTO schema_migrations (version) VALUES ('20150120005624');
+
+INSERT INTO schema_migrations (version) VALUES ('20150128005954');
 
