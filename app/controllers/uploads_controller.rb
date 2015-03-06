@@ -20,10 +20,18 @@ class UploadsController < ApplicationController
 
       begin
         @source = Sources::Site.new(params[:url])
+        @remote_size = Downloads::File.new(@normalized_url, ".").size
       rescue Exception
       end
     end
     respond_with(@upload)
+  end
+
+  def batch
+    if params[:url] =~ /twitter/
+      @service = TwitterService.new
+    end
+    @urls = @service.image_urls(params[:url])
   end
 
   def index

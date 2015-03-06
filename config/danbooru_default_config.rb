@@ -4,7 +4,7 @@ module Danbooru
   class Configuration
     # The version of this Danbooru.
     def version
-      "2.71.0"
+      "2.74.0"
     end
 
     # The name of this Danbooru.
@@ -327,10 +327,10 @@ module Danbooru
       "/var/www/danbooru2/shared"
     end
 
-    def twitter_login
+    def twitter_api_key
     end
 
-    def twitter_password
+    def twitter_api_secret
     end
   end
 end
