@@ -1,6 +1,4 @@
 class BulkUpdateRequest < ActiveRecord::Base
-  include Rails.application.routes.url_helpers
-
   attr_accessor :title, :reason
 
   belongs_to :user
@@ -52,7 +50,7 @@ class BulkUpdateRequest < ActiveRecord::Base
   end
 
   def reason_with_link
-    "#{script_with_links}\n\n\"Link to request\":#{root_path}bulk_update_requests?search[id]=#{id}\n\n#{reason}"
+    "#{script_with_links}\n\n\"Link to request\":/booru/bulk_update_requests?search[id]=#{id}\n\n#{reason}"
   end
 
   def script_with_links

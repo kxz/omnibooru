@@ -1,6 +1,4 @@
 class Post < ActiveRecord::Base
-  include Rails.application.routes.url_helpers
-
   class ApprovalError < Exception ; end
   class DisapprovalError < Exception ; end
   class SearchError < Exception ; end
@@ -96,12 +94,12 @@ class Post < ActiveRecord::Base
     end
 
     def file_url
-      "#{root_path}data/#{file_path_prefix}#{md5}.#{file_ext}"
+      "/booru/data/#{file_path_prefix}#{md5}.#{file_ext}"
     end
 
     def large_file_url
       if has_large?
-        "#{root_path}data/sample/#{file_path_prefix}#{Danbooru.config.large_image_prefix}#{md5}.#{large_file_ext}"
+        "/booru/data/sample/#{file_path_prefix}#{Danbooru.config.large_image_prefix}#{md5}.#{large_file_ext}"
       else
         file_url
       end
@@ -109,10 +107,10 @@ class Post < ActiveRecord::Base
 
     def preview_file_url
       if !has_preview?
-        return "#{root_path}images/download-preview.png"
+        return "/booru/images/download-preview.png"
       end
 
-      "#{root_path}data/preview/#{file_path_prefix}#{md5}.jpg"
+      "/booru/data/preview/#{file_path_prefix}#{md5}.jpg"
     end
 
     def file_url_for(user)
@@ -373,7 +371,7 @@ class Post < ActiveRecord::Base
         subdomain = $1
         filename = $2
         "http://#{subdomain}.wikia.com/wiki/File:#{filename}"
-
+        
       when %r{\Ahttps?://vignette(?:\d*)\.wikia\.nocookie\.net/([^/]+)/images/[a-f0-9]/[a-f0-9]{2}/([^/]+)}i
         subdomain = $1
         filename = $2
