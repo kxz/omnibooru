@@ -384,8 +384,3 @@ Rails.application.routes.draw do
 
   root :to => "posts#index"
 end
-
-# <https://github.com/rails/rails/issues/6933#issuecomment-7654247>
-# The comment thread claims this is fixed in Rails 4.0, but references
-# to Rails.application.routes.url_helpers won't work without this.
-Rails.application.routes.default_url_options[:script_name] = '/booru'
