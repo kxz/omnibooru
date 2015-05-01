@@ -20,7 +20,22 @@ class BulkUpdateRequestTest < ActiveSupport::TestCase
       setup do
         @admin = FactoryGirl.create(:admin_user)
         @topic = FactoryGirl.create(:forum_topic)
-        @req = FactoryGirl.create(:bulk_update_request, :script => "create alias aaa -> bbb", :forum_topic => @topic)
+        @req = FactoryGirl.create(:bulk_update_request, :script => "create alias AAA -> BBB", :forum_topic => @topic)
+      end
+
+      should "handle errors gracefully" do
+        @req.stubs(:update_forum_topic_for_approve).raises(RuntimeError.new("blah"))
+        assert_difference("Dmail.count", 1) do
+          CurrentUser.scoped(@admin, "127.0.0.1") do
+            @req.approve!
+          end
+        end
+        assert_match(/Exception: RuntimeError/, Dmail.last.body)
+        assert_match(/Message: blah/, Dmail.last.body)
+      end
+
+      should "downcase the text" do
+        assert_equal("create alias aaa -> bbb", @req.script)
       end
 
       should "update the topic when processed" do

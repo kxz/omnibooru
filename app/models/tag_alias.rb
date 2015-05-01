@@ -77,7 +77,7 @@ class TagAlias < ActiveRecord::Base
     end.uniq
   end
 
-  def process!
+  def process!(update_topic=true)
     unless valid?
       raise errors.full_messages.join("; ")
     end
@@ -86,7 +86,8 @@ class TagAlias < ActiveRecord::Base
     clear_all_cache
     ensure_category_consistency
     update_posts
-    update_forum_topic_for_approve
+    update_forum_topic_for_approve if update_topic
+    update_column(:post_count, consequent_tag.post_count)
     update_column(:status, "active")
   rescue Exception => e
     update_column(:status, "error: #{e}")
@@ -253,5 +254,11 @@ class TagAlias < ActiveRecord::Base
     clear_all_cache
     update_forum_topic_for_reject
     destroy
+  end
+
+  def self.update_cached_post_counts_for_all
+    TagAlias.without_timeout do
+      execute_sql("UPDATE tag_aliases SET post_count = tags.post_count FROM tags WHERE tags.name = tag_aliases.consequent_name")
+    end
   end
 end

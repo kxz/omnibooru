@@ -1,6 +1,8 @@
 (function() {
   Danbooru.Autocomplete = {};
 
+  Danbooru.Autocomplete.AUTOCOMPLETE_VERSION = 1;
+
   Danbooru.Autocomplete.initialize_all = function() {
     if (Danbooru.meta("enable-auto-complete") === "true") {
       Danbooru.Autocomplete.enable_local_storage = this.test_local_storage();
@@ -21,8 +23,14 @@
 
   Danbooru.Autocomplete.prune_local_storage = function() {
     if (this.enable_local_storage) {
-      if ($.localStorage.keys().length > 4000) {
-        $.localStorage.removeAll();
+      var cached_autocomplete_version = $.localStorage.get("danbooru-autocomplete-version");
+      if (cached_autocomplete_version !== this.AUTOCOMPLETE_VERSION || $.localStorage.keys().length > 4000) {
+        $.each($.localStorage.keys(), function(i, key) {
+          if (key.substr(0, 3) === "ac-") {
+            $.localStorage.remove(key);
+          }
+        });
+        $.localStorage.set("danbooru-autocomplete-version", this.AUTOCOMPLETE_VERSION);
       }
     }
   }
@@ -167,17 +175,19 @@
     if (this.enable_local_storage) {
       var cached = $.localStorage.get(key);
       if (cached) {
-        resp(cached.value);
-        return;
+        if (Date.parse(cached.expires) < new Date().getTime()) {
+          $.localStorage.remove(key);
+        } else {
+          resp(cached.value);
+          return;
+        }
       }
     }
 
     $.ajax({
-      url: "<%= Rails.application.routes.url_helpers.tags_path :format => :json %>",
+      url: "<%= Rails.application.routes.url_helpers.autocomplete_tags_path :format => :json %>",
       data: {
-        "search[order]": "count",
         "search[name_matches]": term + "*",
-        "limit": 10
       },
       method: "get",
       success: function(data) {
@@ -185,6 +195,7 @@
           return {
             type: "tag",
             label: tag.name.replace(/_/g, " "),
+            antecedent: tag.antecedent_name,
             value: tag.name,
             category: tag.category,
             post_count: tag.post_count
@@ -202,7 +213,17 @@
   }
 
   Danbooru.Autocomplete.render_item = function(list, item) {
-    var $link = $("<a/>").text(item.label);
+    var $link = $("<a/>");
+
+    if (item.antecedent) {
+      var antecedent = item.antecedent.replace(/_/g, " ");
+      var arrow = $("<span/>").html(" &rarr; ").addClass("autocomplete-arrow");
+      var antecedent_element = $("<span/>").text(antecedent).addClass("autocomplete-antecedent");
+      $link.append(antecedent_element);
+      $link.append(arrow);
+    }
+
+    $link.append(document.createTextNode(item.label));
     $link.attr("href", "<%= Rails.application.routes.url_helpers.posts_path %>?tags=" + encodeURIComponent(item.value));
     $link.click(function(e) {
       e.preventDefault();
@@ -280,6 +301,7 @@
       url: "<%= Rails.application.routes.url_helpers.users_path :format => :json %>",
       data: {
         "search[order]": "post_upload_count",
+        "search[current_user_first]": "true",
         "search[name_matches]": term + "*",
         "limit": 10,
       },

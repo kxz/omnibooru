@@ -13,6 +13,7 @@ class BulkUpdateRequest < ActiveRecord::Base
   attr_accessible :user_id, :forum_topic_id, :script, :title, :reason
   attr_accessible :status, :as => [:admin]
   before_validation :initialize_attributes, :on => :create
+  before_validation :normalize_text
   after_create :create_forum_topic
 
   module SearchMethods
@@ -31,9 +32,32 @@ class BulkUpdateRequest < ActiveRecord::Base
   extend SearchMethods
 
   def approve!
-    update_forum_topic_for_approve
     AliasAndImplicationImporter.new(script, forum_topic_id, "1").process!
+    update_forum_topic_for_approve
     update_attribute(:status, "approved")
+
+  rescue Exception => x
+    admin = User.admins.first
+    msg = <<-EOS
+      Bulk Update Request ##{id} failed\n
+      Exception: #{x.class}\n
+      Message: #{x.to_s}\n
+      Stack trace:\n
+    EOS
+
+    x.backtrace.each do |line|
+      msg += "#{line}\n"
+    end
+
+    dmail = Dmail.new(
+      :from_id => admin.id,
+      :to_id => admin.id,
+      :owner_id => admin.id,
+      :title => "Bulk update request approval failed",
+      :body => msg
+    )
+    dmail.owner_id = admin.id
+    dmail.save
   end
 
   def editable?(user)
@@ -113,5 +137,9 @@ class BulkUpdateRequest < ActiveRecord::Base
         )
       end
     end
+  end
+
+  def normalize_text
+    self.script = script.downcase
   end
 end
