@@ -21,8 +21,10 @@ gem "pry", :group => [:test, :development]
 gem "byebug", :group => [:test, :development]
 gem "rails", "~> 4.1.8"
 gem "pg"
-gem "kgio"
-gem "dalli"
+gem "kgio", :platforms => :ruby
+gem "dalli", :platforms => :ruby
+gem "memcache-client", :platforms => [:mswin, :mingw, :x64_mingw]
+gem "tzinfo-data", :platforms => [:mswin, :mingw, :x64_mingw]
 gem "delayed_job"
 gem "delayed_job_active_record"
 gem "simple_form"
@@ -30,7 +32,7 @@ gem "mechanize"
 gem "nokogiri"
 gem "whenever", :require => false
 gem "sanitize", "~> 3.1.0"
-gem 'rmagick', :require => "RMagick"
+gem 'rmagick'
 gem 'daemons'
 gem 'net-ssh'
 gem 'net-sftp'
@@ -54,6 +56,8 @@ gem 'aws-s3', :require => "aws/s3", :git => "https://github.com/fnando/aws-s3.gi
 
 group :production do
   gem 'unicorn', :platforms => :ruby
+  # gem 'unicorn-worker-killer'
+  gem 'gctools', :platforms => :ruby
   gem 'capistrano-unicorn', :require => false
 end
 

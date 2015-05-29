@@ -195,12 +195,16 @@ class Post < ActiveRecord::Base
     end
 
     def large_image_width
-      [Danbooru.config.large_image_width, image_width].min
+      if has_large?
+        [Danbooru.config.large_image_width, image_width].min
+      else
+        image_width
+      end
     end
 
     def large_image_height
       ratio = Danbooru.config.large_image_width.to_f / image_width.to_f
-      if ratio < 1
+      if has_large? && ratio < 1
         (image_height * ratio).to_i
       else
         image_height
@@ -427,14 +431,19 @@ class Post < ActiveRecord::Base
         "http://nijie.info/view.php?id=#{$1}"
 
       when %r{\Ahttps?://(?:o|image-proxy-origin)\.twimg\.com/\d/proxy\.jpg\?t=(\w+)&}i
-	str = Base64.decode64($1)
-	url = URI.extract(str, ['http', 'https'])
-	if (url[0] =~ /^https?:\/\/twitpic.com\/show\/large\/[a-z0-9]+/i)
-	  url[0].gsub!(/show\/large\//, "")
-	  index = url[0].rindex('.')
-	  url[0] = url[0][0..index-1]
-	end
-	"#{url[0]}"
+        str = Base64.decode64($1)
+        url = URI.extract(str, ['http', 'https'])
+        if url.any?
+          url = url[0]
+          if (url =~ /^https?:\/\/twitpic.com\/show\/large\/[a-z0-9]+/i)
+            url.gsub!(/show\/large\//, "")
+            index = url.rindex('.')
+            url = url[0..index-1]
+          end
+          url
+        else
+          source
+        end
 
       else
         source
@@ -1556,6 +1565,32 @@ class Post < ActiveRecord::Base
 
   def strip_source
     self.source = source.try(:strip)
+  end
+
+  def mark_as_translated(params)
+    tags = self.tag_array.dup
+
+    if params["check_translation"] == "1"
+      tags << "check_translation"
+    elsif params["check_translation"] == "0"
+      tags -= ["check_translation"]
+    end
+    if params["partially_translated"] == "1"
+      tags << "partially_translated"
+    elsif params["partially_translated"] == "0"
+      tags -= ["partially_translated"]
+    end
+
+    if params["check_translation"] == "1" || params["partially_translated"] == "1"
+      tags << "translation_request"
+      tags -= ["translated"]
+    else
+      tags << "translated"
+      tags -= ["translation_request"]
+    end
+
+    self.tag_string = tags.join(" ")
+    save
   end
 end
 

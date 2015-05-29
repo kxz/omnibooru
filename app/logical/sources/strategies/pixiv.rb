@@ -48,28 +48,34 @@ module Sources
           moniker = get_moniker_from_url
         else
           illust_id = illust_id_from_url(url)
-          get_metadata_from_spapi!(illust_id) do |metadata|
-            moniker = metadata[24]
-          end
+          metadata = get_metadata_from_papi(illust_id)
+          moniker = metadata.moniker
         end
 
         "http://img.pixiv.net/img/#{moniker}/"
       end
 
       def get
-        agent.get(URI.parse(normalized_url)) do |page|
-          @artist_name, @profile_url = get_profile_from_page(page)
-          @pixiv_moniker = get_moniker_from_page(page)
-          @zip_url, @ugoira_frame_data, @ugoira_content_type = get_zip_url_from_page(page)
-          @tags = get_tags_from_page(page)
-          @page_count = get_page_count_from_page(page)
-          @gallery_link = get_gallery_link(page)
+        page = agent.get(URI.parse(normalized_url))
+        
+        if page.search("body.not-logged-in").any?
+          # Session cache is invalid, clear it and log in normally.
+          Cache.delete("pixiv-phpsessid")
+          @agent = nil
+          page = agent.get(URI.parse(normalized_url))
+        end
+        
+        @artist_name, @profile_url = get_profile_from_page(page)
+        @pixiv_moniker = get_moniker_from_page(page)
+        @zip_url, @ugoira_frame_data, @ugoira_content_type = get_zip_url_from_page(page)
+        @tags = get_tags_from_page(page)
+        @page_count = get_page_count_from_page(page)
+        @gallery_link = get_gallery_link(page)
 
-          is_manga = @page_count > 1
+        is_manga = @page_count > 1
 
-          if !@zip_url
-            @image_url = get_image_url_from_page(page, is_manga)
-          end
+        if !@zip_url
+          @image_url = get_image_url_from_page(page, is_manga)
         end
       end
 
@@ -115,19 +121,11 @@ module Sources
       # => http://i1.pixiv.net/img-original/img/2014/10/02/13/51/23/46304396_p1.png
       def rewrite_new_medium_images(thumbnail_url)
         if thumbnail_url =~ %r!/c/\d+x\d+/img-master/img/#{TIMESTAMP}/\d+_p\d+_\w+\.jpg!i
-          thumbnail_url = thumbnail_url.sub(%r!/c/\d+x\d+/img-master/!i, '/img-original/')
-          # => http://i1.pixiv.net/img-original/img/2014/10/02/13/51/23/46304396_p1_master1200.jpg
-
-          page = manga_page_from_url(@url)
-          thumbnail_url = thumbnail_url.sub(%r!_p(\d+)_\w+\.jpg$!i, "_p#{page}.")
-          # => http://i1.pixiv.net/img-original/img/2014/10/02/13/51/23/46304396_p1.
-
+          page = manga_page_from_url(@url).to_i
           illust_id = illust_id_from_url(@url)
-          get_metadata_from_spapi!(illust_id) do |metadata|
-            file_ext = metadata[2]
-            thumbnail_url += file_ext
-            # => http://i1.pixiv.net/img-original/img/2014/10/02/13/51/23/46304396_p1.png
-          end
+
+          metadata = get_metadata_from_papi(illust_id)
+          thumbnail_url = metadata.pages[page]
         end
 
         thumbnail_url
@@ -157,10 +155,9 @@ module Sources
         if thumbnail_url =~ %r!/img/#{MONIKER}/\d+_[ms]\.#{EXT}!i
           if is_manga.nil?
             illust_id = illust_id_from_url(@url)
-            get_metadata_from_spapi!(illust_id) do |metadata|
-              page_count = metadata[19].to_i || 1
-              is_manga   = page_count > 1
-            end
+            metadata = get_metadata_from_papi(illust_id)
+            page_count = metadata.page_count
+            is_manga = page_count > 1
           end
 
           if is_manga
@@ -307,48 +304,8 @@ module Sources
         "http://www.pixiv.net/member_illust.php?mode=medium&illust_id=#{illust_id}"
       end
 
-      # Refer to http://danbooru.donmai.us/wiki_pages/58938 for documentation on the Pixiv API.
-      def get_metadata_from_spapi!(illust_id)
-        spapi_url = "http://spapi.pixiv.net/iphone/illust.php?illust_id=#{illust_id}&PHPSESSID=#{PixivWebAgent.phpsessid(agent)}"
-
-        agent.get(spapi_url) do |response|
-          metadata = CSV.parse(response.content.force_encoding("UTF-8")).first
-
-          validate_spapi_metadata!(metadata)
-          yield metadata
-        end
-      end
-
-      def validate_spapi_metadata!(metadata)
-        if metadata.nil?
-          raise Sources::Error.new("Pixiv API returned empty response.")
-        elsif metadata.size != 31
-          raise Sources::Error.new("Pixiv API returned unexpected number of fields.")
-        end
-
-        illust_id  = metadata[0]
-        file_ext   = metadata[2]
-        page_count = metadata[19]
-        moniker    = metadata[24]
-        mobile_profile_image = metadata[30]
-
-        if file_ext !~ /#{EXT}/i
-          raise Sources::Error.new("Pixiv API returned unexpected file extension '#{file_ext}' for pixiv ##{illust_id}.")
-        elsif moniker !~ /#{MONIKER}/i
-          raise Sources::Error.new("Pixiv API returned invalid artist moniker '#{moniker}' for pixiv ##{illust_id}.")
-        elsif page_count.to_s !~ /[0-9]*/i
-          raise Sources::Error.new("Pixiv API returned invalid page count '#{page_count}' for pixiv ##{illust_id}.")
-        end
-
-        if mobile_profile_image
-          # http://i1.pixiv.net/img01/profile/ccz67420/mobile/5042957_80.jpg
-          profile_regex  = %r!i[12]\.pixiv\.net/img\d+/profile/#{MONIKER}/mobile/\d+_\d+\.jpg!i
-          mobile_moniker = mobile_profile_image.match(profile_regex)[1]
-
-          if mobile_moniker != moniker
-            raise Sources::Error.new("Pixiv API returned inconsistent artist moniker '#{moniker}' for pixiv ##{illust_id}.")
-          end
-        end
+      def get_metadata_from_papi(illust_id)
+        @metadata ||= PixivApiClient.new.works(illust_id)
       end
 
       def illust_id_from_url(url)
