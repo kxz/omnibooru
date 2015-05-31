@@ -1,7 +1,5 @@
 require 'capistrano/ext/multistage'
 require 'bundler/capistrano'
-require 'delayed/recipes'
-require 'capistrano-unicorn'
 require 'whenever/capistrano'
 
 
@@ -31,16 +29,9 @@ set :default_stage, "production"
 set :bundle_cmd, "bundle"
 set :bundle_flags, "--deployment --binstubs"
 
-# Unicorn
-set :unicorn_env, defer {stage}
-
 # Asset deployment
 set :rake, "#{bundle_cmd} exec rake"
 set :asset_env, "RAILS_RELATIVE_URL_ROOT=/booru RAILS_GROUPS=assets"
-
-# delayed_job
-set :delayed_job_command, "#{bundle_cmd} exec script/delayed_job"
-set :delayed_job_args, "--queues=default,`hostname`"
 
 # Whenever
 set :whenever_command, "#{bundle_cmd} exec whenever"
@@ -51,17 +42,22 @@ set :whenever_environment, defer {stage}
 
 # delayed_job
 namespace :delayed_job do
-  desc "Forcibly end the delayed_job process"
-  task :kill, :roles => :app do
-    procs = capture("ps -A -o pid,command").split(/\r\n|\r|\n/).grep(/delayed_job/).map(&:to_i)
+  desc "Start the delayed_job process"
+  task :start, :roles => :app do
+    run "systemctl --user start danbooru-delayed_job.service"
+  end
 
-    if procs.any?
-      run "for i in #{procs.join(' ')} ; do #{sudo :as => unicorn_user} kill -SIGTERM $i ; done"
-    end
+  desc "Stop the delayed_job process"
+  task :stop, :roles => :app do
+    run "systemctl --user stop danbooru-delayed_job.service"
+  end
+
+  desc "Restart the delayed_job process"
+  task :restart, :roles => :app do
+    run "systemctl --user restart danbooru-delayed_job.service"
   end
 end
 
-after "delayed_job:stop", "delayed_job:kill"
 after "deploy:stop", "delayed_job:stop"
 after "deploy:start", "delayed_job:start"
 after "deploy:restart", "delayed_job:restart"
@@ -93,6 +89,28 @@ namespace :deploy do
 end
 
 # Unicorn
+namespace :unicorn do
+  desc "Start Unicorn master process"
+  task :start, :roles => :app do
+    run "systemctl --user start danbooru-unicorn.service"
+  end
+
+  desc "Stop Unicorn"
+  task :stop, :roles => :app do
+    run "systemctl --user stop danbooru-unicorn.service"
+  end
+
+  desc "Reload Unicorn"
+  task :reload, :roles => :app do
+    run "systemctl --user reload danbooru-unicorn.service"
+  end
+
+  desc "Restart Unicorn"
+  task :restart, :roles => :app do
+    run "systemctl --user restart danbooru-unicorn.service"
+  end
+end
+
 after "deploy:stop", "unicorn:stop"
 after "deploy:start", "unicorn:start"
 after "deploy:restart", "unicorn:reload"

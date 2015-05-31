@@ -1,0 +1,14 @@
+[Unit]
+Description=Danbooru delayed_job instance
+
+[Service]
+Type=forking
+ExecStart=/usr/local/rbenv/shims/bundle exec script/delayed_job start
+ExecStop=/usr/local/rbenv/shims/bundle exec script/delayed_job stop
+Environment=RAILS_ENV=production
+WorkingDirectory=/srv/danbooru2/current
+Restart=always
+TimeoutSec=30
+
+[Install]
+WantedBy=multi-user.target

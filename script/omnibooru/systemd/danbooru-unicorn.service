@@ -1,0 +1,13 @@
+[Unit]
+Description=Danbooru Unicorn Web server instance
+
+[Service]
+ExecStart=/usr/local/rbenv/shims/bundle exec unicorn \
+    -c /srv/danbooru2/current/config/unicorn/production.rb -E deployment
+ExecReload=/bin/kill -HUP $MAINPID
+Environment=RAILS_ENV=production BUNDLE_GEMFILE=/srv/danbooru2/current/Gemfile
+WorkingDirectory=/srv/danbooru2/current
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
