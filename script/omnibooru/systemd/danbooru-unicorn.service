@@ -10,4 +10,4 @@ WorkingDirectory=/srv/danbooru2/current
 Restart=always
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target
