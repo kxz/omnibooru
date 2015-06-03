@@ -2,14 +2,14 @@ require 'test_helper'
 
 module Sources
   class TwitterTest < ActiveSupport::TestCase
-    setup do
-      Danbooru.config.stubs(:twitter_api_key).returns("xxx")
-      Danbooru.config.stubs(:twitter_api_secret).returns("xxx")
+    def setup
+      super
+      setup_vcr
     end
-    
+
     context "The source site for a restricted twitter" do
       setup do
-        VCR.use_cassette("source-twitter-unit-test-2", :record => :none) do
+        VCR.use_cassette("source-twitter-unit-test-2", :record => :once) do
           @site = Sources::Site.new("https://mobile.twitter.com/Strangestone/status/556440271961858051")
           @site.get
         end
@@ -22,7 +22,7 @@ module Sources
 
     context "The source site for twitter" do
       setup do
-        VCR.use_cassette("source-twitter-unit-test-1", :record => :none) do
+        VCR.use_cassette("source-twitter-unit-test-1", :record => :once) do
           @site = Sources::Site.new("https://mobile.twitter.com/nounproject/status/540944400767922176")
           @site.get
         end
@@ -42,6 +42,10 @@ module Sources
 
       should "get the tags" do
         assert_equal([], @site.tags)
+      end
+
+      should "get the artist commentary" do
+        assert_not_nil(@site.artist_commentary_desc)
       end
 
       should "convert a page into a json representation" do

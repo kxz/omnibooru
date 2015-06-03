@@ -1,6 +1,10 @@
 require 'test_helper'
 
 class UploadTest < ActiveSupport::TestCase
+  def setup
+    super
+  end
+
   context "In all cases" do
     setup do
       user = FactoryGirl.create(:contributor_user)
@@ -87,7 +91,7 @@ class UploadTest < ActiveSupport::TestCase
           assert_equal("image/gif", @upload.file_header_to_content_type("#{Rails.root}/test/files/test.gif"))
           assert_equal("image/png", @upload.file_header_to_content_type("#{Rails.root}/test/files/test.png"))
           assert_equal("application/x-shockwave-flash", @upload.file_header_to_content_type("#{Rails.root}/test/files/compressed.swf"))
-          assert_equal("application/octet-stream", @upload.file_header_to_content_type("#{Rails.root}/README"))
+          assert_equal("application/octet-stream", @upload.file_header_to_content_type("#{Rails.root}/README.md"))
         end
 
         should "know how to parse jpeg, png, gif, and swf content types" do
@@ -122,7 +126,7 @@ class UploadTest < ActiveSupport::TestCase
           end
           
           should "process successfully" do
-            VCR.use_cassette("ugoira-converter", :record => :none) do
+            VCR.use_cassette("ugoira-converter-1", :record => :once) do
               @upload.download_from_source(@output_file.path)
             end
             assert_operator(File.size(@output_file.path), :>, 1_000)
@@ -135,7 +139,7 @@ class UploadTest < ActiveSupport::TestCase
           @upload = FactoryGirl.create(:source_upload)
           path = "#{Rails.root}/tmp/test.download.jpg"
 
-          VCR.use_cassette("upload-test-file", :record => :none) do
+          VCR.use_cassette("upload-test-file", :record => :once) do
             assert_nothing_raised {@upload.download_from_source(path)}
             assert(File.exists?(path))
             assert_equal(8558, File.size(path))
@@ -209,11 +213,32 @@ class UploadTest < ActiveSupport::TestCase
       should "increment the uploaders post_upload_count" do
         @upload = FactoryGirl.create(:source_upload)
         assert_difference("CurrentUser.user.post_upload_count", 1) do
-          VCR.use_cassette("upload-test-file", :record => :none) do
+          VCR.use_cassette("upload-test-file", :record => :once) do
             @upload.process!
           end
 
           CurrentUser.user.reload
+        end
+      end
+
+      context "with an artist commentary" do
+        setup do
+          @upload = FactoryGirl.create(:source_upload,
+            :rating => "s",
+            :uploader_ip_addr => "127.0.0.1",
+            :tag_string => "hoge foo"
+          )
+          @upload.include_artist_commentary = "1"
+          @upload.artist_commentary_title = ""
+          @upload.artist_commentary_desc = "blah"
+        end
+
+        should "create an artist commentary when processed" do
+          VCR.use_cassette("upload-test-file", :record => :once) do
+            assert_difference("ArtistCommentary.count") do
+              @upload.process!
+            end
+          end
         end
       end
 
@@ -224,7 +249,7 @@ class UploadTest < ActiveSupport::TestCase
           :tag_string => "hoge foo"
         )
         assert_difference("Post.count") do
-          VCR.use_cassette("upload-test-file", :record => :none) do
+          VCR.use_cassette("upload-test-file", :record => :once) do
             assert_nothing_raised {@upload.process!}
           end
         end
@@ -252,16 +277,17 @@ class UploadTest < ActiveSupport::TestCase
         :uploader_ip_addr => "127.0.0.1",
         :tag_string => "hoge foo"
       )
-      VCR.use_cassette("ugoira-converter", :record => :none) do
+      VCR.use_cassette("ugoira-converter-2", :record => :once) do
         assert_difference(["Post.count", "PixivUgoiraFrameData.count"]) do
           @upload.process!
+          assert_equal([], @upload.errors.full_messages)
         end
         post = Post.last
         assert_not_nil(post.pixiv_ugoira_frame_data)
         assert_equal("0d94800c4b520bf3d8adda08f95d31e2", post.md5)
         assert_equal(60, post.image_width)
         assert_equal(60, post.image_height)
-        assert_equal("http://i1.pixiv.net/img-zip-ugoira/img/2014/10/05/23/42/23/46378654_ugoira1920x1080.zip", post.source)
+        assert_equal("http://i3.pixiv.net/img-zip-ugoira/img/2014/10/05/23/42/23/46378654_ugoira1920x1080.zip", post.source)
         assert_operator(File.size(post.large_file_path), :>, 0)
         assert_operator(File.size(post.preview_file_path), :>, 0)            
       end
