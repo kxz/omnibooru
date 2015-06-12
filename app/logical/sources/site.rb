@@ -3,7 +3,7 @@
 module Sources
   class Site
     attr_reader :url, :strategy
-    delegate :get, :get_size, :referer_url, :site_name, :artist_name, 
+    delegate :get, :get_size, :site_name, :artist_name, 
       :profile_url, :image_url, :tags, :artist_record, :unique_id, 
       :page_count, :file_url, :ugoira_frame_data, :image_urls, 
       :has_artist_commentary?, :artist_commentary_title,
@@ -13,15 +13,19 @@ module Sources
       [Strategies::Pixiv, Strategies::NicoSeiga, Strategies::DeviantArt, Strategies::Nijie, Strategies::Twitter]
     end
 
-    def initialize(url)
+    def initialize(url, options = {})
       @url = url
 
       Site.strategies.each do |strategy|
         if strategy.url_match?(url)
-          @strategy = strategy.new(url)
+          @strategy = strategy.new(url, options[:referer_url])
           break
         end
       end
+    end
+
+    def referer_url
+      strategy.try(:referer_url)
     end
 
     def normalized_for_artist_finder?
