@@ -2202,7 +2202,8 @@ CREATE TABLE janitor_trials (
     created_at timestamp without time zone,
     updated_at timestamp without time zone,
     id integer NOT NULL,
-    creator_id integer DEFAULT 1 NOT NULL
+    creator_id integer DEFAULT 1 NOT NULL,
+    status character varying(255) DEFAULT 'active'::character varying NOT NULL
 );
 
 
@@ -7206,4 +7207,6 @@ INSERT INTO schema_migrations (version) VALUES ('20150120005624');
 INSERT INTO schema_migrations (version) VALUES ('20150128005954');
 
 INSERT INTO schema_migrations (version) VALUES ('20150403224949');
+
+INSERT INTO schema_migrations (version) VALUES ('20150613010904');
 
