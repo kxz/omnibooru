@@ -2,6 +2,10 @@ class PostPresenter < Presenter
   attr_reader :pool, :next_post_in_pool
 
   def self.preview(post, options = {})
+    if post.nil?
+      return "Expunged"
+    end
+
     if post.is_deleted? && options[:tags] !~ /status:(?:all|any|deleted|banned)/ && !options[:raw]
       return ""
     end
@@ -22,6 +26,8 @@ class PostPresenter < Presenter
       tag_param = "?tags=#{CGI::escape(options[:tags])}"
     elsif options[:pool_id] || options[:pool]
       tag_param = "?pool_id=#{CGI::escape((options[:pool_id] || options[:pool].id).to_s)}"
+    elsif options[:favgroup_id] || options[:favgroup]
+      tag_param = "?favgroup_id=#{CGI::escape((options[:favgroup_id] || options[:favgroup].id).to_s)}"
     else
       tag_param = nil
     end
@@ -199,7 +205,7 @@ class PostPresenter < Presenter
   end
 
   def has_nav_links?(template)
-    (CurrentUser.user.enable_sequential_post_navigation && template.params[:tags].present? && template.params[:tags] !~ /(?:^|\s)(?:order|ordfav|ordpool):/) || @post.pools.any?
+    (CurrentUser.user.enable_sequential_post_navigation && template.params[:tags].present? && template.params[:tags] !~ /(?:^|\s)(?:order|ordfav|ordpool):/) || @post.pools.any? || @post.favorite_groups.any?
   end
 
   def post_footer_for_pool_html(template)
@@ -229,7 +235,7 @@ class PostPresenter < Presenter
       first = true
       pools = @post.pools.series_first
       pools.each do |pool|
-        if first && template.params[:tags].blank?
+        if first && template.params[:tags].blank? && template.params[:favgroup_id].blank?
           html += pool_link_html(template, pool, :include_rel => true)
           first = false
         else

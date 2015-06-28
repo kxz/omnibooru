@@ -2,7 +2,7 @@
   <div id="a-user-promotions">
     <h1>User Promotion Confidence Intervals</h1>
 
-    <p>Binomial proportion confidence interval for how likely a user's uploads will achieve a score of at at least n with 95% confidence within the past 30 days.</p>
+    <p>Binomial proportion confidence interval for how likely a user's uploads will achieve a score of at at least n with 95% confidence within the past 30 days. Most statistics are not significant unless there are at least 300 uploads.</p>
 
     <table width="100%" class="striped" id="sortable">
       <thead>
@@ -13,23 +13,25 @@
           <th data-sort="string">Age</th>
           <th data-sort="int">score:3+</th>
           <th data-sort="int">score:6+</th>
+          <th data-sort="int" title="25% of uploads received this score or less">quartile score</th>
+          <th data-sort="int" title="50% of uploads received this score or less">median score</th>
           <th data-sort="int">deletion</th>
         </tr>
       </thead>
       <tbody>
-        <% cache("user-promotions-report/#{Date.today}") do %>
-          <% @report.users.each do |user| %>
-            <% if user.confidence_interval_for(5) > 0 %>
-              <tr>
-                <td><%= link_to_user user.user %></td>
-                <td data-sort-value="<%= user.level %>"><%= user.level_string %></td>
-                <td><%= user.post_upload_count %></td>
-                <td data-sort-value="<%= user.created_at.to_formatted_s(:db) %>"><%= time_ago_in_words user.created_at %></td>
-                <td><%= number_to_percentage user.confidence_interval_for(3), :precision => 0 %></td>
-                <td><%= number_to_percentage user.confidence_interval_for(6), :precision => 0 %></td>
-                <td><%= number_to_percentage user.deletion_confidence_interval, :precision => 0 %></td>
-              </tr>
-            <% end %>
+        <% @report.users.each do |user| %>
+          <% if user.confidence_interval_for(5) > 0 %>
+            <tr>
+              <td><%= link_to_user user.user %></td>
+              <td data-sort-value="<%= user.level %>"><%= user.level_string %></td>
+              <td><%= link_to user.post_upload_count, posts_path(:tags => "uploader:#{user.name} order:random", :limit => 300) %></td>
+              <td data-sort-value="<%= user.created_at.to_formatted_s(:db) %>"><%= time_ago_in_words user.created_at %></td>
+              <td><%= number_to_percentage user.confidence_interval_for(3), :precision => 0 %></td>
+              <td><%= number_to_percentage user.confidence_interval_for(6), :precision => 0 %></td>
+              <td><%= user.quartile_score %></td>
+              <td><%= user.median_score %></td>
+              <td><%= link_to number_to_percentage(user.deletion_confidence_interval, :precision => 0), posts_path(:tags => "uploader:#{user.name} status:deleted", :limit => 300) %></td>
+            </tr>
           <% end %>
         <% end %>
       </tbody>
