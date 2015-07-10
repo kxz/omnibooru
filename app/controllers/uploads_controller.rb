@@ -33,6 +33,11 @@ class UploadsController < ApplicationController
     @urls = @source.image_urls
   end
 
+  def image_proxy
+    resp = ImageProxy.get_image(params[:url])
+    send_data resp.body, :type => resp.content_type, :disposition => "inline"
+  end
+
   def index
     @search = Upload.search(params[:search])
     @uploads = @search.order("id desc").paginate(params[:page], :limit => params[:limit])

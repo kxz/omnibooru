@@ -20,6 +20,10 @@ class AnonymousUser
     Time.now
   end
 
+  def dmail_filter
+    nil
+  end
+
   def name
     "Anonymous"
   end
@@ -105,6 +109,10 @@ class AnonymousUser
   end
 
   def can_remove_from_pools?
+    false
+  end
+
+  def can_approve_posts?
     false
   end
 

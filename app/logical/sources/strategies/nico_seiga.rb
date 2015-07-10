@@ -6,7 +6,7 @@ module Sources
       end
 
       def referer_url
-        if @referer_url =~ /seiga\.nicovideo\.jp\/seiga\/im\d+/ && @url =~ /http:\/\/lohas\.nicoseiga\.jp\/priv\//
+        if @referer_url =~ /seiga\.nicovideo\.jp\/seiga\/im\d+/ && @url =~ /http:\/\/lohas\.nicoseiga\.jp\/(?:priv|o)\//
           @referer_url
         else
           @url
@@ -120,7 +120,7 @@ module Sources
             mech.cookie_jar.add(cookie)
           else
             mech.get("https://secure.nicovideo.jp/secure/login_form") do |page|
-              page.form_with do |form|
+              page.form_with(:id => "login_form") do |form|
                 form["mail_tel"] = Danbooru.config.nico_seiga_login
                 form["password"] = Danbooru.config.nico_seiga_password
               end.click_button

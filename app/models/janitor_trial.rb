@@ -1,6 +1,5 @@
 class JanitorTrial < ActiveRecord::Base
   belongs_to :user
-  before_create :initialize_original_level
   after_create :send_dmail
   after_create :promote_user
   validates_presence_of :user
@@ -28,11 +27,12 @@ class JanitorTrial < ActiveRecord::Base
   def self.message_candidates!
     admin = User.admins.first
 
-    User.where("last_logged_in_at >= ? and created_at <= ? and email is not null and favorite_count >= 200 and level between ? and ?", 1.week.ago, 6.months.ago, User::Levels::MEMBER, User::Levels::CONTRIBUTOR).order("random()").limit(5).each do |user|
+    User.where("last_logged_in_at >= ? and created_at <= ? and email is not null and (favorite_count >= 400 OR post_upload_count >= 400) and level between ? and ?", 1.week.ago, 6.months.ago, User::Levels::MEMBER, User::Levels::CONTRIBUTOR).order("random()").limit(5).each do |user|
       if !Dmail.where("from_id = ? and to_id = ? and title = ?", admin.id, user.id, "Test Janitor Invitation").exists?
-        favorites = user.favorites.order("random()").limit(400)
-        p50 = ActiveRecord::Base.select_value_sql("select percentile_cont(0.50) within group (order by score) from posts where id in (?)", favorites.map(&:post_id)).to_f
-
+        favorites = user.favorites.order("random()").limit(400).map(&:post_id)
+        uploads = user.posts.order("random()").limit(400).map(&:id)
+        p50 = ActiveRecord::Base.select_value_sql("select percentile_cont(0.50) within group (order by score) from posts where id in (?)", favorites + uploads).to_f
+        
         if p50 > 3 and p50 <= 10
           CurrentUser.scoped(admin, "127.0.0.1") do
             body = <<-EOS
@@ -54,10 +54,6 @@ class JanitorTrial < ActiveRecord::Base
     self.creator_id = CurrentUser.id
   end
 
-  def initialize_original_level
-    self.original_level = user.level
-  end
-
   def user_name
     user.try(:name)
   end
@@ -67,13 +63,14 @@ class JanitorTrial < ActiveRecord::Base
   end
 
   def send_dmail
-    body = "You have been selected as a test janitor. You can now approve pending posts and have access to the moderation interface. You should reacquaint yourself with the [[howto:upload]] guide to make sure you understand the site rules.\n\nOver the next several weeks your approvals will be monitored. If the majority of them are not quality uploads you will fail the trial period and be demoted back to your original level. You will also receive a negative user record indicating you previously attempted and failed a test janitor trial.\n\nThere is a minimum quota of 1 approval a month to indicate that you are being active. Remember, the goal isn't to approve as much as possible. It's to filter out borderline-quality art.\n\nIf you have any questions please respond to this message."
+    body = "You have been selected as a test janitor. You can now approve pending posts and have access to the moderation interface. You should reacquaint yourself with the [[howto:upload]] guide to make sure you understand the site rules.\n\nOver the next several weeks your approvals will be monitored. If the majority of them are not quality uploads you will fail the trial period and lose your approval privileges. You will also receive a negative user record indicating you previously attempted and failed a test janitor trial.\n\nThere is a minimum quota of 1 approval a month to indicate that you are being active. Remember, the goal isn't to approve as much as possible. It's to filter out borderline-quality art.\n\nIf you have any questions please respond to this message."
 
     Dmail.create_split(:title => "Test Janitor Trial Period", :body => body, :to_id => user_id)
   end
 
   def promote_user
-    user.promote_to!(User::Levels::JANITOR, :skip_dmail => true)
+    user.can_approve_posts = true
+    user.save
   end
 
   def create_feedback
@@ -88,8 +85,9 @@ class JanitorTrial < ActiveRecord::Base
   end
 
   def demote!
+    user.can_approve_posts = false
+    user.save
     update_attribute(:status, "inactive")
-    user.update_column(:level, original_level)
     self.create_feedback
   end
 

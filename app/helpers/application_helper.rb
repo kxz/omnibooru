@@ -76,9 +76,16 @@ module ApplicationHelper
     time_tag(time.strftime("%Y-%m-%d %H:%M"), time)
   end
 
-  def link_to_user(user)
-    user_class = CurrentUser.user.style_usernames? ? "#{user.level_class} with-style" : user.level_class
-    link_to(user.pretty_name, user_path(user), :class => user_class)
+  def link_to_user(user, options = {})
+    user_class = user.level_class
+    user_class = user_class + " user-post-approver" if user.can_approve_posts?
+    user_class = user_class + " with-style" if CurrentUser.user.style_usernames?
+    if options[:raw_name]
+      name = user.name
+    else
+      name = user.pretty_name
+    end
+    link_to(name, user_path(user), :class => user_class)
   end
 
   def mod_link_to_user(user, positive_or_negative)

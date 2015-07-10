@@ -37,6 +37,11 @@ class BulkUpdateRequest < ActiveRecord::Base
     update_attribute(:status, "approved")
 
   rescue Exception => x
+    message_admin_on_failure(x)
+    update_topic_on_failure(x)
+  end
+
+  def message_admin_on_failure(x)
     admin = User.admins.first
     msg = <<-EOS
       Bulk Update Request ##{id} failed\n
@@ -60,8 +65,15 @@ class BulkUpdateRequest < ActiveRecord::Base
     dmail.save
   end
 
+  def update_topic_on_failure(x)
+    if forum_topic_id
+      body = "Bulk update request ##{id} failed: #{x.to_s}"
+      ForumPost.create(:body => body, :topic_id => forum_topic_id)
+    end
+  end
+
   def editable?(user)
-    user_id == user.id || user.is_janitor?
+    user_id == user.id || user.is_builder?
   end
 
   def create_forum_topic
@@ -121,21 +133,17 @@ class BulkUpdateRequest < ActiveRecord::Base
 
   def update_forum_topic_for_approve
     if forum_topic
-      CurrentUser.scoped(User.admins.first, "127.0.0.1") do
-        forum_topic.posts.create(
-          :body => "The bulk update request ##{id} has been approved."
-        )
-      end
+      forum_topic.posts.create(
+        :body => "The bulk update request ##{id} has been approved."
+      )
     end
   end
 
   def update_forum_topic_for_reject
     if forum_topic
-      CurrentUser.scoped(User.admins.first, "127.0.0.1") do
-        forum_topic.posts.create(
-          :body => "The bulk update request ##{id} has been rejected."
-        )
-      end
+      forum_topic.posts.create(
+        :body => "The bulk update request ##{id} has been rejected."
+      )
     end
   end
 

@@ -165,11 +165,15 @@ class Comment < ActiveRecord::Base
   end
 
   def editable_by?(user)
-    creator_id == user.id || user.is_janitor?
+    creator_id == user.id || user.is_moderator?
   end
 
   def hidden_attributes
     super + [:body_index]
+  end
+
+  def delete!
+    update_attribute(:is_deleted, true)
   end
 end
 

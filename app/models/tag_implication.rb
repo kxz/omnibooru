@@ -207,7 +207,7 @@ class TagImplication < ActiveRecord::Base
 
   def deletable_by?(user)
     return true if user.is_admin?
-    return true if is_pending? && user.is_janitor?
+    return true if is_pending? && user.is_builder?
     return true if is_pending? && user.id == creator_id
     return false
   end
@@ -218,21 +218,17 @@ class TagImplication < ActiveRecord::Base
 
   def update_forum_topic_for_approve
     if forum_topic
-      CurrentUser.scoped(User.admins.first, "127.0.0.1") do
-        forum_topic.posts.create(
-          :body => "The tag implication #{antecedent_name} -> #{consequent_name} has been approved."
-        )
-      end
+      forum_topic.posts.create(
+        :body => "The tag implication #{antecedent_name} -> #{consequent_name} has been approved."
+      )
     end
   end
 
   def update_forum_topic_for_reject
     if forum_topic
-      CurrentUser.scoped(User.admins.first, "127.0.0.1") do
-        forum_topic.posts.create(
-          :body => "The tag implication #{antecedent_name} -> #{consequent_name} has been rejected."
-        )
-      end
+      forum_topic.posts.create(
+        :body => "The tag implication #{antecedent_name} -> #{consequent_name} has been rejected."
+      )
     end
   end
 

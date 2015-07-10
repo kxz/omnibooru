@@ -1,6 +1,6 @@
 class ForumPost < ActiveRecord::Base
   attr_accessible :body, :topic_id, :as => [:member, :builder, :janitor, :gold, :platinum, :contributor, :admin, :moderator, :default]
-  attr_accessible :is_locked, :is_sticky, :is_deleted, :as => [:admin, :moderator, :janitor]
+  attr_accessible :is_locked, :is_sticky, :is_deleted, :as => [:admin, :moderator]
   attr_readonly :topic_id
   belongs_to :creator, :class_name => "User"
   belongs_to :updater, :class_name => "User"
@@ -92,7 +92,7 @@ class ForumPost < ActiveRecord::Base
   end
 
   def validate_topic_is_unlocked
-    return if CurrentUser.user.is_janitor?
+    return if CurrentUser.user.is_moderator?
     return if topic.nil?
 
     if topic.is_locked?
@@ -110,7 +110,7 @@ class ForumPost < ActiveRecord::Base
   end
 
   def editable_by?(user)
-    creator_id == user.id || user.is_janitor?
+    creator_id == user.id || user.is_moderator?
   end
 
   def update_topic_updated_at_on_create

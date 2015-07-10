@@ -16,6 +16,9 @@ class User < ActiveRecord::Base
     ADMIN = 50
   end
 
+
+  # bit_prefs is 64 bits signed so theoretical maximum 
+  # is 0x8000 0000 0000 0000
   BOOLEAN_ATTRIBUTES = {
     :is_banned                         => 0x0001,
     :has_mail                          => 0x0002,
@@ -29,7 +32,8 @@ class User < ActiveRecord::Base
     :style_usernames                   => 0x0200,
     :enable_auto_complete              => 0x0400,
     :show_deleted_children             => 0x0800,
-    :has_saved_searches                => 0x1000
+    :has_saved_searches                => 0x1000,
+    :can_approve_posts                 => 0x2000
   }
 
   attr_accessor :password, :old_password
@@ -255,7 +259,7 @@ class User < ActiveRecord::Base
     end
 
     def favorite_groups
-      FavoriteGroup.for_creator(CurrentUser.user.id)
+      FavoriteGroup.for_creator(CurrentUser.user.id).order("updated_at desc")
     end
   end
 

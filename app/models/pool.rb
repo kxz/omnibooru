@@ -19,7 +19,7 @@ class Pool < ActiveRecord::Base
   after_create :synchronize!
   before_destroy :create_mod_action_for_destroy
   attr_accessible :name, :description, :post_ids, :post_id_array, :post_count, :is_active, :category, :as => [:member, :gold, :platinum, :contributor, :janitor, :moderator, :admin, :default]
-  attr_accessible :is_deleted, :as => [:janitor, :moderator, :admin]
+  attr_accessible :is_deleted, :as => [:moderator, :admin]
 
   module SearchMethods
     def deleted
@@ -207,7 +207,7 @@ class Pool < ActiveRecord::Base
   end
 
   def deletable_by?(user)
-    user.is_janitor?
+    user.is_moderator?
   end
 
   def create_mod_action_for_delete

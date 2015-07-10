@@ -26,6 +26,8 @@ Rails.application.routes.draw do
           post :expunge
           post :delete
           post :undelete
+          get :confirm_move_favorites
+          post :move_favorites
           get :confirm_ban
           post :ban
           post :unban
@@ -54,6 +56,7 @@ Rails.application.routes.draw do
       resource :login_reminder, :only => [:new, :create]
       resource :deletion, :only => [:show, :destroy]
       resource :email_change, :only => [:new, :create]
+      resource :dmail_filter, :only => [:edit, :update]
     end
   end
 
@@ -109,7 +112,12 @@ Rails.application.routes.draw do
   end
   resource  :dtext_preview, :only => [:create]
   resources :favorites
-  resources :favorite_groups
+  resources :favorite_groups do
+    member do
+      put :add_post
+    end
+    resource :order, :only => [:edit], :controller => "favorite_group_orders"
+  end
   resources :forum_posts do
     member do
       post :undelete
@@ -164,7 +172,7 @@ Rails.application.routes.draw do
     collection do
       get :gallery
     end
-    resource :order, :only => [:edit, :update], :controller => "pool_orders"
+    resource :order, :only => [:edit], :controller => "pool_orders"
   end
   resource  :pool_element, :only => [:create, :destroy] do
     collection do
@@ -243,9 +251,12 @@ Rails.application.routes.draw do
   resources :uploads do
     collection do
       get :batch
+      get :image_proxy
     end
   end
   resources :users do
+    resource :password, :only => [:edit], :controller => "maintenance/user/passwords"
+
     collection do
       get :search
       get :custom_style
