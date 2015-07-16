@@ -27,6 +27,10 @@ class ForumPostTest < ActiveSupport::TestCase
       end
 
       context "that is deleted" do
+        setup do
+          CurrentUser.user = FactoryGirl.create(:moderator_user)
+        end
+        
         should "update the topic's updated_at timestamp" do
           @topic.reload
           assert_equal(@posts[-1].updated_at.to_i, @topic.updated_at.to_i)
@@ -107,18 +111,6 @@ class ForumPostTest < ActiveSupport::TestCase
     should "initialize its creator" do
       post = FactoryGirl.create(:forum_post, :topic_id => @topic.id)
       assert_equal(@user.id, post.creator_id)
-    end
-
-    context "that is deleted" do
-      setup do
-        @post = FactoryGirl.create(:forum_post, :topic_id => @topic.id)
-        @post.delete!
-        @topic.reload
-      end
-
-      should "also delete the topic" do
-        assert(@topic.is_deleted)
-      end
     end
 
     context "updated by a second user" do

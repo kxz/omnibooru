@@ -9,7 +9,7 @@ class Comment < ActiveRecord::Base
   before_validation :initialize_updater
   after_create :update_last_commented_at_on_create
   after_destroy :update_last_commented_at_on_destroy
-  attr_accessible :body, :post_id, :do_not_bump_post
+  attr_accessible :body, :post_id, :do_not_bump_post, :is_deleted
 
   module SearchMethods
     def recent
@@ -173,7 +173,11 @@ class Comment < ActiveRecord::Base
   end
 
   def delete!
-    update_attribute(:is_deleted, true)
+    update_attributes(:is_deleted => true)
+  end
+
+  def undelete!
+    update_attributes(:is_deleted => false)
   end
 end
 

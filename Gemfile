@@ -47,12 +47,10 @@ gem 'radix62', '~> 1.0.1'
 gem 'streamio-ffmpeg'
 gem 'rubyzip', :require => "zip"
 gem 'twitter'
+gem 'aws-sdk', '~> 2'
 
 # needed for looser jpeg header compat
 gem 'ruby-imagespec', :require => "image_spec", :git => "https://github.com/r888888888/ruby-imagespec.git", :branch => "exif-fixes"
-
-# needed for rails 4.1.0 compat
-gem 'aws-s3', :require => "aws/s3", :git => "https://github.com/fnando/aws-s3.git"
 
 group :production do
   gem 'unicorn', :platforms => :ruby
