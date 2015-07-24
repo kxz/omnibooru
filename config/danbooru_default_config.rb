@@ -4,7 +4,7 @@ module Danbooru
   class Configuration
     # The version of this Danbooru.
     def version
-      "2.86.0"
+      "2.87.0"
     end
 
     # The name of this Danbooru.
@@ -331,6 +331,18 @@ module Danbooru
     end
 
     def twitter_api_secret
+    end
+
+    def shared_remote_key
+      "blah blah blah blah blah blah"
+    end
+
+    def report_server
+      "https://isshiki.donmai.us"
+    end
+
+    def enable_view_counts
+      false
     end
   end
 end

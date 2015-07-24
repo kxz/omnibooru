@@ -1,7 +1,7 @@
 <div id="c-posts">
   <div id="a-show">
     <aside id="sidebar">
-      <%= render "posts/partials/common/search", :path => posts_path, :tags => params[:tags] %>
+      <%= render "posts/partials/common/search", :path => posts_path, :tags => params[:tags], :tags_dom_id => "tags" %>
 
       <%= render "posts/partials/index/blacklist" %>
 
@@ -88,7 +88,7 @@
       </menu>
 
       <section id="responsive-tag-list">
-        <%= render "posts/partials/common/search", :path => posts_path, :tags => params[:tags] %>
+        <%= render "posts/partials/common/search", :path => posts_path, :tags => params[:tags], :tags_dom_id => "responsive-tags" %>
         <%= @post.presenter.split_tag_list_html(self) %>
       </section>
 
@@ -134,6 +134,8 @@
   </div>
 </div>
 
+<%= post_view_count_js %>
+
 <% content_for(:page_title) do %>
   <%= @post.presenter.humanized_essential_tag_string %> - <%= Danbooru.config.app_name %>
 <% end %>
@@ -152,6 +154,10 @@
   <meta property="og:title" content="<%= @post.presenter.humanized_essential_tag_string %> - <%= Danbooru.config.app_name %>">
   <meta property="og:description" content="<%= @post.presenter.humanized_tag_string %>">
   <meta property="og:image" content="<%= request.protocol %><%= request.host_with_port %><%= @post.large_file_url %>">
+
+  <% if Danbooru.config.enable_view_counts %>
+    <meta name="report-server" content="<%= Danbooru.config.report_server %>">
+  <% end %>
 
   <!-- Twitter properties -->
   <% if @post.twitter_card_supported? %>
