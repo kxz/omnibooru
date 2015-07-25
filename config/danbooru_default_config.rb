@@ -220,6 +220,10 @@ module Danbooru
       nil
     end
 
+    def google_analytics_id
+      nil
+    end
+
     # The number of posts displayed per page.
     def posts_per_page
       20
