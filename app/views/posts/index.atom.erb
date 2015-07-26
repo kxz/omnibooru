@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <feed xmlns="http://www.w3.org/2005/Atom">
-	<title><%= Danbooru.config.app_name %>: <%= params[:tags] %></title>
+	<title><%= Danbooru.config.app_name %><% if !params[:tags].blank? %>: <%= params[:tags] %><% end %></title>
 	<link href="<%= posts_path :format => :atom, :tags => params[:tags], :only_path => false %>" rel="self"/>
   <link href="<%= posts_path :tags => params[:tags], :only_path => false %>" rel="alternate"/>
   <id><%= posts_path :format => :atom, :tags => params[:tags], :only_path => false %></id>
