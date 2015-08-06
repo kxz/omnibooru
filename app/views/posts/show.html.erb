@@ -26,8 +26,7 @@
         <ul>
           <li><%= fast_link_to "Tags", post_versions_path(:search => {:post_id => @post.id}) %></li>
           <li><%= fast_link_to "Notes", note_versions_path(:search => {:post_id => @post.id}) %></li>
-          <li><%= fast_link_to "Flags", post_flags_path(:search => {:post_id => @post.id}) %></li>
-          <li><%= fast_link_to "Appeals", post_appeals_path(:search => {:post_id => @post.id}) %></li>
+          <li><%= fast_link_to "Flags & Appeals", post_events_path(@post.id) %></li>
           <li><%= fast_link_to "Commentary", artist_commentary_versions_path(:search => {:post_id => @post.id}) %></li>
         </ul>
       </section>
@@ -134,8 +133,6 @@
   </div>
 </div>
 
-<%= post_view_count_js %>
-
 <% content_for(:page_title) do %>
   <%= @post.presenter.humanized_essential_tag_string %> - <%= Danbooru.config.app_name %>
 <% end %>
@@ -155,7 +152,7 @@
   <meta property="og:description" content="<%= @post.presenter.humanized_tag_string %>">
   <meta property="og:image" content="<%= request.protocol %><%= request.host_with_port %><%= @post.large_file_url %>">
 
-  <% if Danbooru.config.enable_view_counts %>
+  <% if Danbooru.config.enable_post_search_counts %>
     <meta name="report-server" content="<%= Danbooru.config.report_server %>">
   <% end %>
 

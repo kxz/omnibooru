@@ -155,6 +155,11 @@ protected
   end
 
   def post_approvers_only
-    CurrentUser.can_approve_posts?
+    if CurrentUser.can_approve_posts?
+      true
+    else
+      access_denied()
+      false
+    end
   end
 end

@@ -11,10 +11,11 @@
   <% else %>
     <li id="add-notes-list"><%= link_to "Add notes", "#", :id => "translate", :title => "Shortcut is N" %></li>
   <% end %>
-  <li id="add-artist-commentary-list"><%= link_to "Add artist commentary", "#", :id => "add-commentary" %></li>
   <% if CurrentUser.is_builder? && post.has_notes? %>
     <li id="copy-all-notes-list"><%= link_to "Copy all notes", "#", :id => "copy-notes" %></li>
   <% end %>
+  <li id="add-artist-commentary-list"><%= link_to "Add artist commentary", "#", :id => "add-commentary" %></li>
+  <li><%= link_to "Add to favorite group", "#", :id => "open-favgroup-dialog-link" %></li>
   <li><%= link_to "Similar images on IQDB", "http://iqdb.org/db-search.php?url=" + URI::join(root_path(:only_path => false), post.preview_file_url).to_s %></li>
   <li><%= link_to "Google Search by Image", "http://images.google.com/searchbyimage?image_url=" + URI::join(root_path(:only_path => false), post.preview_file_url).to_s %></li>
 

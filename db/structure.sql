@@ -2587,7 +2587,8 @@ CREATE TABLE post_disapprovals (
     created_at timestamp without time zone DEFAULT now(),
     updated_at timestamp without time zone DEFAULT now(),
     id integer NOT NULL,
-    reason character varying(255) DEFAULT 'legacy'::character varying
+    reason character varying(255) DEFAULT 'legacy'::character varying,
+    message text
 );
 
 
@@ -3176,7 +3177,10 @@ CREATE TABLE users (
     email_verification_key character varying(255),
     default_image_size character varying(255) DEFAULT 'large'::character varying NOT NULL,
     favorite_tags text,
-    blacklisted_tags text,
+    blacklisted_tags text DEFAULT 'spoilers
+guro
+scat
+furry -rating:s'::text,
     time_zone character varying(255) DEFAULT 'Eastern Time (US & Canada)'::character varying NOT NULL,
     post_update_count integer DEFAULT 0 NOT NULL,
     note_update_count integer DEFAULT 0 NOT NULL,
@@ -7282,4 +7286,8 @@ INSERT INTO schema_migrations (version) VALUES ('20150629235905');
 INSERT INTO schema_migrations (version) VALUES ('20150705014135');
 
 INSERT INTO schema_migrations (version) VALUES ('20150721214646');
+
+INSERT INTO schema_migrations (version) VALUES ('20150728170433');
+
+INSERT INTO schema_migrations (version) VALUES ('20150805010245');
 

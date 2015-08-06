@@ -4,7 +4,7 @@ module Danbooru
   class Configuration
     # The version of this Danbooru.
     def version
-      "2.88.0"
+      "2.89.0"
     end
 
     # The name of this Danbooru.
@@ -345,7 +345,7 @@ module Danbooru
       "https://isshiki.donmai.us"
     end
 
-    def enable_view_counts
+    def enable_post_search_counts
       false
     end
   end

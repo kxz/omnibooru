@@ -8,6 +8,11 @@ module Explore
       respond_with(@posts)
     end
 
+    def searches
+      @date = params[:date] ? Date.parse(params[:date]) : Date.today
+      @search_service = PopularSearchService.new(@date, params[:scale] || "day")
+    end
+
     def intro
       @presenter = IntroPresenter.new
       render :layout => "blank"

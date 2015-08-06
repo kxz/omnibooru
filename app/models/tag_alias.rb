@@ -34,7 +34,7 @@ class TagAlias < ActiveRecord::Base
       end
 
       if params[:id].present?
-        q = q.where("id = ?", params[:id].to_i)
+        q = q.where("id in (?)", params[:id].split(",").map(&:to_i))
       end
 
       case params[:order]
@@ -91,6 +91,7 @@ class TagAlias < ActiveRecord::Base
     update_column(:status, "active")
   rescue Exception => e
     update_column(:status, "error: #{e}")
+    NewRelic::Agent.notice_error(e, :custom_params => {:tag_alias_id => id, :antecedent_name => antecedent_name, :consequent_name => consequent_name})
   end
 
   def is_pending?
