@@ -188,7 +188,7 @@ class User < ActiveRecord::Base
 
     def reset_password_and_deliver_notice
       new_password = reset_password()
-      Maintenance::User::PasswordResetMailer.confirmation(self, new_password).deliver
+      Maintenance::User::PasswordResetMailer.confirmation(self, new_password).deliver_now
     end
   end
 
@@ -754,6 +754,12 @@ class User < ActiveRecord::Base
     end
   end
 
+  module StatisticsMethods
+    def deletion_confidence(days = 30)
+      Reports::UserPromotion.deletion_confidence_interval_for(self, days)
+    end
+  end
+
   include BanMethods
   include NameMethods
   include PasswordMethods
@@ -768,6 +774,7 @@ class User < ActiveRecord::Base
   include ApiMethods
   include CountMethods
   extend SearchMethods
+  include StatisticsMethods
 
   def initialize_default_image_size
     self.default_image_size = "large"

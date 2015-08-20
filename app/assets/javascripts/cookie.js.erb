@@ -2,15 +2,19 @@
   Danbooru.Cookie = {};
 
   Danbooru.Cookie.put = function(name, value, days) {
-    if (days == null) {
-      days = 365;
+    var expires = "";
+    if (days !== "session") {
+      if (!days) {
+        days = 365;
+      }
+
+      var date = new Date();
+      date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+      expires = "expires=" + date.toGMTString() + "; ";
     }
 
-    var date = new Date();
-    date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
-    var expires = "; expires=" + date.toGMTString();
-    var secure = (window.location.protocol == "https:" ? "; secure" : "");
-    document.cookie = name + "=" + encodeURIComponent(value) + expires + secure + "; path=<%= Rails.application.routes.url_helpers.root_path %>";
+    var secure = (window.location.protocol == "https:" ? "secure; " : "");
+    document.cookie = name + "=" + encodeURIComponent(value) + "; " + expires + secure + "path=<%= Rails.application.routes.url_helpers.root_path %>";
   }
 
   Danbooru.Cookie.raw_get = function(name) {

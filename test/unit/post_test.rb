@@ -463,8 +463,8 @@ class PostTest < ActiveSupport::TestCase
 
       context "as a new user" do
         setup do
-          CurrentUser.user = FactoryGirl.create(:user)
           @post.update_attribute(:tag_string, "aaa bbb ccc ddd")
+          CurrentUser.user = FactoryGirl.create(:user)
         end
 
         should "not allow you to remove more than 2 tags" do
@@ -958,6 +958,9 @@ class PostTest < ActiveSupport::TestCase
 
         should "normalize hentai foundry links" do
           @post.source = "http://pictures.hentai-foundry.com//a/AnimeFlux/219123.jpg"
+          assert_equal("http://www.hentai-foundry.com/pictures/user/AnimeFlux/219123", @post.normalized_source)
+
+          @post.source = "http://pictures.hentai-foundry.com/a/AnimeFlux/219123/Mobile-Suit-Equestria-rainbow-run.jpg"
           assert_equal("http://www.hentai-foundry.com/pictures/user/AnimeFlux/219123", @post.normalized_source)
         end
       end

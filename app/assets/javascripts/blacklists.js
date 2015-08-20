@@ -38,9 +38,12 @@
     })[0];
     if (match) {
       match.disabled = !match.disabled;
+      var hash = tags.hash();
       if (match.disabled) {
+        Danbooru.Cookie.put("bl:" + hash, "1", "session");
         $(e.target).addClass("blacklisted-active");
       } else {
+        Danbooru.Cookie.remove("bl:" + hash);
         $(e.target).removeClass("blacklisted-active");
       }
     }
@@ -56,18 +59,49 @@
       var item = $("<li/>");
       var link = $("<a/>");
       var count = $("<span/>");
+      var hash = entry.tags.hash();
 
       link.text(entry.tags);
       link.click(Danbooru.Blacklist.toggle_entry);
       count.html(entry.hits);
+      count.addClass("count");
       item.append(link);
       item.append(" ");
       item.append(count);
+
+      if (Danbooru.Cookie.get("bl:" + hash)) {
+        link.click();
+      }
 
       $("#blacklist-list").append(item);
     });
 
     $("#blacklist-box").show();
+  }
+
+  Danbooru.Blacklist.initialize_disable_all_blacklists = function() {
+    if (Danbooru.Cookie.get("disable-all-blacklists") === "1") {
+      $("#re-enable-all-blacklists").show();
+      $("#blacklist-list a:not(.blacklisted-active)").click();
+      Danbooru.Blacklist.apply();
+    } else {
+      $("#disable-all-blacklists").show()
+    }
+
+    $("#disable-all-blacklists").click(function(e) {
+      $("#disable-all-blacklists").hide();
+      $("#re-enable-all-blacklists").show();
+      $("#blacklist-list a:not(.blacklisted-active)").click();
+      Danbooru.Cookie.put("disable-all-blacklists", "1");
+      e.preventDefault();
+    });
+    $("#re-enable-all-blacklists").click(function(e) {
+      $("#disable-all-blacklists").show();
+      $("#re-enable-all-blacklists").hide();
+      $("#blacklist-list a.blacklisted-active").click();
+      Danbooru.Cookie.put("disable-all-blacklists", "0");
+      e.preventDefault();
+    });
   }
 
   Danbooru.Blacklist.apply = function() {
@@ -97,7 +131,7 @@
   }
 
   Danbooru.Blacklist.posts = function() {
-    return $(".post-preview, #image-container");
+    return $(".post-preview, #image-container, #c-comments .post");
   }
 
   Danbooru.Blacklist.post_match = function(post, entry) {
@@ -126,6 +160,7 @@
 
     if (Danbooru.Blacklist.apply() > 0) {
       Danbooru.Blacklist.update_sidebar();
+      Danbooru.Blacklist.initialize_disable_all_blacklists();
     } else {
       $("#blacklist-box").hide();
     }
@@ -133,5 +168,9 @@
 })();
 
 $(document).ready(function() {
+  if ($("#c-moderator-post-queues").length) {
+    return;
+  }
+
   Danbooru.Blacklist.initialize_all();
 });

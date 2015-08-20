@@ -1,5 +1,5 @@
 class Tag < ActiveRecord::Base
-  METATAGS = "-user|user|-approver|approver|commenter|comm|noter|noteupdater|artcomm|-pool|pool|ordpool|favgroup|-fav|fav|ordfav|sub|md5|-rating|rating|-locked|locked|width|height|mpixels|ratio|score|favcount|filesize|source|-source|id|-id|date|age|order|limit|-status|status|tagcount|gentags|arttags|chartags|copytags|parent|-parent|child|pixiv_id|pixiv"
+  METATAGS = "-user|user|-approver|approver|commenter|comm|noter|noteupdater|artcomm|-pool|pool|ordpool|-favgroup|favgroup|-fav|fav|ordfav|sub|md5|-rating|rating|-locked|locked|width|height|mpixels|ratio|score|favcount|filesize|source|-source|id|-id|date|age|order|limit|-status|status|tagcount|gentags|arttags|chartags|copytags|parent|-parent|child|pixiv_id|pixiv"
   SUBQUERY_METATAGS = "commenter|comm|noter|noteupdater|artcomm"
   attr_accessible :category, :as => [:moderator, :janitor, :contributor, :gold, :member, :anonymous, :default, :builder, :admin]
   attr_accessible :is_locked, :as => [:moderator, :admin]
@@ -56,6 +56,16 @@ class Tag < ActiveRecord::Base
       def decrement_post_counts(tag_names)
         Tag.where(:name => tag_names).update_all("post_count = post_count - 1")
         Post.expire_cache_for_all(tag_names)
+      end
+
+      def clean_up_negative_post_counts!
+        Tag.where("post_count < 0").find_each do |tag|
+          tag_alias = TagAlias.where("status in ('active', 'processing') and antecedent_name = ?", tag.name).first
+          tag.fix_post_count
+          if tag_alias
+            tag_alias.consequent_tag.fix_post_count
+          end
+        end
       end
     end
 
@@ -459,6 +469,10 @@ class Tag < ActiveRecord::Base
             pool_id = Pool.name_to_id($2)
             q[:tags][:related] << "pool:#{pool_id}"
             q[:ordpool] = pool_id
+
+          when "-favgroup"
+            favgroup_id = FavoriteGroup.name_to_id($2)
+            q[:favgroup_neg] = favgroup_id
 
           when "favgroup"
             favgroup_id = FavoriteGroup.name_to_id($2)
