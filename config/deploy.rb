@@ -10,3 +10,9 @@ set :default_env, {
   "RAILS_RELATIVE_URL_ROOT" => "/booru",
   "RAILS_GROUPS" => "assets"
 }
+
+after "deploy:symlink:shared", "symlink:local_files"
+after "deploy:symlink:shared", "symlink:directories"
+before "deploy:started", "delayed_job:stop"
+after "deploy:published", "delayed_job:start"
+after "deploy:published", "unicorn:reload"

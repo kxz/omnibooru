@@ -1,6 +1,6 @@
 namespace :delayed_job do
   desc "Start the delayed_job process"
-  task :start, :roles => :app do
+  task :start do
     on roles(:app) do
       execute "systemctl", "--user", "start", "danbooru-delayed_job.service"
     end
