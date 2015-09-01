@@ -14,8 +14,4 @@ set :default_env, {
   "XDG_RUNTIME_DIR" => "/run/user/112",
 }
 
-after "deploy:symlink:shared", "symlink:local_files"
-after "deploy:symlink:shared", "symlink:directories"
-before "deploy:started", "delayed_job:stop"
-after "deploy:published", "delayed_job:start"
 after "deploy:published", "unicorn:reload"
