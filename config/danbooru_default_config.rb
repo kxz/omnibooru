@@ -4,7 +4,7 @@ module Danbooru
   class Configuration
     # The version of this Danbooru.
     def version
-      "2.91.0"
+      "2.92.0"
     end
 
     # The name of this Danbooru.
@@ -349,6 +349,10 @@ module Danbooru
       false
     end
 
+    def email_key
+      "zDMSATq0W3hmA5p3rKTgD"
+    end
+
     # For downloads, if the host matches any of these IPs, block it
     def banned_ip_for_download?(ip_addr)
       raise ArgumentError unless ip_addr.is_a?(IPAddr)
@@ -380,6 +384,10 @@ module Danbooru
       else
         false
       end
+    end
+
+    def twitter_site
+      "@teruyo"
     end
   end
 end
