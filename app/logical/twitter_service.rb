@@ -18,7 +18,9 @@ class TwitterService
   end
 
   def image_urls(tweet_url)
-    attrs = client.status(tweet_url).attrs
+    tweet_url =~ %r{/status/(\d+)}
+    twitter_id = $1
+    attrs = client.status(twitter_id).attrs
     urls = []
     attrs[:entities][:media].each do |obj|
       urls << obj[:media_url] + ":orig"

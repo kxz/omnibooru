@@ -4,7 +4,7 @@ module Reports
   class UserPromotions
     class User
       attr_reader :user
-      delegate :name, :post_upload_count, :level_string, :level, :created_at, :to => :user
+      delegate :name, :post_upload_count, :level_string, :level, :created_at, :upload_limit, :to => :user
 
       def initialize(user)
         @user = user
@@ -55,7 +55,7 @@ module Reports
     end
 
     def users
-      ::User.where("users.level < ? and users.post_upload_count >= 250", ::User::Levels::CONTRIBUTOR).order("created_at desc").limit(50).map {|x| Reports::UserPromotions::User.new(x)}
+      ::User.where("users.level < ? and users.post_upload_count >= 250", ::User::Levels::CONTRIBUTOR).order("created_at desc").map {|x| Reports::UserPromotions::User.new(x)}
     end
   end
 end
