@@ -11,6 +11,10 @@ module Reports
         JanitorTrial.where(user_id: user.id).first
       end
 
+      def created_at
+        trial.try(:created_at) || 10.years.ago
+      end
+
       def since
         3.months.ago
       end

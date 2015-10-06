@@ -36,6 +36,16 @@ class DText
     str.gsub!(/&/, "&amp;")
     str.gsub!(/</, "&lt;")
     str.gsub!(/>/, "&gt;")
+    str.gsub!(/(?:^| )@\S+/) do |name|
+      if name =~ /([:;,.!?\)\]<>])$/
+        name.chop!
+        ch = $1
+      else
+        ch = ""
+      end
+
+      %{<a href="#{Rails.application.routes.url_helpers.users_path(:name => name[1..-1])}">#{name}</a>#{ch}}
+    end
     str.gsub!(/\n/m, "<br>") unless options[:ignore_newlines]
     str.gsub!(/\[b\](.+?)\[\/b\]/i, '<strong>\1</strong>')
     str.gsub!(/\[i\](.+?)\[\/i\]/i, '<em>\1</em>')

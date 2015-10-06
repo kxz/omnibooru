@@ -4,7 +4,7 @@ module Reports
   class UserPromotions
     class User
       attr_reader :user
-      delegate :name, :post_upload_count, :level_string, :level, :created_at, :upload_limit, :to => :user
+      delegate :name, :post_upload_count, :level_string, :level, :created_at, :upload_limit, :max_upload_limit, :to => :user
 
       def initialize(user)
         @user = user
@@ -16,6 +16,10 @@ module Reports
 
       def deletion_confidence_interval
         Reports::UserPromotions.deletion_confidence_interval_for(user)
+      end
+
+      def negative_score_confidence_interval
+        Reports::UserPromotions.negative_score_confidence_interval_for(user)
       end
 
       def median_score
@@ -34,10 +38,17 @@ module Reports
     end
 
     def self.deletion_confidence_interval_for(user, days = nil)
-      date = (days || 30).days.ago
+      date = (days || 120).days.ago
       deletions = Post.where("created_at >= ?", date).where(:uploader_id => user.id, :is_deleted => true).count
       total = Post.where("created_at >= ?", date).where(:uploader_id => user.id).count
       ci_lower_bound(deletions, total)
+    end
+
+    def self.negative_score_confidence_interval_for(user, days = nil)
+      date = (days || 120).days.ago
+      hits = Post.where("created_at >= ? and score < 0", date).where(:uploader_id => user.id).count
+      total = Post.where("created_at >= ?", date).where(:uploader_id => user.id).count
+      ci_lower_bound(hits, total)
     end
 
     def self.ci_lower_bound(pos, n, confidence = 0.95)

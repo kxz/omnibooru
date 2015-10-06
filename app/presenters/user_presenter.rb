@@ -58,8 +58,9 @@ class UserPresenter
     multiplier = (1 - (dcon / 15.0))
     max_count = [(user.base_upload_limit * multiplier).ceil, 5].max
     uploaded_count = Post.for_user(user.id).where("created_at >= ?", 24.hours.ago).count
+    uploaded_comic_count = Post.for_user(user.id).tag_match("comic").where("created_at >= ?", 24.hours.ago).count / 3
 
-    "(#{user.base_upload_limit} * #{'%0.2f' % multiplier}) - #{uploaded_count} = #{user.upload_limit}"
+    "(#{user.base_upload_limit} * #{'%0.2f' % multiplier}) - #{uploaded_count - uploaded_comic_count} = #{user.upload_limit}"
   end
 
   def uploads
@@ -161,11 +162,11 @@ class UserPresenter
   end
 
   def appeal_count(template)
-    template.link_to(user.appeal_count, template.post_appeals_path(:search => {:creator_id => user.id}))
+    template.link_to(user.appeal_count, template.post_appeals_path(:search => {:creator_name => user.name}))
   end
 
   def flag_count(template)
-    template.link_to(user.flag_count, template.post_flags_path(:search => {:creator_id => user.id}))
+    template.link_to(user.flag_count, template.post_flags_path(:search => {:creator_name => user.name}))
   end
 
   def approval_count(template)
