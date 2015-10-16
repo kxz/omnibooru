@@ -40,10 +40,12 @@
       match.disabled = !match.disabled;
       var hash = tags.hash();
       if (match.disabled) {
-        Danbooru.Cookie.put("bl:" + hash, "1", "session");
+        if (Danbooru.Cookie.get("dab") !== "1") {
+          Danbooru.Cookie.put("b" + hash, "1", "session");
+        }
         $(e.target).addClass("blacklisted-active");
       } else {
-        Danbooru.Cookie.remove("bl:" + hash);
+        Danbooru.Cookie.remove("b" + hash);
         $(e.target).removeClass("blacklisted-active");
       }
     }
@@ -69,7 +71,7 @@
       item.append(" ");
       item.append(count);
 
-      if (Danbooru.Cookie.get("bl:" + hash)) {
+      if (Danbooru.Cookie.get("b" + hash)) {
         link.click();
       }
 
@@ -80,7 +82,7 @@
   }
 
   Danbooru.Blacklist.initialize_disable_all_blacklists = function() {
-    if (Danbooru.Cookie.get("disable-all-blacklists") === "1") {
+    if (Danbooru.Cookie.get("dab") === "1") {
       $("#re-enable-all-blacklists").show();
       $("#blacklist-list a:not(.blacklisted-active)").click();
       Danbooru.Blacklist.apply();
@@ -91,10 +93,10 @@
     $("#disable-all-blacklists").click(function(e) {
       $("#disable-all-blacklists").hide();
       $("#re-enable-all-blacklists").show();
+      Danbooru.Cookie.put("dab", "1");
       $("#blacklist-list a:not(.blacklisted-active)").click();
-      Danbooru.Cookie.put("disable-all-blacklists", "1");
       $.each(Danbooru.Blacklist.entries, function(i, entry) {
-        Danbooru.Cookie.put("bl:" + entry.tags.hash(), "1", "session");
+        Danbooru.Cookie.remove("b" + entry.tags.hash());
       });
       e.preventDefault();
     });
@@ -102,10 +104,10 @@
     $("#re-enable-all-blacklists").click(function(e) {
       $("#disable-all-blacklists").show();
       $("#re-enable-all-blacklists").hide();
+      Danbooru.Cookie.put("dab", "0");
       $("#blacklist-list a.blacklisted-active").click();
-      Danbooru.Cookie.put("disable-all-blacklists", "0");
       $.each(Danbooru.Blacklist.entries, function(i, entry) {
-        Danbooru.Cookie.remove("bl:" + entry.tags.hash());
+        Danbooru.Cookie.remove("b" + entry.tags.hash());
       });
       e.preventDefault();
     });
