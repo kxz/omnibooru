@@ -38,14 +38,14 @@ module Reports
     end
 
     def self.deletion_confidence_interval_for(user, days = nil)
-      date = (days || 120).days.ago
+      date = (days || 60).days.ago
       deletions = Post.where("created_at >= ?", date).where(:uploader_id => user.id, :is_deleted => true).count
       total = Post.where("created_at >= ?", date).where(:uploader_id => user.id).count
       ci_lower_bound(deletions, total)
     end
 
     def self.negative_score_confidence_interval_for(user, days = nil)
-      date = (days || 120).days.ago
+      date = (days || 60).days.ago
       hits = Post.where("created_at >= ? and score < 0", date).where(:uploader_id => user.id).count
       total = Post.where("created_at >= ?", date).where(:uploader_id => user.id).count
       ci_lower_bound(hits, total)
@@ -66,7 +66,7 @@ module Reports
     end
 
     def users
-      ::User.where("users.level < ? and users.post_upload_count >= 250", ::User::Levels::CONTRIBUTOR).order("created_at desc").map {|x| Reports::UserPromotions::User.new(x)}
+      ::User.where("users.bit_prefs & ? > 0 and users.post_upload_count >= 250", ::User.flag_value_for("can_upload_free")).order("created_at desc").map {|x| Reports::UserPromotions::User.new(x)}
     end
   end
 end

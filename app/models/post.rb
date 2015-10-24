@@ -42,8 +42,8 @@ class Post < ActiveRecord::Base
   has_many :favorites, :dependent => :destroy
   validates_uniqueness_of :md5
   validate :post_is_not_its_own_parent
-  attr_accessible :source, :rating, :tag_string, :old_tag_string, :old_parent_id, :old_source, :old_rating, :last_noted_at, :parent_id, :has_embedded_notes, :as => [:member, :builder, :gold, :platinum, :contributor, :janitor, :moderator, :admin, :default]
-  attr_accessible :is_rating_locked, :is_note_locked, :as => [:builder, :contributor, :janitor, :moderator, :admin]
+  attr_accessible :source, :rating, :tag_string, :old_tag_string, :old_parent_id, :old_source, :old_rating, :last_noted_at, :parent_id, :has_embedded_notes, :as => [:member, :builder, :gold, :platinum, :janitor, :moderator, :admin, :default]
+  attr_accessible :is_rating_locked, :is_note_locked, :as => [:builder, :janitor, :moderator, :admin]
   attr_accessible :is_status_locked, :as => [:admin]
 
   module FileMethods
@@ -916,6 +916,7 @@ class Post < ActiveRecord::Base
 
     def remove_pool!(pool, force = false)
       return unless belongs_to_pool?(pool)
+      return unless CurrentUser.user.can_remove_from_pools?
       return if pool.is_deleted? && !force
       reload
       self.pool_string = pool_string.gsub(/(?:\A| )pool:#{pool.id}(?:\Z| )/, " ").strip

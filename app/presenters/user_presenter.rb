@@ -32,6 +32,10 @@ class UserPresenter
       permissions << "approve posts"
     end
 
+    if user.can_upload_free?
+      permissions << "unrestricted uploads"
+    end
+
     permissions.join(", ")
   end
 
@@ -50,11 +54,11 @@ class UserPresenter
   end
 
   def upload_limit
-    if user.is_contributor?
+    if user.can_upload_free?
       return "none"
     end
     
-    dcon = [user.deletion_confidence(120), 15].min
+    dcon = [user.deletion_confidence(60), 15].min
     multiplier = (1 - (dcon / 15.0))
     max_count = [(user.base_upload_limit * multiplier).ceil, 5].max
     uploaded_count = Post.for_user(user.id).where("created_at >= ?", 24.hours.ago).count
