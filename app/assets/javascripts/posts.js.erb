@@ -516,16 +516,17 @@
 
   Danbooru.Post.initialize_saved_searches = function() {
     $("#save-search").click(function() {
-      var input = window.prompt("Category for this saved search (optional):");
-      if (input !== null) {
-        $.post(
-          "<%= Rails.application.routes.url_helpers.saved_searches_path :format => :js %>",
-          {
-            "tags": $("#tags").attr("value"),
-            "category": input
-          }
-        );
+      var input = null;
+      if (Danbooru.meta("enable-categorized-saved-searches") === "true") {
+        input = window.prompt("Category for this saved search (optional):");
       }
+      $.post(
+        "<%= Rails.application.routes.url_helpers.saved_searches_path :format => :js %>",
+        {
+          "tags": $("#tags").attr("value"),
+          "category": input
+        }
+      );
     });
   }
 })();
