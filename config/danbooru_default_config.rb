@@ -4,7 +4,7 @@ module Danbooru
   class Configuration
     # The version of this Danbooru.
     def version
-      "2.96.0"
+      "2.98.0"
     end
 
     # The name of this Danbooru.
@@ -338,11 +338,9 @@ module Danbooru
     end
 
     def shared_remote_key
-      "blah blah blah blah blah blah"
     end
 
     def report_server
-      "https://isshiki.donmai.us"
     end
 
     def enable_post_search_counts
@@ -387,19 +385,15 @@ module Danbooru
     end
 
     def twitter_site
-      "@teruyo"
     end
 
     def addthis_key
-      nil
     end
 
     def listbooru_server
-      "http://miura.donmai.us"
     end
 
     def listbooru_auth_key
-      ENV["LISTBOORU_AUTH_KEY"]
     end
   end
 end
