@@ -1,3 +1,0 @@
-#!/bin/bash
-
-find /srv/danbooru2/shared/backup -name 'db-*.dump' -mtime +30 -delete
