@@ -6953,6 +6953,13 @@ CREATE INDEX index_users_on_inviter_id ON users USING btree (inviter_id) WHERE (
 
 
 --
+-- Name: index_users_on_last_ip_addr; Type: INDEX; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE INDEX index_users_on_last_ip_addr ON users USING btree (last_ip_addr) WHERE (last_ip_addr IS NOT NULL);
+
+
+--
 -- Name: index_users_on_name; Type: INDEX; Schema: public; Owner: -; Tablespace: 
 --
 

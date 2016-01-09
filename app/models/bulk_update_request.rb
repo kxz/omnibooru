@@ -86,7 +86,7 @@ class BulkUpdateRequest < ActiveRecord::Base
   end
 
   def reason_with_link
-    "#{script_with_links}\n\n\"Link to request\":/booru/bulk_update_requests?search[id]=#{id}\n\n#{reason}"
+    "#{script_with_links}\n\n\"Link to request\":/bulk_update_requests?search[id]=#{id}\n\n#{reason}"
   end
 
   def script_with_links

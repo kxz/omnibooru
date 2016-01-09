@@ -24,8 +24,6 @@ stdout_path "log/unicorn.log"
 # Set master PID location
 pid "#{app_path}/tmp/pids/unicorn.pid"
 
-ENV["RAILS_RELATIVE_URL_ROOT"] = "/booru"
-
 # before_fork do |server, worker|
 #   ActiveRecord::Base.connection.disconnect!
 

@@ -98,12 +98,12 @@ class Post < ActiveRecord::Base
     end
 
     def file_url
-      "/booru/data/#{file_path_prefix}#{md5}.#{file_ext}"
+      "/data/#{file_path_prefix}#{md5}.#{file_ext}"
     end
 
     def large_file_url
       if has_large?
-        "/booru/data/sample/#{file_path_prefix}#{Danbooru.config.large_image_prefix}#{md5}.#{large_file_ext}"
+        "/data/sample/#{file_path_prefix}#{Danbooru.config.large_image_prefix}#{md5}.#{large_file_ext}"
       else
         file_url
       end
@@ -111,10 +111,10 @@ class Post < ActiveRecord::Base
 
     def preview_file_url
       if !has_preview?
-        return "/booru/images/download-preview.png"
+        return "/images/download-preview.png"
       end
 
-      "/booru/data/preview/#{file_path_prefix}#{md5}.jpg"
+      "/data/preview/#{file_path_prefix}#{md5}.jpg"
     end
 
     def file_url_for(user)
@@ -401,7 +401,7 @@ class Post < ActiveRecord::Base
         subdomain = $1
         filename = $2
         "http://#{subdomain}.wikia.com/wiki/File:#{filename}"
-        
+
       when %r{\Ahttps?://vignette(?:\d*)\.wikia\.nocookie\.net/([^/]+)/images/[a-f0-9]/[a-f0-9]{2}/([^/]+)}i
         subdomain = $1
         filename = $2
@@ -1021,7 +1021,7 @@ class Post < ActiveRecord::Base
       if CurrentUser.safe_mode?
         tags = "#{tags} rating:s".strip
       end
-      
+
       if CurrentUser.user && CurrentUser.hide_deleted_posts? && tags !~ /(?:^|\s)(?:-)?status:.+/
         tags = "#{tags} -status:deleted".strip
       end
@@ -1244,7 +1244,7 @@ class Post < ActiveRecord::Base
         return false
       end
 
-      if !CurrentUser.is_admin? 
+      if !CurrentUser.is_admin?
         if approver_id == CurrentUser.id
           raise ApprovalError.new("You have previously approved this post and cannot undelete it")
         elsif uploader_id == CurrentUser.id
