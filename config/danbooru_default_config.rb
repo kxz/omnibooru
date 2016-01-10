@@ -4,7 +4,7 @@ module Danbooru
   class Configuration
     # The version of this Danbooru.
     def version
-      "2.99.0"
+      "2.100.0"
     end
 
     # The name of this Danbooru.
@@ -136,7 +136,7 @@ module Danbooru
 
     # Maximum size of an upload.
     def max_file_size
-      30.megabytes
+      35.megabytes
     end
 
     def member_comment_time_threshold
@@ -418,6 +418,9 @@ module Danbooru
     end
 
     def aws_sqs_queue_url
+    end
+
+    def aws_sqs_reltagcalc_url
     end
 
     def aws_sqs_region
