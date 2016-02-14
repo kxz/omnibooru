@@ -1034,17 +1034,19 @@ class Post < ActiveRecord::Base
 
       # optimize some cases. these are just estimates but at these
       # quantities being off by a few hundred doesn't matter much
-      if tags == ""
-        return (Post.maximum(:id) * (2200402.0 / 2232212)).floor
+      if Danbooru.config.estimate_post_counts
+        if tags == ""
+          return (Post.maximum(:id) * (2200402.0 / 2232212)).floor
 
-      elsif tags =~ /^rating:s(?:afe)?$/
-        return (Post.maximum(:id) * (1648652.0 / 2200402)).floor
+        elsif tags =~ /^rating:s(?:afe)?$/
+          return (Post.maximum(:id) * (1648652.0 / 2200402)).floor
 
-      elsif tags =~ /^rating:q(?:uestionable)?$/
-        return (Post.maximum(:id) * (350101.0 / 2200402)).floor
+        elsif tags =~ /^rating:q(?:uestionable)?$/
+          return (Post.maximum(:id) * (350101.0 / 2200402)).floor
 
-      elsif tags =~ /^rating:e(?:xplicit)?$/
-        return (Post.maximum(:id) * (201650.0 / 2200402)).floor
+        elsif tags =~ /^rating:e(?:xplicit)?$/
+          return (Post.maximum(:id) * (201650.0 / 2200402)).floor
+        end
       end
 
       count = get_count_from_cache(tags)
@@ -1059,8 +1061,8 @@ class Post < ActiveRecord::Base
     end
 
     def fast_count_search(tags, options = {})
-      count = Post.with_timeout(options[:statement_timeout] || 500, nil, :tags => tags) do
-        Post.tag_match(tags).count
+      count = PostReadOnly.with_timeout(3_000, nil) do
+        PostReadOnly.tag_match(tags).count
       end
 
       if count == nil && tags !~ / /
@@ -1081,8 +1083,8 @@ class Post < ActiveRecord::Base
       i = Post.maximum(:id)
       sum = 0
       while i > 0
-        count = Post.with_timeout(options[:statement_timeout] || 500, nil, :tags => tags) do
-          sum += Post.tag_match(tags).where("id <= ? and id > ?", i, i - 25_000).count
+        count = PostReadOnly.with_timeout(1_000, nil) do
+          sum += PostReadOnly.tag_match(tags).where("id <= ? and id > ?", i, i - 25_000).count
           i -= 25_000
         end
 
@@ -1511,8 +1513,12 @@ class Post < ActiveRecord::Base
       where("posts.tag_index @@ to_tsquery('danbooru', E?)", tag.to_escaped_for_tsquery)
     end
 
-    def tag_match(query)
-      PostQueryBuilder.new(query).build
+    def tag_match(query, read_only = false)
+      if read_only
+        PostQueryBuilder.new(query).build(PostReadOnly.where("true"))
+      else
+        PostQueryBuilder.new(query).build
+      end
     end
 
     def positive

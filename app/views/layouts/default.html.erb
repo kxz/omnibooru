@@ -7,6 +7,7 @@
   <%= csrf_meta_tag %>
   <meta name="current-user-name" content="<%= CurrentUser.name %>">
   <meta name="current-user-id" content="<%= CurrentUser.id %>">
+  <meta name="current-user-can-approve-posts" content="<%= CurrentUser.can_approve_posts? %>">
   <meta name="user-comment-threshold" content="<%= CurrentUser.comment_threshold %>">
   <% if CurrentUser.user.blacklisted_tags.present? %>
     <meta name="blacklisted-tags" content="<%= CurrentUser.user.blacklisted_tags.gsub(/(?:\r|\n)+/, ",") %>">
@@ -27,9 +28,35 @@
   <% if CurrentUser.user.custom_style.present? %>
     <%= stylesheet_link_tag custom_style_users_path, :media => "screen" %>
   <% end %>
-  <%= javascript_include_tag "application" %>
+  <%= javascript_include_tag "application", :async => true %>
   <%= raw Danbooru.config.custom_html_header_content %>
   <%= yield :html_header %>
+  <% if Danbooru.config.twitter_site %>
+    <script type="application/ld+json">
+      {
+        "@context" : "http://schema.org",
+        "@type" : "Organization",
+        "name" : "<%= Danbooru.config.app_name %>",
+        "url" : "<%= root_path %>",
+        "sameAs" : [
+          "http://twitter.com/<%= Danbooru.config.twitter_site[1..-1] %>"
+        ]
+      }
+    </script>
+  <% end %>
+  <script type="application/ld+json">
+  {
+    "@context": "http://schema.org",
+    "@type": "WebSite",
+    "url" : "<%= root_path %>",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "<%= posts_path(tags: '{search_term_string}') %>",
+      "query-input": "required name=search_term_string"
+    }
+  }
+  </script>
+
 </head>
 <body lang="en">
   <header id="top">

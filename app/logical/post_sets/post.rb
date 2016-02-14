@@ -1,6 +1,6 @@
 module PostSets
   class Post < PostSets::Base
-    attr_reader :tag_array, :page, :per_page, :raw, :random, :post_count, :format
+    attr_reader :tag_array, :page, :per_page, :raw, :random, :post_count, :format, :read_only
 
     def initialize(tags, page = 1, per_page = nil, options = {})
       @tag_array = Tag.scan_query(tags)
@@ -10,6 +10,7 @@ module PostSets
       @raw = options[:raw].present?
       @random = options[:random].present?
       @format = options[:format] || "html"
+      @read_only = options[:read_only]
     end
 
     def tag_string
@@ -25,7 +26,7 @@ module PostSets
     end
 
     def has_wiki?
-      is_single_tag? && ::WikiPage.titled(tag_string).exists?
+      is_single_tag? && ::WikiPage.titled(tag_string).exists? && wiki_page.visible?
     end
 
     def wiki_page
@@ -128,7 +129,7 @@ module PostSets
         elsif raw
           temp = ::Post.raw_tag_match(tag_string).order("posts.id DESC").paginate(page, :count => post_count, :limit => per_page)
         else
-          temp = ::Post.tag_match(tag_string).paginate(page, :count => post_count, :limit => per_page)
+          temp = ::Post.tag_match(tag_string, read_only).paginate(page, :count => post_count, :limit => per_page)
         end
         temp.each # hack to force rails to eager load
         temp
@@ -137,6 +138,19 @@ module PostSets
 
     def unknown_post_count?
       post_count == Danbooru.config.blank_tag_search_fast_count
+    end
+
+    def hide_from_crawler?
+      return true if !is_single_tag?
+      return true if is_pattern_search?
+      return true if page.to_i > 1
+      return true if is_metatag_search?
+      false
+    end
+
+    def is_metatag_search?
+      # filter out some common metatags
+      tag_string =~ /(?:rating|user|fav|status|order|source|score|width|height):/
     end
 
     def is_single_tag?

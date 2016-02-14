@@ -107,8 +107,8 @@ private
       end
 
       if CurrentUser.user.is_gold? && current_query.present?
-        html << %{<a href="#{url.posts_path :tags => current_query + ' ' + tag}" class="search-inc-tag">+</a> }
-        html << %{<a href="#{url.posts_path :tags => current_query + ' -' + tag}" class="search-exl-tag">&ndash;</a> }
+        html << %{<a rel="nofollow" href="#{url.posts_path :tags => current_query + ' ' + tag}" class="search-inc-tag">+</a> }
+        html << %{<a rel="nofollow" href="#{url.posts_path :tags => current_query + ' -' + tag}" class="search-exl-tag">&ndash;</a> }
       end
     end
 

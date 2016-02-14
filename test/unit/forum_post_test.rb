@@ -51,7 +51,7 @@ class ForumPostTest < ActiveSupport::TestCase
           end
 
           dmail = Dmail.last
-          assert_equal("You were mentioned in the forum topic \"#{@topic.title}\":http://#{Danbooru.config.hostname}/forum_topics/#{@topic.id}?page=1\n\n---\n\nHey @#{@user2.name} check this out!", dmail.body)
+          assert_equal("You were mentioned in the forum topic \"#{@topic.title}\":#{Rails.application.routes.url_helpers.forum_topic_path(@topic.id, page: 1)}\n\n---\n\n[i]#{@user.name} said:[/i]\n\nHey @#{@user2.name} check this out!", dmail.body)
         end
       end
     end
@@ -72,7 +72,7 @@ class ForumPostTest < ActiveSupport::TestCase
         setup do
           CurrentUser.user = FactoryGirl.create(:moderator_user)
         end
-        
+
         should "update the topic's updated_at timestamp" do
           @topic.reload
           assert_equal(@posts[-1].updated_at.to_i, @topic.updated_at.to_i)
@@ -129,7 +129,7 @@ class ForumPostTest < ActiveSupport::TestCase
       3.times do
         posts << FactoryGirl.create(:forum_post, :topic_id => @topic.id, :body => rand(100_000))
       end
-      
+
       # updating the original post
       Timecop.travel(1.second.from_now) do
         posts.first.update_attributes(:body => "xxx")

@@ -237,7 +237,7 @@ module Danbooru
     end
 
     def can_user_see_post?(user, post)
-      if is_user_restricted?(user) && is_post_restricted?(post)
+     if is_user_restricted?(user) && is_post_restricted?(post)
         false
       else
         true
@@ -337,6 +337,11 @@ module Danbooru
       "zDMSATq0W3hmA5p3rKTgD"
     end
 
+    # impose additional requirements to create tag aliases and implications
+    def strict_tag_requirements
+      true
+    end
+
     # For downloads, if the host matches any of these IPs, block it
     def banned_ip_for_download?(ip_addr)
       raise ArgumentError unless ip_addr.is_a?(IPAddr)
@@ -374,6 +379,11 @@ module Danbooru
     end
 
     def addthis_key
+    end
+
+    # enable some (donmai-specific) optimizations for post counts
+    def estimate_post_counts
+      true
     end
 
     # listbooru options
