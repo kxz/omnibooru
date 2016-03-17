@@ -1,4 +1,6 @@
 class TagImplication < ActiveRecord::Base
+  attr_accessor :skip_secondary_validations
+
   before_save :update_descendant_names
   after_save :update_descendant_names_for_parents
   after_destroy :update_descendant_names_for_parents
@@ -12,8 +14,8 @@ class TagImplication < ActiveRecord::Base
   validate :antecedent_is_not_aliased
   validate :consequent_is_not_aliased
   validate :antecedent_and_consequent_are_different
-  # validate :wiki_pages_present
-  attr_accessible :antecedent_name, :consequent_name, :descendant_names, :forum_topic_id, :status, :forum_topic
+  validate :wiki_pages_present, :on => :create
+  attr_accessible :antecedent_name, :consequent_name, :descendant_names, :forum_topic_id, :status, :forum_topic, :skip_secondary_validations
 
   module DescendantMethods
     extend ActiveSupport::Concern
@@ -184,7 +186,7 @@ class TagImplication < ActiveRecord::Base
 
   def update_posts
     Post.without_timeout do
-      Post.raw_tag_match(antecedent_name).find_each do |post|
+      Post.raw_tag_match(antecedent_name).where("true /* TagImplication#update_posts */").find_each do |post|
         fixed_tags = "#{post.tag_string} #{descendant_names}".strip
         CurrentUser.scoped(creator, creator_ip_addr) do
           post.update_attributes(
@@ -258,7 +260,7 @@ class TagImplication < ActiveRecord::Base
   end
 
   def wiki_pages_present
-    return if !Danbooru.config.strict_tag_requirements
+    return if skip_secondary_validations
 
     unless WikiPage.titled(consequent_name).exists?
       self.errors[:base] = "The #{consequent_name} tag needs a corresponding wiki page"

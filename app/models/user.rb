@@ -33,6 +33,7 @@ class User < ActiveRecord::Base
     can_approve_posts
     can_upload_free
     disable_categorized_saved_searches
+    is_super_voter
   )
 
   include Danbooru::HasBitFlags
@@ -67,6 +68,7 @@ class User < ActiveRecord::Base
   has_one :recent_ban, lambda {order("bans.id desc")}, :class_name => "Ban"
   has_one :api_key
   has_one :dmail_filter
+  has_one :super_voter
   has_many :subscriptions, lambda {order("tag_subscriptions.name")}, :class_name => "TagSubscription", :foreign_key => "creator_id"
   has_many :note_versions, :foreign_key => "updater_id"
   has_many :dmails, lambda {order("dmails.id desc")}, :foreign_key => "owner_id"
@@ -397,6 +399,10 @@ class User < ActiveRecord::Base
 
     def is_admin?
       level >= Levels::ADMIN
+    end
+
+    def is_voter?
+      is_gold? || is_super_voter?
     end
 
     def create_mod_action
@@ -803,6 +809,10 @@ class User < ActiveRecord::Base
     else
       ""
     end
+  end
+
+  def hide_favorites?
+    enable_privacy_mode? && CurrentUser.user.id != id
   end
 
   def initialize_default_boolean_attributes

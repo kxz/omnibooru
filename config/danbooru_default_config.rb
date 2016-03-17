@@ -4,7 +4,7 @@ module Danbooru
   class Configuration
     # The version of this Danbooru.
     def version
-      "2.100.0"
+      "2.101.0"
     end
 
     # The name of this Danbooru.
@@ -14,6 +14,10 @@ module Danbooru
       else
         "Danbooru"
       end
+    end
+
+    def description
+      "Find good anime art fast"
     end
 
     # The hostname of the server.

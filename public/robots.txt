@@ -32,7 +32,6 @@ Disallow: /post_sets
 Disallow: /post_versions
 Disallow: /post_votes
 Disallow: /posts.atom
-Disallow: /posts/show_seq
 Disallow: /posts/random
 Disallow: /posts/copy_notes
 Disallow: /posts/revert

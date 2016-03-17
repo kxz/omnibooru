@@ -350,6 +350,12 @@ class PostQueryBuilder
 
     if q[:ordfav].present?
       user_id = q[:ordfav].to_i
+      user = User.find(user_id)
+
+      if user.hide_favorites?
+        raise User::PrivilegeError.new
+      end
+
       relation = relation.joins("INNER JOIN favorites ON favorites.post_id = posts.id")
       relation = relation.where("favorites.user_id % 100 = ? and favorites.user_id = ?", user_id % 100, user_id).order("favorites.id DESC")
     end
@@ -428,7 +434,7 @@ class PostQueryBuilder
       relation = relation.order("posts.file_size ASC")
 
     when "rank"
-      relation = relation.order("log(3, posts.score) + (extract(epoch from posts.created_at) - extract(epoch from timestamp '2005-05-24')) / 45000 DESC")
+      relation = relation.order("log(3, posts.score) + (extract(epoch from posts.created_at) - extract(epoch from timestamp '2005-05-24')) / 35000 DESC")
 
     else
       relation = relation.order("posts.id DESC")

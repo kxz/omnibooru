@@ -27,6 +27,8 @@
           <li><%= link_to "Pool", pool_path(@post_set.pool), :id => "show-excerpt-link" %></li>
         <% elsif @post_set.has_favgroup? %>
           <li><%= link_to "Favorite Group", favorite_group_path(@post_set.favgroup), :id => "show-excerpt-link" %></li>
+        <% elsif @post_set.is_single_tag? && !@post_set.is_metatag_search? %>
+          <li><%= link_to "Wiki", "#", :id => "show-excerpt-link" %></li>
         <% end %>
       </menu>
 
@@ -57,10 +59,12 @@
 <%= content_for(:html_header) do %>
   <link href="<%= posts_path(:format => 'atom', :tags => params[:tags]) %>" rel="alternate" title="ATOM" type="application/atom+xml" />
   <% if @post_set.has_wiki? %>
-    <meta name="description" content="<%= @post_set.wiki_page.presenter.blurb %>"></meta>
+    <meta name="description" content="<%= @post_set.wiki_page.presenter.blurb %>">
+  <% else %>
+    <meta name="description" content="<%= Danbooru.config.description %>">
   <% end %>
   <%= missed_post_search_count_js %>
   <% if @post_set.hide_from_crawler? %>
-    <meta name="robots" content="none">
+    <meta name="robots" content="nofollow,noindex">
   <% end %>
 <% end %>

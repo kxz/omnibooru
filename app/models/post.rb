@@ -840,6 +840,8 @@ class Post < ActiveRecord::Base
 
     def add_favorite!(user)
       Favorite.add(self, user)
+      vote!("up") if CurrentUser.is_gold?
+    rescue PostVote::Error
     end
 
     def delete_user_from_fav_string(user_id)
@@ -848,6 +850,8 @@ class Post < ActiveRecord::Base
 
     def remove_favorite!(user)
       Favorite.remove(self, user)
+      unvote! if CurrentUser.is_gold?
+    rescue PostVote::Error
     end
 
     def favorited_user_ids
@@ -855,7 +859,9 @@ class Post < ActiveRecord::Base
     end
 
     def favorited_users
-      favorited_user_ids.map {|id| User.find(id)}
+      favorited_user_ids.map {|id| User.find(id)}.select do |x|
+        !x.hide_favorites?
+      end
     end
 
     def favorite_groups(active_id=nil)
@@ -952,15 +958,8 @@ class Post < ActiveRecord::Base
 
     def vote!(score)
       if can_be_voted_by?(CurrentUser.user)
-        if score == "up"
-          Post.where(:id => id).update_all("score = score + 1, up_score = up_score + 1")
-          self.score += 1
-        elsif score == "down"
-          Post.where(:id => id).update_all("score = score - 1, down_score = down_score - 1")
-          self.score -= 1
-        end
-
-        votes.create(:score => score)
+        vote = PostVote.create(:post_id => id, :score => score)
+        self.score += vote.score
       else
         raise PostVote::Error.new("You have already voted for this post")
       end
@@ -970,17 +969,14 @@ class Post < ActiveRecord::Base
       if can_be_voted_by?(CurrentUser.user)
         raise PostVote::Error.new("You have not voted for this post")
       else
-        vote = votes.where("user_id = ?", CurrentUser.user.id).first
-
-        if vote.score == 1
-          Post.where(:id => id).update_all("score = score - 1, up_score = up_score - 1")
-          self.score -= 1
-        else
-          Post.where(:id => id).update_all("score = score + 1, down_score = down_score + 1")
-          self.score += 1
-        end
-
+        vote = PostVote.where("post_id = ? and user_id = ?", id, CurrentUser.user.id).first
         vote.destroy
+
+        if vote.score > 0
+          self.score -= vote.score
+        else
+          self.score += vote.score
+        end
       end
     end
   end
@@ -1046,6 +1042,10 @@ class Post < ActiveRecord::Base
 
         elsif tags =~ /^rating:e(?:xplicit)?$/
           return (Post.maximum(:id) * (201650.0 / 2200402)).floor
+
+        elsif tags =~ /status:deleted.status:deleted/
+          # temp fix for degenerate crawlers
+          return 0
         end
       end
 
@@ -1061,7 +1061,7 @@ class Post < ActiveRecord::Base
     end
 
     def fast_count_search(tags, options = {})
-      count = PostReadOnly.with_timeout(3_000, nil) do
+      count = PostReadOnly.with_timeout(3_000, nil, {:tags => tags}) do
         PostReadOnly.tag_match(tags).count
       end
 
@@ -1083,7 +1083,7 @@ class Post < ActiveRecord::Base
       i = Post.maximum(:id)
       sum = 0
       while i > 0
-        count = PostReadOnly.with_timeout(1_000, nil) do
+        count = PostReadOnly.with_timeout(1_000, nil, {:tags => tags}) do
           sum += PostReadOnly.tag_match(tags).where("id <= ? and id > ?", i, i - 25_000).count
           i -= 25_000
         end
@@ -1514,6 +1514,11 @@ class Post < ActiveRecord::Base
     end
 
     def tag_match(query, read_only = false)
+      if query =~ /status:deleted.status:deleted/
+        # temp fix for degenerate crawlers
+        raise ActiveRecord::RecordNotFound
+      end
+
       if read_only
         PostQueryBuilder.new(query).build(PostReadOnly.where("true"))
       else

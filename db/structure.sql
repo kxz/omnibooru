@@ -23,6 +23,20 @@ CREATE EXTENSION IF NOT EXISTS plpgsql WITH SCHEMA pg_catalog;
 COMMENT ON EXTENSION plpgsql IS 'PL/pgSQL procedural language';
 
 
+--
+-- Name: pg_trgm; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
+
+
+--
+-- Name: EXTENSION pg_trgm; Type: COMMENT; Schema: -; Owner: -
+--
+
+COMMENT ON EXTENSION pg_trgm IS 'text similarity measurement and index searching based on trigrams';
+
+
 SET search_path = public, pg_catalog;
 
 --
@@ -2828,6 +2842,37 @@ CREATE TABLE schema_migrations (
 
 
 --
+-- Name: super_voters; Type: TABLE; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE TABLE super_voters (
+    id integer NOT NULL,
+    user_id integer,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL
+);
+
+
+--
+-- Name: super_voters_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE super_voters_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: super_voters_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE super_voters_id_seq OWNED BY super_voters.id;
+
+
+--
 -- Name: tag_aliases; Type: TABLE; Schema: public; Owner: -; Tablespace: 
 --
 
@@ -4265,6 +4310,13 @@ ALTER TABLE ONLY saved_searches ALTER COLUMN id SET DEFAULT nextval('saved_searc
 -- Name: id; Type: DEFAULT; Schema: public; Owner: -
 --
 
+ALTER TABLE ONLY super_voters ALTER COLUMN id SET DEFAULT nextval('super_voters_id_seq'::regclass);
+
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: -
+--
+
 ALTER TABLE ONLY tag_aliases ALTER COLUMN id SET DEFAULT nextval('tag_aliases_id_seq'::regclass);
 
 
@@ -4666,6 +4718,14 @@ ALTER TABLE ONLY saved_searches
 
 
 --
+-- Name: super_voters_pkey; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace: 
+--
+
+ALTER TABLE ONLY super_voters
+    ADD CONSTRAINT super_voters_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: tag_aliases_pkey; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace: 
 --
 
@@ -4867,10 +4927,31 @@ CREATE INDEX index_artist_versions_on_updater_id ON artist_versions USING btree 
 
 
 --
+-- Name: index_artists_on_group_name_trgm; Type: INDEX; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE INDEX index_artists_on_group_name_trgm ON artists USING gin (group_name gin_trgm_ops);
+
+
+--
+-- Name: index_artists_on_name_trgm; Type: INDEX; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE INDEX index_artists_on_name_trgm ON artists USING gin (name gin_trgm_ops);
+
+
+--
 -- Name: index_artists_on_other_names_index; Type: INDEX; Schema: public; Owner: -; Tablespace: 
 --
 
 CREATE INDEX index_artists_on_other_names_index ON artists USING gin (other_names_index);
+
+
+--
+-- Name: index_artists_on_other_names_trgm; Type: INDEX; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE INDEX index_artists_on_other_names_trgm ON artists USING gin (other_names gin_trgm_ops);
 
 
 --
@@ -6603,6 +6684,13 @@ CREATE INDEX index_pools_on_lower_name ON pools USING btree (lower(name));
 
 
 --
+-- Name: index_pools_on_name_trgm; Type: INDEX; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE INDEX index_pools_on_name_trgm ON pools USING gin (name gin_trgm_ops);
+
+
+--
 -- Name: index_post_appeals_on_created_at; Type: INDEX; Schema: public; Owner: -; Tablespace: 
 --
 
@@ -7300,4 +7388,12 @@ INSERT INTO schema_migrations (version) VALUES ('20150728170433');
 INSERT INTO schema_migrations (version) VALUES ('20150805010245');
 
 INSERT INTO schema_migrations (version) VALUES ('20151217213321');
+
+INSERT INTO schema_migrations (version) VALUES ('20160219004022');
+
+INSERT INTO schema_migrations (version) VALUES ('20160219010854');
+
+INSERT INTO schema_migrations (version) VALUES ('20160219172840');
+
+INSERT INTO schema_migrations (version) VALUES ('20160222211328');
 
