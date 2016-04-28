@@ -1,3 +1,5 @@
+require 'dtext'
+
 module ApplicationHelper
   def wordbreakify(string)
     lines = string.scan(/.{1,10}/)
@@ -48,11 +50,19 @@ module ApplicationHelper
   end
 
   def format_text(text, options = {})
-    DText.parse(text)
+    if CurrentUser.id == 1
+      raw(DTextRagel.parse(text))
+    else
+      DText.parse(text)
+    end
   end
 
-  def strip_dtext(text)
-    DText.strip(text)
+  def strip_dtext(text, options = {})
+    if CurrentUser.id == 1
+      raw(DTextRagel.parse_strip(text))
+    else
+      DText.parse_strip(text)
+    end
   end
 
   def error_messages_for(instance_name)
