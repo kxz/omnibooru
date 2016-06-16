@@ -4,7 +4,7 @@ module Danbooru
   class Configuration
     # The version of this Danbooru.
     def version
-      "2.102.0"
+      "2.103.0"
     end
 
     # The name of this Danbooru.
@@ -383,6 +383,11 @@ module Danbooru
     end
 
     def addthis_key
+    end
+
+    # include essential tags in image urls (requires nginx/apache rewrites)
+    def enable_seo_post_urls
+      false
     end
 
     # enable some (donmai-specific) optimizations for post counts

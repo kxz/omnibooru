@@ -6,13 +6,14 @@ class Post < ActiveRecord::Base
   class SearchError < Exception ; end
 
   attr_accessor :old_tag_string, :old_parent_id, :old_source, :old_rating, :has_constraints, :disable_versioning, :view_count
+  after_destroy :remove_iqdb_async
   after_destroy :delete_files
   after_destroy :delete_remote_files
   after_save :create_version
   after_save :update_parent_on_save
   after_save :apply_post_metatags
   after_create :update_iqdb_async
-  after_destroy :remove_iqdb_async
+  after_commit :pg_notify
   before_save :merge_old_changes
   before_save :normalize_tags
   before_save :update_tag_post_counts
@@ -98,15 +99,27 @@ class Post < ActiveRecord::Base
     end
 
     def file_url
-      "/data/#{file_path_prefix}#{md5}.#{file_ext}"
+      "/data/#{seo_tag_string}#{file_path_prefix}#{md5}.#{file_ext}"
     end
 
     def large_file_url
       if has_large?
-        "/data/sample/#{file_path_prefix}#{Danbooru.config.large_image_prefix}#{md5}.#{large_file_ext}"
+        "/data/sample/#{seo_tag_string}#{file_path_prefix}#{Danbooru.config.large_image_prefix}#{md5}.#{large_file_ext}"
       else
         file_url
       end
+    end
+
+    def seo_tag_string
+      if Danbooru.config.enable_seo_post_urls && !CurrentUser.user.disable_tagged_filenames?
+        "--#{seo_tags}--"
+      else
+        nil
+      end
+    end
+
+    def seo_tags
+      @seo_tags ||= humanized_essential_tag_string.gsub(/[^a-z0-9]+/, "-").gsub(/(?:^-+)|(?:-+$)/, "").gsub(/-{2,}/, "-")
     end
 
     def preview_file_url
@@ -777,26 +790,37 @@ class Post < ActiveRecord::Base
       end
     end
 
-    def essential_tag_string
-      tag_array.each do |tag|
-        if tag_categories[tag] == Danbooru.config.tag_category_mapping["copyright"]
-          return tag
-        end
-      end
+    def humanized_essential_tag_string
+      @humanized_essential_tag_string ||= begin
+        string = []
 
-      tag_array.each do |tag|
-        if tag_categories[tag] == Danbooru.config.tag_category_mapping["character"]
-          return tag
+        if character_tags.any?
+          chartags = character_tags.slice(0, 5)
+          if character_tags.length > 5
+            chartags << "others"
+          end
+          chartags = chartags.map do |tag|
+            tag.match(/^(.+?)(?:_\(.+\))?$/)[1]
+          end
+          string << chartags.to_sentence
         end
-      end
 
-      tag_array.each do |tag|
-        if tag_categories[tag] == Danbooru.config.tag_category_mapping["artist"]
-          return tag
+        if copyright_tags.any?
+          copytags = copyright_tags.slice(0, 5)
+          if copyright_tags.length > 5
+            copytags << "others"
+          end
+          copytags = copytags.to_sentence
+          string << (character_tags.any? ? "(#{copytags})" : copytags)
         end
-      end
 
-      return tag_array.first
+        if artist_tags_excluding_hidden.any?
+          string << "drawn by"
+          string << artist_tags_excluding_hidden.to_sentence
+        end
+
+        string.empty? ? "##{id}" : string.join(" ").tr("_", " ")
+      end
     end
 
     def tag_string_copyright
@@ -1342,6 +1366,10 @@ class Post < ActiveRecord::Base
       revert_to(target)
       save!
     end
+
+    def pg_notify
+      execute_sql("notify changes_posts, '#{id}'")
+    end
   end
 
   module NoteMethods
@@ -1706,6 +1734,18 @@ class Post < ActiveRecord::Base
 
     self.tag_string = tags.join(" ")
     save
+  end
+
+  def update_column(name, value)
+    ret = super(name, value)
+    pg_notify
+    ret
+  end
+
+  def update_columns(attributes)
+    ret = super(attributes)
+    pg_notify
+    ret
   end
 end
 

@@ -798,7 +798,8 @@ CREATE TABLE bulk_update_requests (
     script text NOT NULL,
     status character varying(255) DEFAULT 'pending'::character varying NOT NULL,
     created_at timestamp without time zone,
-    updated_at timestamp without time zone
+    updated_at timestamp without time zone,
+    approver_id integer
 );
 
 
@@ -2887,7 +2888,8 @@ CREATE TABLE tag_aliases (
     creator_ip_addr inet DEFAULT '127.0.0.1'::inet NOT NULL,
     created_at timestamp without time zone DEFAULT now(),
     updated_at timestamp without time zone DEFAULT now(),
-    post_count integer DEFAULT 0 NOT NULL
+    post_count integer DEFAULT 0 NOT NULL,
+    approver_id integer
 );
 
 
@@ -2925,7 +2927,8 @@ CREATE TABLE tag_implications (
     status character varying(255) DEFAULT 'active'::character varying NOT NULL,
     forum_topic_id integer,
     created_at timestamp without time zone DEFAULT now(),
-    updated_at timestamp without time zone DEFAULT now()
+    updated_at timestamp without time zone DEFAULT now(),
+    approver_id integer
 );
 
 
@@ -7396,4 +7399,6 @@ INSERT INTO schema_migrations (version) VALUES ('20160219010854');
 INSERT INTO schema_migrations (version) VALUES ('20160219172840');
 
 INSERT INTO schema_migrations (version) VALUES ('20160222211328');
+
+INSERT INTO schema_migrations (version) VALUES ('20160526174848');
 
