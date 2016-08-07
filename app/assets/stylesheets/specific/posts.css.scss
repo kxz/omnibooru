@@ -474,6 +474,10 @@ div#c-post-versions, div#c-artist-versions {
       word-wrap: break-word
     }
 
+    tr.hilite {
+      background: $highlight_color;
+    }
+
     ins, ins a {
       color: green;
       text-decoration: none;
@@ -557,6 +561,10 @@ div#unapprove-dialog {
 #add-commentary-dialog {
   input {
     width: 70%;
+  }
+
+  input[type=checkbox] {
+    width: auto;
   }
 
   textarea {

@@ -1,4 +1,5 @@
 require 'danbooru/has_bit_flags'
+require 'google/apis/pubsub_v1'
 
 class Post < ActiveRecord::Base
   class ApprovalError < Exception ; end
@@ -12,8 +13,9 @@ class Post < ActiveRecord::Base
   after_save :create_version
   after_save :update_parent_on_save
   after_save :apply_post_metatags
+  after_save :expire_essential_tag_string_cache
   after_create :update_iqdb_async
-  after_commit :pg_notify
+  after_commit :notify_pubsub
   before_save :merge_old_changes
   before_save :normalize_tags
   before_save :update_tag_post_counts
@@ -112,14 +114,14 @@ class Post < ActiveRecord::Base
 
     def seo_tag_string
       if Danbooru.config.enable_seo_post_urls && !CurrentUser.user.disable_tagged_filenames?
-        "--#{seo_tags}--"
+        "__#{seo_tags}__"
       else
         nil
       end
     end
 
     def seo_tags
-      @seo_tags ||= humanized_essential_tag_string.gsub(/[^a-z0-9]+/, "-").gsub(/(?:^-+)|(?:-+$)/, "").gsub(/-{2,}/, "-")
+      @seo_tags ||= humanized_essential_tag_string.gsub(/[^a-z0-9]+/, "_").gsub(/(?:^_+)|(?:_+$)/, "").gsub(/_{2,}/, "_")
     end
 
     def preview_file_url
@@ -351,15 +353,15 @@ class Post < ActiveRecord::Base
 
     def normalized_source
       case source
-      when %r{\Ahttp://img\d+\.pixiv\.net/img/[^\/]+/(\d+)}i, %r{\Ahttp://i\d\.pixiv\.net/img\d+/img/[^\/]+/(\d+)}i
+      when %r{\Ahttps?://img\d+\.pixiv\.net/img/[^\/]+/(\d+)}i, %r{\Ahttps?://i\d\.pixiv\.net/img\d+/img/[^\/]+/(\d+)}i
         "http://www.pixiv.net/member_illust.php?mode=medium&illust_id=#{$1}"
 
-      when %r{\Ahttp://i\d+\.pixiv\.net/img-original/img/(?:\d+\/)+(\d+)_p}i,
-           %r{\Ahttp://i\d+\.pixiv\.net/c/\d+x\d+/img-master/img/(?:\d+\/)+(\d+)_p}i,
-           %r{\Ahttp://i\d+\.pixiv\.net/img-zip-ugoira/img/(?:\d+\/)+(\d+)_ugoira\d+x\d+\.zip}i
+      when %r{\Ahttps?://i\d+\.pixiv\.net/img-original/img/(?:\d+\/)+(\d+)_p}i,
+           %r{\Ahttps?://i\d+\.pixiv\.net/c/\d+x\d+/img-master/img/(?:\d+\/)+(\d+)_p}i,
+           %r{\Ahttps?://i\d+\.pixiv\.net/img-zip-ugoira/img/(?:\d+\/)+(\d+)_ugoira\d+x\d+\.zip}i
         "http://www.pixiv.net/member_illust.php?mode=medium&illust_id=#{$1}"
 
-      when %r{\Ahttp://lohas\.nicoseiga\.jp/priv/(\d+)\?e=\d+&h=[a-f0-9]+}i, %r{\Ahttp://lohas\.nicoseiga\.jp/priv/[a-f0-9]+/\d+/(\d+)}i
+      when %r{\Ahttps?://lohas\.nicoseiga\.jp/priv/(\d+)\?e=\d+&h=[a-f0-9]+}i, %r{\Ahttps?://lohas\.nicoseiga\.jp/priv/[a-f0-9]+/\d+/(\d+)}i
         "http://seiga.nicovideo.jp/seiga/im#{$1}"
 
       when %r{\Ahttps?://(?:d3j5vwomefv46c|dn3pm25xmtlyu)\.cloudfront\.net/photos/large/(\d+)\.}i
@@ -753,6 +755,14 @@ class Post < ActiveRecord::Base
       !!(tag_string =~ /(?:^| )(?:#{tag})(?:$| )/)
     end
 
+    def add_tag(tag)
+      set_tag_string("#{tag_string} #{tag}")
+    end
+
+    def remove_tag(tag)
+      set_tag_string((tag_array - Array(tag)).join(" "))
+    end
+
     def has_dup_tag?
       has_tag?("duplicate")
     end
@@ -790,8 +800,12 @@ class Post < ActiveRecord::Base
       end
     end
 
+    def expire_essential_tag_string_cache
+      Cache.delete("hets-#{id}")
+    end
+
     def humanized_essential_tag_string
-      @humanized_essential_tag_string ||= begin
+      @humanized_essential_tag_string ||= Cache.get("hets-#{id}", 1.hour.to_i) do
         string = []
 
         if character_tags.any?
@@ -1321,10 +1335,10 @@ class Post < ActiveRecord::Base
     def create_version(force = false)
       if new_record? || rating_changed? || source_changed? || parent_id_changed? || tag_string_changed? || force
         if merge_version?
-          merge_version
-        else
-          create_new_version
+          delete_previous_version
         end
+
+        create_new_version
       end
     end
 
@@ -1343,16 +1357,9 @@ class Post < ActiveRecord::Base
       )
     end
 
-    def merge_version
+    def delete_previous_version
       prev = versions.last
-      if prev
-        prev.update_attributes(
-          :rating => rating,
-          :source => source,
-          :tags => tag_string,
-          :parent_id => parent_id
-        )
-      end
+      prev.destroy
     end
 
     def revert_to(target)
@@ -1367,8 +1374,16 @@ class Post < ActiveRecord::Base
       save!
     end
 
-    def pg_notify
-      execute_sql("notify changes_posts, '#{id}'")
+    def notify_pubsub
+      return unless Danbooru.config.google_api_project
+
+      require 'google/apis/pubsub_v1'
+      pubsub = Google::Apis::PubsubV1::PubsubService.new
+      pubsub.authorization = Google::Auth.get_application_default([Google::Apis::PubsubV1::AUTH_PUBSUB])
+      topic = "projects/#{Danbooru.config.google_api_project}/topics/post_updates"
+      request = Google::Apis::PubsubV1::PublishRequest.new(messages: [])
+      request.messages << Google::Apis::PubsubV1::Message.new(data: id.to_s)
+      pubsub.publish_topic(topic, request)
     end
   end
 
@@ -1738,13 +1753,13 @@ class Post < ActiveRecord::Base
 
   def update_column(name, value)
     ret = super(name, value)
-    pg_notify
+    notify_pubsub
     ret
   end
 
   def update_columns(attributes)
     ret = super(attributes)
-    pg_notify
+    notify_pubsub
     ret
   end
 end

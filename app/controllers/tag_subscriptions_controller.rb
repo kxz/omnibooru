@@ -1,5 +1,5 @@
 class TagSubscriptionsController < ApplicationController
-  before_filter :member_only, :only => [:new, :edit, :create, :update, :destroy]
+  before_filter :member_only, :only => [:new, :edit, :create, :update, :destroy, :migrate]
   respond_to :html, :xml, :json
 
   def new
@@ -59,6 +59,14 @@ class TagSubscriptionsController < ApplicationController
     @user = User.find(params[:id])
     @post_set = PostSets::Post.new("sub:#{@user.name} #{params[:tags]}", params[:page])
     @posts = @post_set.posts
+  end
+
+  def migrate
+    @tag_subscription = TagSubscription.find(params[:id])
+    check_privilege(@tag_subscription)
+    @tag_subscription.migrate_to_saved_searches
+    flash[:notice] = "Tag subscription will be migrated to a saved search. Please wait a few minutes for the search to refresh."
+    redirect_to tag_subscriptions_path
   end
 
 private

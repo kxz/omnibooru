@@ -4,7 +4,7 @@ app_path = "/srv/danbooru2/current"
 # Set unicorn options
 worker_processes 4
 
-preload_app true
+preload_app false
 timeout 180
 listen "#{app_path}/tmp/sockets/unicorn.sock"
 

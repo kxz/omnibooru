@@ -12,5 +12,3 @@ set :default_env, {
   "RAILS_GROUPS" => "assets",
   "XDG_RUNTIME_DIR" => "/run/user/112",
 }
-
-after "deploy:published", "unicorn:reload"

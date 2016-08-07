@@ -4,7 +4,7 @@ module Danbooru
   class Configuration
     # The version of this Danbooru.
     def version
-      "2.103.0"
+      "2.104.0"
     end
 
     # The name of this Danbooru.
@@ -392,7 +392,7 @@ module Danbooru
 
     # enable some (donmai-specific) optimizations for post counts
     def estimate_post_counts
-      true
+      false
     end
 
     # listbooru options
@@ -404,6 +404,10 @@ module Danbooru
     end
 
     def listbooru_auth_key
+    end
+
+    # google api options
+    def google_api_project
     end
 
     # AWS config options
@@ -440,6 +444,9 @@ module Danbooru
     end
 
     def aws_sqs_reltagcalc_url
+    end
+
+    def aws_sqs_post_versions_url
     end
 
     def aws_sqs_region

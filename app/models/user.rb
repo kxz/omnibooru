@@ -479,6 +479,8 @@ class User < ActiveRecord::Base
     def can_upload?
       if can_upload_free?
         true
+      elsif is_admin?
+        true
       else
         upload_limit > 0
       end
