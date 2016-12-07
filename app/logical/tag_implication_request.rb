@@ -29,8 +29,8 @@ class TagImplicationRequest
 
   def build_tag_implication
     x = TagImplication.new(
-      :antecedent_name => antecedent_name,
-      :consequent_name => consequent_name,
+      :antecedent_name => antecedent_name, 
+      :consequent_name => consequent_name, 
       :skip_secondary_validations => skip_secondary_validations
     )
     x.status = "pending"
@@ -38,11 +38,10 @@ class TagImplicationRequest
   end
 
   def build_forum_topic(tag_implication_id)
-    implication_url = Rails.application.routes.url_helpers.tag_implications_path(:search => {:id => tag_implication_id})
     ForumTopic.new(
       :title => "Tag implication: #{antecedent_name} -> #{consequent_name}",
       :original_post_attributes => {
-        :body => "create implication [[#{antecedent_name}]] -> [[#{consequent_name}]]\n\n\"Link to implication\":#{implication_url}\n\n#{reason}"
+        :body => "create implication [[#{antecedent_name}]] -> [[#{consequent_name}]]\n\n\"Link to implication\":/tag_implications?search[id]=#{tag_implication_id}\n\n#{reason}"
       },
       :category_id => 1
     )
@@ -52,7 +51,7 @@ class TagImplicationRequest
     ti = @tag_implication || build_tag_implication
 
     if ti.invalid?
-      self.errors.add(:base, ti.errors.full_messages.join("; "))
+      self.errors.add(:base, ti.errors.full_messages.join("; ")) 
       return false
     end
   end
@@ -60,7 +59,7 @@ class TagImplicationRequest
   def validate_forum_topic
     ft = @forum_topic || build_forum_topic(nil)
     if ft.invalid?
-      self.errors.add(:base, ft.errors.full_messages.join("; "))
+      self.errors.add(:base, ft.errors.full_messages.join("; ")) 
       return false
     end
   end

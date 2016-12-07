@@ -3,7 +3,7 @@
   <%= submit_tag "Go", :name => nil %>
 <% end %>
 
-<%= @post_set.presenter.post_previews_html(self, :path_prefix => mobile_posts_path) %>
+<%= @post_set.presenter.post_previews_html(self, :path_prefix => "/m/posts") %>
 
 <%= sequential_paginator(@post_set.posts) %>
 
@@ -16,7 +16,7 @@
           var href = $(".paginator a[rel=next]").attr("href");
           if (href) {
             window.location = href;
-          }
+          }          
         }
       });
 

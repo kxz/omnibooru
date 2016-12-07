@@ -408,7 +408,7 @@ Danbooru.Note = {
       $dialog.data("uiDialog")._title = function(title) {
         title.html(this.options.title); // Allow unescaped html in dialog title
       }
-      $dialog.dialog("option", "title", 'Edit note (<a href="<%= Rails.application.routes.url_helpers.wiki_pages_path :title => 'help:notes' %>">view help</a>)');
+      $dialog.dialog("option", "title", 'Edit note (<a href="/wiki_pages/help:notes">view help</a>)');
 
       $dialog.bind("dialogclose", function() {
         Danbooru.Note.editing = false;
@@ -473,7 +473,7 @@ Danbooru.Note = {
       var text = $textarea.val();
       $note_body.data("original-body", text);
       Danbooru.Note.Body.set_text($note_body, $note_box, "Loading...");
-      $.get("<%= Rails.application.routes.url_helpers.note_previews_path :format => :json %>", {body: text}).success(function(data) {
+      $.get("/note_previews.json", {body: text}).success(function(data) {
         Danbooru.Note.Body.set_text($note_body, $note_box, data.body);
         Danbooru.Note.Box.resize_inner_border($note_box);
         $note_body.show();
@@ -481,14 +481,14 @@ Danbooru.Note = {
       $this.dialog("close");
 
       if (id.match(/\d/)) {
-        $.ajax("<%= Rails.application.routes.url_helpers.notes_path %>/" + id + ".json", {
+        $.ajax("/notes/" + id + ".json", {
           type: "PUT",
           data: Danbooru.Note.Edit.parameterize_note($note_box, $note_body),
           error: Danbooru.Note.Edit.error_handler,
           success: Danbooru.Note.Edit.success_handler
         });
       } else {
-        $.ajax("<%= Rails.application.routes.url_helpers.notes_path :format => :json %>", {
+        $.ajax("/notes.json", {
           type: "POST",
           data: Danbooru.Note.Edit.parameterize_note($note_box, $note_body),
           error: Danbooru.Note.Edit.error_handler,
@@ -506,7 +506,7 @@ Danbooru.Note = {
       var $note_box = Danbooru.Note.Box.find(id);
       $note_box.find(".note-box-inner-border").addClass("unsaved");
       Danbooru.Note.Body.set_text($note_body, $note_box, "Loading...");
-      $.get("<%= Rails.application.routes.url_helpers.note_previews_path :format => :json %>", {body: text}).success(function(data) {
+      $.get("/note_previews.json", {body: text}).success(function(data) {
         Danbooru.Note.Body.set_text($note_body, $note_box, data.body);
         $note_body.show();
       });
@@ -525,7 +525,7 @@ Danbooru.Note = {
       var id = $this.data("id");
 
       if (id.match(/\d/)) {
-        $.ajax("<%= Rails.application.routes.url_helpers.notes_path %>/" + id + ".json", {
+        $.ajax("/notes/" + id + ".json", {
           type: "DELETE",
           success: function() {
             Danbooru.Note.Box.find(id).remove();
@@ -540,7 +540,7 @@ Danbooru.Note = {
       var $this = $(this);
       var id = $this.data("id");
       if (id.match(/\d/)) {
-        window.location.href = "<%= Rails.application.routes.url_helpers.note_versions_path %>?search[note_id]=" + id;
+        window.location.href = "/note_versions?search[note_id]=" + id;
       }
       $(this).dialog("close");
     }

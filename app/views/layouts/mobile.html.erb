@@ -2,7 +2,7 @@
 <html>
 <head>
   <title><%= yield :page_title %></title>
-  <link rel="shortcut icon" href="<%= root_path %>favicon.ico" type="image/x-icon">
+  <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
   <%= csrf_meta_tag %>
   <%= stylesheet_link_tag "mobile", :media => "screen" %>
   <%= javascript_include_tag "jquery-1.11.1.min.js" %>
@@ -12,7 +12,7 @@
 </head>
 <body lang="en">
   <header id="top">
-    <h1><%= link_to Danbooru.config.app_name, root_path %></h1>
+    <h1><%= link_to Danbooru.config.app_name, "/" %></h1>
   </header>
   <div id="page">
     <%= yield :layout %>

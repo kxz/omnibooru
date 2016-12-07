@@ -20,7 +20,7 @@
       minLength: 1,
       source: function(req, resp) {
         $.ajax({
-          url: "<%= Rails.application.routes.url_helpers.wiki_pages_path :format => :json %>",
+          url: "/wiki_pages.json",
           data: {
             "search[title]": "*" + req.term + "*",
             "limit": 10

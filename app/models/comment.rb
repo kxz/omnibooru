@@ -14,8 +14,8 @@ class Comment < ActiveRecord::Base
   after_destroy :update_last_commented_at_on_destroy
   attr_accessible :body, :post_id, :do_not_bump_post, :is_deleted
   mentionable(
-    :message_field => :body,
-    :user_field => :creator_id,
+    :message_field => :body, 
+    :user_field => :creator_id, 
     :title => "You were mentioned in a comment",
     :body => lambda {|rec, user_name| "You were mentioned in a \"comment\":/posts/#{rec.post_id}#comment-#{rec.id}\n\n---\n\n[i]#{rec.creator.name} said:[/i]\n\n#{ActionController::Base.helpers.excerpt(rec.body, user_name)}"}
   )

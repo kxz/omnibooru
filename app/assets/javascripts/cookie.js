@@ -14,7 +14,7 @@
     }
 
     var secure = (window.location.protocol == "https:" ? "secure; " : "");
-    var new_val = name + "=" + encodeURIComponent(value) + "; " + expires + secure + "path=<%= Rails.application.routes.url_helpers.root_path %>";
+    var new_val = name + "=" + encodeURIComponent(value) + "; " + expires + secure + "path=/";
     if (document.cookie.length < (4090 - new_val.length)) {
       document.cookie = new_val;
       return true;

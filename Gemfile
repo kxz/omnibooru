@@ -9,7 +9,6 @@ group :test do
   gem "vcr"
   gem "webmock"
   gem "timecop"
-  gem "rails-perftest"
 end
 
 gem 'protected_attributes'

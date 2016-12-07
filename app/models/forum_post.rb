@@ -20,8 +20,8 @@ class ForumPost < ActiveRecord::Base
   before_destroy :validate_topic_is_unlocked
   after_save :delete_topic_if_original_post
   mentionable(
-    :message_field => :body,
-    :user_field => :creator_id,
+    :message_field => :body, 
+    :user_field => :creator_id, 
     :title => "You were mentioned in a forum topic",
     :body => lambda {|rec, user_name| "You were mentioned in the forum topic \"#{rec.topic.title}\":/forum_topics/#{rec.topic_id}?page=#{rec.forum_topic_page}\n\n---\n\n[i]#{rec.creator.name} said:[/i]\n\n#{ActionController::Base.helpers.excerpt(rec.body, user_name)}"}
   )
@@ -107,7 +107,7 @@ class ForumPost < ActiveRecord::Base
 
       super(options)
     end
-
+    
     def hidden_attributes
       super + [:text_index]
     end

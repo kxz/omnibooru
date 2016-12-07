@@ -1,5 +1,5 @@
 <menu class="main">
-  <%= nav_link_to("&laquo; Room 208".html_safe, "/") %>
+  <%= nav_link_to("&laquo; Room 208".html_safe, "https://room208.org/") %>
   <% if CurrentUser.is_anonymous? %>
     <%= nav_link_to("Sign in", new_session_path, :class => "login") %>
   <% else %>

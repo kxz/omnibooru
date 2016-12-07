@@ -3,7 +3,7 @@ require 'uri'
 
 class DText
   MENTION_REGEXP = /(?<=^| )@\S+/
-
+  
   def self.u(string)
     CGI.escape(string)
   end
@@ -57,7 +57,7 @@ class DText
   def self.parse_mentions(str, options = {})
     return if options[:disable_mentions]
 
-    str.gsub!(MENTION_REGEXP) do |name|
+    str.gsub!(MENTION_REGEXP) do |name| 
       next name unless name =~ /[a-z0-9]/i
 
       if name =~ /([:;,.!?\)\]<>])$/
@@ -67,7 +67,7 @@ class DText
         ch = ""
       end
 
-      %{<a href="#{Rails.application.routes.url_helpers.users_path(:name => name[1..-1])}">#{name}</a>#{ch}}
+      '<a href="/users?name=' + u(CGI.unescapeHTML(name[1..-1])) + '">' + name + '</a>' + ch
     end
     str
   end
@@ -107,7 +107,7 @@ class DText
     str.gsub(/\[\[([^\|\]]+)\|([^\]]+)\]\]/m) do
       text = CGI.unescapeHTML($2)
       title = CGI.unescapeHTML($1).tr(" ", "_").downcase
-      %{<a href="#{Rails.application.routes.url_helpers.show_or_new_wiki_pages_path(:title => title)}">#{h(text)}</a>}
+      %{<a href="/wiki_pages/show_or_new?title=#{u(title)}">#{h(text)}</a>}
     end
   end
 
@@ -115,43 +115,26 @@ class DText
     str.gsub(/\[\[([^\]]+)\]\]/) do
       text = CGI.unescapeHTML($1)
       title = text.tr(" ", "_").downcase
-      %{<a href="#{Rails.application.routes.url_helpers.show_or_new_wiki_pages_path(:title => title)}">#{h(text)}</a>}
+      %{<a href="/wiki_pages/show_or_new?title=#{u(title)}">#{h(text)}</a>}
     end
   end
 
   def self.parse_post_links(str)
     str.gsub(/\{\{([^\}]+)\}\}/) do
       tags = CGI.unescapeHTML($1)
-      %{<a rel="nofollow" href="#{Rails.application.routes.url_helpers.posts_path(:tags => tags)}">#{h(tags)}</a>}
+      %{<a rel="nofollow" href="/posts?tags=#{u(tags)}">#{h(tags)}</a>}
     end
   end
 
   def self.parse_id_links(str)
-    url = Rails.application.routes.url_helpers
-    str = str.gsub(/\bpost #(\d+)/i) do
-      %{<a href="#{url.post_path($1)}">post \##{$1}</a>}
-    end
-    str = str.gsub(/\bforum #(\d+)/i) do
-      %{<a href="#{url.forum_post_path($1)}">forum \##{$1}</a>}
-    end
-    str = str.gsub(/\btopic #(\d+)(?!\/p\d|\d)/i) do
-      %{<a href="#{url.forum_topic_path($1)}">topic \##{$1}</a>}
-    end
-    str = str.gsub(/\btopic #(\d+)\/p(\d+)/i) do
-      %{<a href="#{url.forum_topic_path($1, page: $2)}">topic \##{$1}/p#{$2}</a>}
-    end
-    str = str.gsub(/\bcomment #(\d+)/i) do
-      %{<a href="#{url.comment_path($1)}">comment \##{$1}</a>}
-    end
-    str = str.gsub(/\bpool #(\d+)/i) do
-      %{<a href="#{url.pool_path($1)}">pool \##{$1}</a>}
-    end
-    str = str.gsub(/\buser #(\d+)/i) do
-      %{<a href="#{url.user_path($1)}">user \##{$1}</a>}
-    end
-    str = str.gsub(/\bartist #(\d+)/i) do
-      %{<a href="#{url.artist_path($1)}">artist \##{$1}</a>}
-    end
+    str = str.gsub(/\bpost #(\d+)/i, %{<a href="/posts/\\1">post #\\1</a>})
+    str = str.gsub(/\bforum #(\d+)/i, %{<a href="/forum_posts/\\1">forum #\\1</a>})
+    str = str.gsub(/\btopic #(\d+)(?!\/p\d|\d)/i, %{<a href="/forum_topics/\\1">topic #\\1</a>})
+    str = str.gsub(/\btopic #(\d+)\/p(\d+)/i, %{<a href="/forum_topics/\\1?page=\\2">topic #\\1/p\\2</a>})
+    str = str.gsub(/\bcomment #(\d+)/i, %{<a href="/comments/\\1">comment #\\1</a>})
+    str = str.gsub(/\bpool #(\d+)/i, %{<a href="/pools/\\1">pool #\\1</a>})
+    str = str.gsub(/\buser #(\d+)/i, %{<a href="/users/\\1">user #\\1</a>})
+    str = str.gsub(/\bartist #(\d+)/i, %{<a href="/artists/\\1">artist #\\1</a>})
     str = str.gsub(/\bissue #(\d+)/i, %{<a href="https://github.com/r888888888/danbooru/issues/\\1">issue #\\1</a>})
     str = str.gsub(/\bpixiv #(\d+)(?!\/p\d|\d)/i, %{<a href="http://www.pixiv.net/member_illust.php?mode=medium&illust_id=\\1">pixiv #\\1</a>})
     str = str.gsub(/\bpixiv #(\d+)\/p(\d+)/i, %{<a href="http://www.pixiv.net/member_illust.php?mode=manga_big&illust_id=\\1&page=\\2">pixiv #\\1/p\\2</a>})
@@ -240,7 +223,7 @@ class DText
         tag = $1
         header_id = $2
         content = $3
-
+        
         if options[:inline]
           "<h6 id=\"dtext-#{header_id}\">" + parse_inline(content, options) + "</h6>"
         else

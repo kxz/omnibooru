@@ -136,7 +136,7 @@
 
   Danbooru.Post.initialize_similar = function() {
     $("#similar-button").click(function(e) {
-      $.post("<%= Rails.application.routes.url_helpers.iqdb_queries_path %>", {"url": $("#post_source").val()}).done(function(html) {$("#iqdb-similar").html(html).show()});
+      $.post("/iqdb_queries", {"url": $("#post_source").val()}).done(function(html) {$("#iqdb-similar").html(html).show()});
       e.preventDefault();
     });
   }
@@ -212,7 +212,7 @@
       var other_post_id = parseInt(prompt("Enter the ID of the post to copy all notes to:"), 10);
 
       if (other_post_id !== null) {
-        $.ajax("<%= Rails.application.routes.url_helpers.posts_path %>/" + current_post_id + "/copy_notes", {
+        $.ajax("/posts/" + current_post_id + "/copy_notes", {
           type: "PUT",
           data: {
             other_post_id: other_post_id
@@ -476,7 +476,7 @@
   Danbooru.Post.vote = function(score, id) {
     Danbooru.notice("Voting...");
 
-    $.post("<%= Rails.application.routes.url_helpers.posts_path %>/" + id + "/votes.js", {
+    $.post("/posts/" + id + "/votes.js", {
        score: score
     });
   }
@@ -486,7 +486,7 @@
 
     $.ajax({
       type: "PUT",
-      url: "<%= Rails.application.routes.url_helpers.posts_path %>/" + post_id + ".json",
+      url: "/posts/" + post_id + ".json",
       data: params,
       success: function(data) {
         Danbooru.Post.notice_update("dec");
@@ -494,7 +494,7 @@
       },
       error: function(data) {
         Danbooru.Post.notice_update("dec");
-        Danbooru.error('There was an error updating <a href="<%= Rails.application.routes.url_helpers.posts_path %>/' + post_id + '">post #' + post_id + '</a>');
+        Danbooru.error('There was an error updating <a href="/posts/' + post_id + '">post #' + post_id + '</a>');
         $("#post_" + post_id).effect("shake", {distance: 5, times: 1}, 100);
       }
     });
@@ -503,7 +503,7 @@
   Danbooru.Post.approve = function(post_id) {
     $.ajax({
       type: "POST",
-      url: "<%= Rails.application.routes.url_helpers.moderator_post_approval_path format: :json %>",
+      url: "/moderator/post/approval.json",
       data: {"post_id": post_id},
       dataType: "json",
       success: function(data) {
@@ -527,7 +527,7 @@
       minLength: 1,
       source: function(req, resp) {
         $.ajax({
-          url: "<%= Rails.application.routes.url_helpers.categories_saved_searches_path format: :json %>",
+          url: "/saved_searches/categories.json",
           method: "get",
           success: function(data) {
             resp($.map(data, function(saved_search) {
@@ -562,7 +562,7 @@
         $("#save-search-dialog").dialog("open");
       } else {
         $.post(
-          "<%= Rails.application.routes.url_helpers.saved_searches_path format: :js %>",
+          "/saved_searches.js",
           {
             "saved_search_tags": $("#tags").attr("value")
           }

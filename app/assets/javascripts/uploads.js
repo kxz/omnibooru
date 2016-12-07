@@ -22,7 +22,7 @@
 
   Danbooru.Upload.initialize_iqdb_source = function() {
     if (/^https?:\/\//.test($("#normalized_url").val())) {
-      $.post("<%= Rails.application.routes.url_helpers.iqdb_queries_path %>", {"url": $("#normalized_url").val()}).done(function(html) {$("#iqdb-similar").html(html)});
+      $.post("/iqdb_queries", {"url": $("#normalized_url").val()}).done(function(html) {$("#iqdb-similar").html(html)});
     }
   }
 
@@ -38,7 +38,7 @@
 
   Danbooru.Upload.initialize_similar = function() {
     $("#similar-button").click(function(e) {
-      $.post("<%= Rails.application.routes.url_helpers.iqdb_queries_path %>", {"url": $("#upload_source").val()}).done(function(html) {$("#iqdb-similar").html(html).show()});
+      $.post("/iqdb_queries", {"url": $("#upload_source").val()}).done(function(html) {$("#iqdb-similar").html(html).show()});
       e.preventDefault();
     });
   }
@@ -67,7 +67,7 @@
         Danbooru.error("Error: Source is not a URL");
       } else {
         $("#source-info span#loading-data").show();
-        var xhr = $.get("<%= Rails.application.routes.url_helpers.source_path :format => :json %>?url=" + encodeURIComponent(source));
+        var xhr = $.get("/source.json?url=" + encodeURIComponent(source));
         xhr.success(Danbooru.Upload.fill_source_info);
         xhr.fail(function(data) {
           $("#source-info span#loading-data").html("Error: " + data.responseJSON["message"])
@@ -88,7 +88,7 @@
     Danbooru.RelatedTag.translated_tags = data.translated_tags;
     Danbooru.RelatedTag.build_all();
 
-    var new_artist_href = "<%= Rails.application.routes.url_helpers.new_artist_path %>?other_names="
+    var new_artist_href = "/artists/new?other_names="
                         + encodeURIComponent(data.artist_name)
                         + "&urls="
                         + encodeURIComponent([data.profile_url, data.image_url].join("\n"));

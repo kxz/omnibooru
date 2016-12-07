@@ -2,7 +2,7 @@
   Danbooru.Sources = {};
 
   Danbooru.Sources.get = function(url) {
-    $.get("<%= Rails.application.routes.url_helpers.source_path :format => :json %>", {
+    $.get("/sources.json", {
       url: url
     }).success(function(data) {
     }).error(function(data) {

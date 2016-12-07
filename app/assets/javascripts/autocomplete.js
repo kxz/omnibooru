@@ -239,7 +239,7 @@
     }
 
     $.ajax({
-      url: "<%= Rails.application.routes.url_helpers.autocomplete_tags_path :format => :json %>",
+      url: "/tags/autocomplete.json",
       data: {
         "search[name_matches]": term + "*"
       },
@@ -278,7 +278,7 @@
     }
 
     $link.append(document.createTextNode(item.label));
-    $link.attr("href", "<%= Rails.application.routes.url_helpers.posts_path %>?tags=" + encodeURIComponent(item.value));
+    $link.attr("href", "/posts?tags=" + encodeURIComponent(item.value));
     $link.click(function(e) {
       e.preventDefault();
     });
@@ -353,7 +353,7 @@
 
   Danbooru.Autocomplete.user_source = function(term, resp, metatag) {
     $.ajax({
-      url: "<%= Rails.application.routes.url_helpers.users_path :format => :json %>",
+      url: "/users.json",
       data: {
         "search[order]": "post_upload_count",
         "search[current_user_first]": "true",
@@ -392,7 +392,7 @@
       var subscription_name = match[2];
 
       $.ajax({
-        url: "<%= Rails.application.routes.url_helpers.tag_subscriptions_path :format => :json %>",
+        url: "/tag_subscriptions.json",
         data: {
           "search[creator_name]": user_name,
           "search[name_matches]": subscription_name + "*",
@@ -415,7 +415,7 @@
 
   Danbooru.Autocomplete.pool_source = function(term, resp, metatag) {
     $.ajax({
-      url: "<%= Rails.application.routes.url_helpers.pools_path :format => :json %>",
+      url: "/pools.json",
       data: {
         "search[order]": "post_count",
         "search[name_matches]": term,
@@ -438,7 +438,7 @@
 
   Danbooru.Autocomplete.favorite_group_source = function(term, resp, metatag) {
     $.ajax({
-      url: "<%= Rails.application.routes.url_helpers.favorite_groups_path :format => :json %>",
+      url: "/favorite_groups.json",
       data: {
         "search[name_matches]": term,
         "limit": 10

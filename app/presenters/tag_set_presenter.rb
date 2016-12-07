@@ -93,27 +93,25 @@ private
   end
 
   def build_list_item(tag, template, options)
-    url = Rails.application.routes.url_helpers
-
     html = ""
     html << %{<li class="category-#{categories[tag]}">}
     current_query = template.params[:tags] || ""
 
     unless options[:name_only]
       if categories[tag] == Tag.categories.artist
-        html << %{<a class="wiki-link" href="#{url.show_or_new_artists_path :name => tag}">?</a> }
+        html << %{<a class="wiki-link" href="/artists/show_or_new?name=#{u(tag)}">?</a> }
       else
-        html << %{<a class="wiki-link" href="#{url.show_or_new_wiki_pages_path :title => tag}">?</a> }
+        html << %{<a class="wiki-link" href="/wiki_pages/show_or_new?title=#{u(tag)}">?</a> }
       end
 
       if CurrentUser.user.is_gold? && current_query.present?
-        html << %{<a rel="nofollow" href="#{url.posts_path :tags => current_query + ' ' + tag}" class="search-inc-tag">+</a> }
-        html << %{<a rel="nofollow" href="#{url.posts_path :tags => current_query + ' -' + tag}" class="search-exl-tag">&ndash;</a> }
+        html << %{<a rel="nofollow" href="/posts?tags=#{u(current_query)}+#{u(tag)}" class="search-inc-tag">+</a> }
+        html << %{<a rel="nofollow" href="/posts?tags=#{u(current_query)}+-#{u(tag)}" class="search-exl-tag">&ndash;</a> }
       end
     end
 
     humanized_tag = tag.tr("_", " ")
-    path = options[:path_prefix] || url.posts_path
+    path = options[:path_prefix] || "/posts"
     if categories[tag] == Tag.categories.artist
       itemprop = 'itemprop="author"'
     else

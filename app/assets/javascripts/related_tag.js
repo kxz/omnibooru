@@ -34,7 +34,7 @@
       Danbooru.RelatedTag.build_recent_and_frequent($dest);
       $dest.append("<em>Loading...</em>");
       $("#related-tags-container").show();
-      $.get("<%= Rails.application.routes.url_helpers.related_tag_path :format => :json %>", {
+      $.get("/related_tag.json", {
         "query": Danbooru.RelatedTag.current_tag(),
         "category": category
       }).success(Danbooru.RelatedTag.process_response);
@@ -190,7 +190,7 @@
 
     var match = query.match(/^wiki:(.+)/);
     if (match) {
-      header.html($("<a/>").attr("href", "<%= Rails.application.routes.url_helpers.wiki_pages_path %>?title=" + encodeURIComponent(match[1])).attr("target", "_blank").text(query));
+      header.html($("<a/>").attr("href", "/wiki_pages?title=" + encodeURIComponent(match[1])).attr("target", "_blank").text(query));
     } else {
       header.text(query);
     }
@@ -213,7 +213,7 @@
         var $link = $("<a/>");
         $link.text(tag[0].replace(/_/g, " "));
         $link.addClass("tag-type-" + tag[1]);
-        $link.attr("href", "<%= Rails.application.routes.url_helpers.posts_path %>?tags=" + encodeURIComponent(tag[0]));
+        $link.attr("href", "/posts?tags=" + encodeURIComponent(tag[0]));
         $link.click(Danbooru.RelatedTag.toggle_tag);
         if (Danbooru.RelatedTag.tags_include(tag[0])) {
           $link.addClass("selected");
@@ -269,7 +269,7 @@
     $("#artist-tags").html("<em>Loading...</em>");
     var url = $("#upload_source,#post_source");
     var referer_url = $("#upload_referer_url");
-    $.get("<%= Rails.application.routes.url_helpers.finder_artists_path :format => :json %>", {"url": url.val(), "referer_url": referer_url.val()}).success(Danbooru.RelatedTag.process_artist);
+    $.get("/artists/finder.json", {"url": url.val(), "referer_url": referer_url.val()}).success(Danbooru.RelatedTag.process_artist);
     e.preventDefault();
   }
 

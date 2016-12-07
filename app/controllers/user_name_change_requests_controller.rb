@@ -1,11 +1,11 @@
 class UserNameChangeRequestsController < ApplicationController
-  before_filter :member_only, :only => [:new, :create, :show]
+  before_filter :gold_only, :only => [:new, :create, :show]
   before_filter :admin_only, :only => [:index, :approve, :reject, :destroy]
   rescue_from User::PrivilegeError, :with => :access_denied
 
   def new
   end
-
+  
   def create
     @change_request = UserNameChangeRequest.create(
       :user_id => CurrentUser.user.id,
@@ -14,36 +14,36 @@ class UserNameChangeRequestsController < ApplicationController
       :change_reason => params[:reason],
       :desired_name => params[:desired_name]
     )
-
+    
     if @change_request.errors.any?
       render :action => "new"
     else
-      @change_request.approve!
+      @change_request.approve! 
       redirect_to user_name_change_request_path(@change_request), :notice => "Your name has been changed"
     end
   end
-
+  
   def show
     @change_request = UserNameChangeRequest.find(params[:id])
     check_privileges!(@change_request)
   end
-
+  
   def index
     @change_requests = UserNameChangeRequest.order("id desc").paginate(params[:page], :limit => params[:limit])
   end
-
+  
   def approve
     @change_request = UserNameChangeRequest.find(params[:id])
     @change_request.approve!
     redirect_to user_name_change_request_path(@change_request), :notice => "Name change request approved"
   end
-
+  
   def destroy
     @change_request = UserNameChangeRequest.find(params[:id])
     @change_request.destroy
     redirect_to user_name_change_requests_path
   end
-
+  
   def reject
     @change_request = UserNameChangeRequest.find(params[:id])
     @change_request.reject!(params[:reason])

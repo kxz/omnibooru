@@ -36,7 +36,7 @@
 
   Danbooru.Comment.quote = function(e) {
     $.get(
-      "<%= Rails.application.routes.url_helpers.comments_path %>/" + $(e.target).data('comment-id') + ".json",
+      "/comments/" + $(e.target).data('comment-id') + ".json",
       function(data) {
         var $link = $(e.target);
         var $div = $link.closest("div.comments-for-post").find(".new-comment");

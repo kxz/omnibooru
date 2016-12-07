@@ -16,6 +16,4 @@ if defined?(Unicorn) && Rails.env.production?
   use GC::OOB::UnicornMiddleware
 end
 
-map (ENV['RAILS_RELATIVE_URL_ROOT'] || '/') do
-  run Rails.application
-end
+run Rails.application

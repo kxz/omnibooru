@@ -439,7 +439,6 @@ DEPENDENCIES
   pry
   radix62 (~> 1.0.1)
   rails (~> 4.2.0)
-  rails-perftest
   responders
   rmagick
   ruby-imagespec!

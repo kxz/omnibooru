@@ -29,8 +29,8 @@ class TagAliasRequest
 
   def build_tag_alias
     x = TagAlias.new(
-      :antecedent_name => antecedent_name,
-      :consequent_name => consequent_name,
+      :antecedent_name => antecedent_name, 
+      :consequent_name => consequent_name, 
       :skip_secondary_validations => skip_secondary_validations
     )
     x.status = "pending"
@@ -38,11 +38,10 @@ class TagAliasRequest
   end
 
   def build_forum_topic(tag_alias_id)
-    alias_url = Rails.application.routes.url_helpers.tag_aliases_path(:search => {:id => tag_alias_id})
     ForumTopic.new(
       :title => "Tag alias: #{antecedent_name} -> #{consequent_name}",
       :original_post_attributes => {
-        :body => "create alias [[#{antecedent_name}]] -> [[#{consequent_name}]]\n\n\"Link to alias\":#{alias_url}\n\n#{reason}"
+        :body => "create alias [[#{antecedent_name}]] -> [[#{consequent_name}]]\n\n\"Link to alias\":/tag_aliases?search[id]=#{tag_alias_id}\n\n#{reason}"
       },
       :category_id => 1
     )
@@ -52,7 +51,7 @@ class TagAliasRequest
     ta = @tag_alias || build_tag_alias
 
     if ta.invalid?
-      self.errors.add(:base, ta.errors.full_messages.join("; "))
+      self.errors.add(:base, ta.errors.full_messages.join("; ")) 
       return false
     end
   end
@@ -60,7 +59,7 @@ class TagAliasRequest
   def validate_forum_topic
     ft = @forum_topic || build_forum_topic(nil)
     if ft.invalid?
-      self.errors.add(:base, ft.errors.full_messages.join("; "))
+      self.errors.add(:base, ft.errors.full_messages.join("; ")) 
       return false
     end
   end

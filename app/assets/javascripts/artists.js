@@ -38,7 +38,7 @@
       minLength: 1,
       source: function(req, resp) {
         $.ajax({
-          url: "<%= Rails.application.routes.url_helpers.artists_path :format => :json %>",
+          url: "/artists.json",
           data: {
             "search[name]": "*" + req.term + "*",
             "limit": 10

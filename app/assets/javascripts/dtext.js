@@ -31,7 +31,7 @@
     $preview.text("Loading...").fadeIn("fast");
     $.ajax({
       type: "post",
-      url: "<%= Rails.application.routes.url_helpers.dtext_preview_path %>",
+      url: "/dtext_preview",
       data: {
         body: $input.val()
       },
