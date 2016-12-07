@@ -16,3 +16,9 @@ end
 every 1.month, :at => "2:00 am" do
   runner "MonthlyMaintenance.new.run"
 end
+
+if environment == "production"
+  every 30.minutes do
+    runner "PostUpdate.push"
+  end
+end

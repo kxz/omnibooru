@@ -12,7 +12,7 @@
   <% if CurrentUser.user.blacklisted_tags.present? %>
     <meta name="blacklisted-tags" content="<%= CurrentUser.user.blacklisted_tags.gsub(/(?:\r|\n)+/, ",") %>">
   <% end %>
-  <% if flash[:notice] =~ /error/ %>
+  <% if flash[:notice] =~ /error/i %>
     <meta name="errors" content="true">
   <% end %>
   <meta name="enable-js-navigation" content="<%= CurrentUser.user.enable_post_navigation %>">
@@ -79,6 +79,14 @@
 
     <% if CurrentUser.dmail_count.present? && CurrentUser.dmails.unread.present? && cookies[:hide_dmail_notice].to_i != CurrentUser.dmails.unread.first.id %>
       <%= render "users/dmail_notice" %>
+    <% end %>
+
+    <% if CurrentUser.user.can_approve_posts? %>
+      <%= render "moderator/post/queues/notice" %>
+    <% end %>
+
+    <% if cookies["accepted_tos"].blank? && !CurrentUser.is_gold? %>
+      <%= render "users/tos" %>
     <% end %>
 
     <div class="ui-corner-all ui-state-highlight" id="notice" style="<%= "display: none;" unless flash[:notice] %>">

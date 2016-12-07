@@ -21,6 +21,14 @@ module Danbooru
     config.action_mailer.perform_deliveries = true
     config.log_tags = [lambda {|req| "PID:#{Process.pid}"}]
     config.active_record.raise_in_transactional_callbacks = true
+
+    if File.exists?("#{config.root}/REVISION")
+      config.x.git_hash = File.read("#{config.root}/REVISION").strip
+    elsif system("type git > /dev/null && git rev-parse --show-toplevel > /dev/null")
+      config.x.git_hash = %x(git rev-parse --short HEAD).strip
+    else
+      config.x.git_hash = nil
+    end
   end
 
   I18n.enforce_available_locales = false

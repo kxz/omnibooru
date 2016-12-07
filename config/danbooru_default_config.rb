@@ -4,7 +4,7 @@ module Danbooru
   class Configuration
     # The version of this Danbooru.
     def version
-      "2.104.0"
+      "2.105.0"
     end
 
     # The name of this Danbooru.
@@ -34,6 +34,22 @@ module Danbooru
       contact_email
     end
 
+    def source_code_url
+      "https://github.com/r888888888/danbooru"
+    end
+
+    def commit_url(hash)
+      "#{source_code_url}/commit/#{hash}"
+    end
+
+    def releases_url
+      "#{source_code_url}/releases"
+    end
+
+    def issues_url
+      "#{source_code_url}/issues"
+    end
+
     # Stripped of any special characters.
     def safe_app_name
       app_name.gsub(/[^a-zA-Z0-9_-]/, "_")
@@ -49,14 +65,20 @@ module Danbooru
       "choujin-steiner"
     end
 
-    # Set to true to give all new users gold access.
-    def start_as_gold?
-      false
-    end
-
-    # Set to true to give all new users contributor access.
-    def start_as_contributor?
-      false
+    # Set the default level, permissions, and other settings for new users here.
+    def customize_new_user(user)
+      # user.level = User::Levels::MEMBER
+      # user.can_approve_posts = false
+      # user.can_upload_free = false
+      # user.is_super_voter = false
+      #
+      # user.base_upload_limit = 10
+      # user.comment_threshold = -1
+      # user.blacklisted_tags = ["spoilers", "guro", "scat", "furry -rating:s"].join("\n")
+      # user.default_image_size = "large"
+      # user.per_page = 20
+      # user.disable_tagged_filenames = false
+      true
     end
 
     # What method to use to store images.
@@ -92,7 +114,7 @@ module Danbooru
 
     # List of memcached servers
     def memcached_servers
-      %w(localhost:11211)
+      %w(127.0.0.1:11211)
     end
 
     # After a post receives this many comments, new comments will no longer bump the post in comment/index.
@@ -223,6 +245,14 @@ module Danbooru
       nil
     end
 
+    def upload_notice_wiki_page
+      "help:upload_notice"
+    end
+
+    def flag_notice_wiki_page
+      "help:flag_notice"
+    end
+
     # The number of posts displayed per page.
     def posts_per_page
       20
@@ -271,6 +301,14 @@ module Danbooru
       nil
     end
 
+    def pixiv_whitecube_login
+      nil
+    end
+
+    def pixiv_whitecube_password
+      nil
+    end
+
     def tinami_login
       nil
     end
@@ -307,16 +345,6 @@ module Danbooru
       true
     end
 
-    def iqdb_hostname_and_port
-      # ["localhost", 4000]
-      nil
-    end
-
-    def iqdb_file
-      # /var/www/danbooru2/shared/iqdb.db
-      nil
-    end
-
     def shared_dir_path
       "/var/www/danbooru2/shared"
     end
@@ -327,16 +355,11 @@ module Danbooru
     def twitter_api_secret
     end
 
-    def shared_remote_key
-    end
-
-    def report_server
-    end
-
     def enable_post_search_counts
       false
     end
 
+    # you should override this
     def email_key
       "zDMSATq0W3hmA5p3rKTgD"
     end
@@ -395,7 +418,14 @@ module Danbooru
       false
     end
 
-    # listbooru options
+    # reportbooru options - see https://github.com/r888888888/reportbooru
+    def reportbooru_server
+    end
+
+    def reportbooru_key
+    end
+
+    # listbooru options - see https://github.com/r888888888/listbooru
     def listbooru_enabled?
       false
     end
@@ -406,17 +436,26 @@ module Danbooru
     def listbooru_auth_key
     end
 
+    # iqdbs options - see https://github.com/r888888888/iqdbs
+    def iqdbs_auth_key
+    end
+
+    def iqdbs_server
+    end
+
     # google api options
     def google_api_project
     end
 
+    def google_api_json_key_path
+      "/var/www/danbooru2/shared/config/google-key.json"
+    end
+
     # AWS config options
     def aws_access_key_id
-      nil
     end
 
     def aws_secret_access_key
-      nil
     end
 
     def aws_ses_enabled?
@@ -425,7 +464,6 @@ module Danbooru
 
     def aws_ses_options
       # {:smtp_server_name => "smtp server", :user_name => "user name", :ses_smtp_user_name => "smtp user name", :ses_smtp_password => "smtp password"}
-      nil
     end
 
     def aws_s3_enabled?
@@ -450,6 +488,9 @@ module Danbooru
     end
 
     def aws_sqs_region
+    end
+
+    def aws_sqs_iqdb_url
     end
   end
 end

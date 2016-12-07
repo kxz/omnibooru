@@ -8,9 +8,10 @@ class PostVotesController < ApplicationController
     @error = x
   end
 
-protected
-
-  def voter_only
-    CurrentUser.is_voter?
+  def destroy
+    @post = Post.find(params[:post_id])
+    @post.unvote!
+  rescue PostVote::Error => x
+    @error = x
   end
 end

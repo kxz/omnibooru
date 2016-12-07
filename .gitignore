@@ -1,7 +1,9 @@
 bin
 .bundle
+config/application.yml
 config/database.yml
 config/danbooru_local_config.rb
+config/deploy/*.rb
 config/secret_token
 config/session_secret_key
 db/*.sqlite3

@@ -18,11 +18,12 @@
     <% end %>
 
     <% if CurrentUser.is_moderator? %>
-      <%= f.input :is_sticky %>
-      <%= f.input :is_locked %>
+      <%= f.input :min_level, :include_blank => false, :collection => available_min_user_levels %>
+      <%= f.input :is_sticky, :label => "Sticky" %>
+      <%= f.input :is_locked, :label => "Locked" %>
     <% end %>
 
-    <%= f.button :submit, "Submit" %>
+    <%= f.button :submit, "Submit", :data => { :disable_with => "Submitting..." } %>
     <%= dtext_preview_button "forum_post", "body", :input_id => "forum_post_body_for_#{forum_topic.original_post.id}", :preview_id => "dtext-preview-for-#{forum_topic.original_post.id}" %>
   <% end %>
 </div>

@@ -8,9 +8,12 @@ module Downloads
       end
 
       def rewrite(url, headers, data = {})
-        if url =~ /https?:\/\/(?:\w+\.)?pixiv\.net/
+        if url =~ /\Ahttps?:\/\/(?:\w+\.)?pixiv\.net/
           url, headers = rewrite_headers(url, headers)
           url, headers = rewrite_cdn(url, headers)
+        end
+
+        if url =~ /\Ahttps?:\/\/(?:\w+\.)?pixiv\.net/ && source.illust_id_from_url
           url, headers = rewrite_html_pages(url, headers)
           url, headers = rewrite_thumbnails(url, headers)
           url, headers = rewrite_old_small_manga_pages(url, headers)
@@ -53,10 +56,11 @@ module Downloads
       #   http://www.pixiv.net/member_illust.php?mode=big&illust_id=18557054
       #   http://www.pixiv.net/member_illust.php?mode=manga&illust_id=18557054
       #   http://www.pixiv.net/member_illust.php?mode=manga_big&illust_id=18557054&page=1
+      #   http://www.pixiv.net/whitecube/user/277898/illust/59182257
       # Plus this:
       #   i2.pixiv.net/img-inf/img/2014/09/25/00/57/24/46170939_64x64.jpg
       def rewrite_html_pages(url, headers)
-        if url =~ /illust_id=\d+/i || url =~ %r!pixiv\.net/img-inf/img/!i
+        if url =~ /illust_id=\d+/i || url =~ %r!pixiv\.net/img-inf/img/!i || url =~ /illust\/\d+/
           return [source.file_url, headers]
         else
           return [url, headers]
@@ -102,7 +106,7 @@ module Downloads
       # Cache the source data so it gets fetched at most once.
       def source
         @source ||= begin
-          source = ::Sources::Strategies::Pixiv.new(url)
+          source = ::Sources::Site.new(url)
           source.get
 
           source

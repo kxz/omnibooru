@@ -29,7 +29,7 @@ class PostsControllerTest < ActionController::TestCase
           end
 
           get :index, {:format => "json", :login => @user.name, :api_key => @user.api_key.key}
-          assert_response 421
+          assert_response 429
         end
       end
       
@@ -103,6 +103,14 @@ class PostsControllerTest < ActionController::TestCase
         @post.reload
         assert_equal("bbb", @post.tag_string)
       end
+
+      should "ignore restricted params" do
+        post :update, {:id => @post.id, :post => {:last_noted_at => 1.minute.ago}}, {:user_id => @user.id}
+        assert_redirected_to post_path(@post)
+
+        @post.reload
+        assert_nil(@post.last_noted_at)
+      end
     end
 
     context "revert action" do
@@ -118,6 +126,16 @@ class PostsControllerTest < ActionController::TestCase
         assert_redirected_to post_path(@post)
         @post.reload
         assert_equal("aaaa", @post.tag_string)
+      end
+
+      should "not allow reverting to a previous version of another post" do
+        @post2 = FactoryGirl.create(:post, :uploader_id => @user.id, :tag_string => "herp")
+
+        post :revert, { :id => @post.id, :version_id => @post2.versions.first.id }, {:user_id => @user.id}
+        @post.reload
+
+        assert_not_equal(@post.tag_string, @post2.tag_string)
+        assert_response :missing
       end
     end
   end

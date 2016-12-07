@@ -58,7 +58,7 @@ class CommentTest < ActiveSupport::TestCase
           end
 
           dmail = Dmail.last
-          assert_equal("You were mentioned in a \"comment\":#{Rails.application.routes.url_helpers.post_path(@comment.post_id)}#comment-#{@comment.id}\n\n---\n\n[i]#{CurrentUser.name} said:[/i]\n\nHey @#{@user2.name} check this out!", dmail.body)
+          assert_equal("You were mentioned in a \"comment\":/posts/#{@comment.post_id}#comment-#{@comment.id}\n\n---\n\n[i]#{CurrentUser.name} said:[/i]\n\nHey @#{@user2.name} check this out!", dmail.body)
         end
       end
     end
@@ -99,6 +99,13 @@ class CommentTest < ActiveSupport::TestCase
         comment = FactoryGirl.build(:comment)
         comment.save
         assert(comment.errors.empty?, comment.errors.full_messages.join(", "))
+      end
+
+      should "not validate if the post does not exist" do
+        comment = FactoryGirl.build(:comment, :post_id => -1)
+
+        assert_not(comment.valid?)
+        assert_equal(["must exist"], comment.errors[:post])
       end
 
       should "not bump the parent post" do
@@ -153,17 +160,26 @@ class CommentTest < ActiveSupport::TestCase
         user = FactoryGirl.create(:user)
         post = FactoryGirl.create(:post)
         c1 = FactoryGirl.create(:comment, :post => post)
-        comment_vote = c1.vote!("up")
+        comment_vote = c1.vote!("down")
         assert_equal([], comment_vote.errors.full_messages)
-        comment_vote = c1.vote!("up")
+        comment_vote = c1.vote!("down")
         assert_equal(["You have already voted for this comment"], comment_vote.errors.full_messages)
         assert_equal(1, CommentVote.count)
-        assert_equal(1, CommentVote.last.score)
+        assert_equal(-1, CommentVote.last.score)
 
         c2 = FactoryGirl.create(:comment, :post => post)
-        comment_vote = c2.vote!("up")
+        comment_vote = c2.vote!("down")
         assert_equal([], comment_vote.errors.full_messages)
         assert_equal(2, CommentVote.count)
+      end
+
+      should "not allow upvotes by the creator" do
+        user = FactoryGirl.create(:user)
+        post = FactoryGirl.create(:post)
+        c1 = FactoryGirl.create(:comment, :post => post)
+        comment_vote = c1.vote!("up")
+
+        assert_equal(["You cannot upvote your own comments"], comment_vote.errors.full_messages)
       end
 
       should "allow undoing of votes" do

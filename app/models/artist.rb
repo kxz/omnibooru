@@ -1,4 +1,6 @@
 class Artist < ActiveRecord::Base
+  class RevertError < Exception ; end
+
   before_create :initialize_creator
   before_validation :normalize_name
   after_save :create_version
@@ -6,6 +8,7 @@ class Artist < ActiveRecord::Base
   after_save :categorize_tag
   validates_uniqueness_of :name
   validate :name_is_valid
+  validate :wiki_is_empty, :on => :create
   belongs_to :creator, :class_name => "User"
   has_many :members, :class_name => "Artist", :foreign_key => "group_name", :primary_key => "name"
   has_many :urls, :dependent => :destroy, :class_name => "ArtistUrl"
@@ -37,15 +40,20 @@ class Artist < ActiveRecord::Base
           break if url =~ /lohas\.nicoseiga\.jp\/priv\/$/i
           break if url =~ /(?:data|media)\.tumblr\.com\/[a-z0-9]+\/$/i
           break if url =~ /deviantart\.net\//i
+          break if url =~ %r!\Ahttps?://(?:mobile\.)?twitter\.com/\Z!i
         end
 
         artists.inject({}) {|h, x| h[x.name] = x; h}.values.slice(0, 20)
       end
     end
 
+    def url_array
+      urls.map(&:url)
+    end
+
     def save_url_string
       if @url_string
-        prev = urls.map(&:url)
+        prev = url_array
         curr = @url_string.scan(/\S+/).uniq
 
         duplicates = prev.select{|url| prev.count(url) > 1}.uniq
@@ -69,11 +77,11 @@ class Artist < ActiveRecord::Base
     end
 
     def url_string
-      @url_string || urls.map {|x| x.url}.join("\n")
+      @url_string || url_array.join("\n")
     end
 
     def url_string_changed?
-      url_string.scan(/\S+/) != urls.map(&:url)
+      url_string.scan(/\S+/) != url_array
     end
   end
 
@@ -168,6 +176,10 @@ class Artist < ActiveRecord::Base
     end
 
     def revert_to!(version)
+      if id != version.artist_id
+        raise RevertError.new("You cannot revert to a previous version of another artist.")
+      end
+
       self.name = version.name
       self.url_string = version.url_string
       self.is_active = version.is_active
@@ -241,6 +253,13 @@ class Artist < ActiveRecord::Base
     def notes_changed?
       !!@notes_changed
     end
+
+    def wiki_is_empty
+      if WikiPage.titled(name).exists?
+        errors.add(:name, "conflicts with a wiki page")
+        return false
+      end
+    end
   end
 
   module TagMethods
@@ -299,7 +318,7 @@ class Artist < ActiveRecord::Base
           # potential race condition but unlikely
           unless TagImplication.where(:antecedent_name => name, :consequent_name => "banned_artist").exists?
             tag_implication = TagImplication.create!(:antecedent_name => name, :consequent_name => "banned_artist", :skip_secondary_validations => true, :status => "pending")
-            tag_implication.delay(:queue => "default").process!
+            tag_implication.approve!(CurrentUser.user)
           end
 
           update_column(:is_banned, true)
@@ -489,6 +508,10 @@ class Artist < ActiveRecord::Base
 
   def deletable_by?(user)
     user.is_builder?
+  end
+
+  def editable_by?(user)
+    user.is_builder? || (!is_banned? && is_active?)
   end
 
   def visible?

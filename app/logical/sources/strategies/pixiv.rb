@@ -11,12 +11,13 @@ module Sources
       TIMESTAMP = '(?:[0-9]{4}/[0-9]{2}/[0-9]{2}/[0-9]{2}/[0-9]{2}/[0-9]{2})'
       EXT = "(?:jpg|jpeg|png|gif)"
 
-      WEB = "^(?:https?://)?www\\.pixiv\\.net"
-      I12 = "^(?:https?://)?i[0-9]+\\.pixiv\\.net"
-      IMG = "^(?:https?://)?img[0-9]*\\.pixiv\\.net"
+      WEB =   "^(?:https?://)?www\\.pixiv\\.net"
+      I12 =   "^(?:https?://)?i[0-9]+\\.pixiv\\.net"
+      IMG =   "^(?:https?://)?img[0-9]*\\.pixiv\\.net"
+      TOUCH = "^(?:https?://)?touch\\.pixiv\\.net"
 
       def self.url_match?(url)
-        url =~ /#{WEB}|#{IMG}|#{I12}/i
+        url =~ /#{WEB}|#{IMG}|#{I12}|#{TOUCH}/i
       end
 
       def referer_url
@@ -55,7 +56,7 @@ module Sources
         if has_moniker?
           moniker = get_moniker_from_url
         else
-          @illust_id = illust_id_from_url(url)
+          @illust_id = illust_id_from_url!
           @metadata = get_metadata_from_papi(@illust_id)
           moniker = @metadata.moniker
         end
@@ -64,7 +65,8 @@ module Sources
       end
 
       def get
-        @illust_id = illust_id_from_url(url)
+        return unless illust_id_from_url
+        @illust_id = illust_id_from_url
         @metadata = get_metadata_from_papi(@illust_id)
 
         page = agent.get(URI.parse(normalized_url))
@@ -109,8 +111,51 @@ module Sources
       def image_urls
         @metadata.pages
       end
-      
-    protected
+
+      def illust_id_from_url
+        if sample_image? || full_image? || work_page?
+          illust_id_from_url!
+        else
+          nil
+        end
+      rescue Sources::Error
+        nil
+      end
+
+      def illust_id_from_url!
+        # http://img18.pixiv.net/img/evazion/14901720.png
+        #
+        # http://i2.pixiv.net/img18/img/evazion/14901720.png
+        # http://i2.pixiv.net/img18/img/evazion/14901720_m.png
+        # http://i2.pixiv.net/img18/img/evazion/14901720_s.png
+        # http://i1.pixiv.net/img07/img/pasirism/18557054_p1.png
+        # http://i1.pixiv.net/img07/img/pasirism/18557054_big_p1.png
+        #
+        # http://i1.pixiv.net/img-inf/img/2011/05/01/23/28/04/18557054_64x64.jpg
+        # http://i1.pixiv.net/img-inf/img/2011/05/01/23/28/04/18557054_s.png
+        #
+        # http://i1.pixiv.net/c/600x600/img-master/img/2014/10/02/13/51/23/46304396_p0_master1200.jpg
+        # http://i1.pixiv.net/img-original/img/2014/10/02/13/51/23/46304396_p0.png
+        #
+        # http://i1.pixiv.net/img-zip-ugoira/img/2014/10/03/17/29/16/46323924_ugoira1920x1080.zip
+        if url =~ %r!/(\d+)(?:_\w+)?\.(?:jpg|jpeg|png|gif|zip)!i
+          $1
+
+        # http://www.pixiv.net/member_illust.php?mode=medium&illust_id=18557054
+        # http://www.pixiv.net/member_illust.php?mode=big&illust_id=18557054
+        # http://www.pixiv.net/member_illust.php?mode=manga&illust_id=18557054
+        # http://www.pixiv.net/member_illust.php?mode=manga_big&illust_id=18557054&page=1
+        elsif url =~ /illust_id=(\d+)/i
+          $1
+
+        # http://www.pixiv.net/i/18557054
+        elsif url =~ %r!pixiv\.net/i/(\d+)!i
+          $1
+
+        else
+          raise Sources::Error.new("Couldn't get illust ID from URL: #{url}")
+        end
+      end
 
       # http://i1.pixiv.net/c/600x600/img-master/img/2014/10/02/13/51/23/46304396_p1_master1200.jpg
       # => http://i1.pixiv.net/img-original/img/2014/10/02/13/51/23/46304396_p1.png
@@ -297,44 +342,9 @@ module Sources
         @metadata ||= PixivApiClient.new.works(illust_id)
       end
 
-      def illust_id_from_url(url)
-        # http://img18.pixiv.net/img/evazion/14901720.png
-        #
-        # http://i2.pixiv.net/img18/img/evazion/14901720.png
-        # http://i2.pixiv.net/img18/img/evazion/14901720_m.png
-        # http://i2.pixiv.net/img18/img/evazion/14901720_s.png
-        # http://i1.pixiv.net/img07/img/pasirism/18557054_p1.png
-        # http://i1.pixiv.net/img07/img/pasirism/18557054_big_p1.png
-        #
-        # http://i1.pixiv.net/img-inf/img/2011/05/01/23/28/04/18557054_64x64.jpg
-        # http://i1.pixiv.net/img-inf/img/2011/05/01/23/28/04/18557054_s.png
-        #
-        # http://i1.pixiv.net/c/600x600/img-master/img/2014/10/02/13/51/23/46304396_p0_master1200.jpg
-        # http://i1.pixiv.net/img-original/img/2014/10/02/13/51/23/46304396_p0.png
-        #
-        # http://i1.pixiv.net/img-zip-ugoira/img/2014/10/03/17/29/16/46323924_ugoira1920x1080.zip
-        if url =~ %r!/(\d+)(?:_\w+)?\.(?:jpg|jpeg|png|gif|zip)!i
-          $1
-
-        # http://www.pixiv.net/member_illust.php?mode=medium&illust_id=18557054
-        # http://www.pixiv.net/member_illust.php?mode=big&illust_id=18557054
-        # http://www.pixiv.net/member_illust.php?mode=manga&illust_id=18557054
-        # http://www.pixiv.net/member_illust.php?mode=manga_big&illust_id=18557054&page=1
-        elsif url =~ /illust_id=(\d+)/i
-          $1
-
-        # http://www.pixiv.net/i/18557054
-        elsif url =~ %r!pixiv\.net/i/(\d+)!i
-          $1
-
-        else
-          raise Sources::Error.new("Couldn't get illust ID from URL: #{url}")
-        end
-      end
-
       def work_page?
-        return true if url =~ %r!#{WEB}/member_illust\.php\?mode=(?:medium|big|manga|manga_big)&illust_id=\d+!i
-        return true if url =~ %r!#{WEB}/i/\d+$!i
+        return true if url =~ %r!(?:#{WEB}|#{TOUCH})/member_illust\.php\?mode=(?:medium|big|manga|manga_big)&illust_id=\d+!i
+        return true if url =~ %r!(?:#{WEB}|#{TOUCH})/i/\d+$!i
         return false
       end
 

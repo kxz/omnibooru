@@ -1,9 +1,10 @@
 module Moderator
   module Post
     class DisapprovalsController < ApplicationController
-      before_filter :post_approvers_only
+      before_filter :approver_only
 
       def create
+        cookies.permanent[:moderated] = Time.now.to_i
         @post = ::Post.find(params[:post_id])
         @post_disapproval = PostDisapproval.create(:post => @post, :user => CurrentUser.user, :reason => params[:reason] || "disinterest", :message => params[:message])
       end

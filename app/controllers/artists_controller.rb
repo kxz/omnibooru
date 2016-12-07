@@ -3,7 +3,7 @@ class ArtistsController < ApplicationController
   before_filter :member_only, :except => [:index, :show, :banned]
   before_filter :builder_only, :only => [:destroy]
   before_filter :admin_only, :only => [:ban, :unban]
-  before_filter :load_artist, :only => [:ban, :unban, :show, :edit, :update, :destroy, :undelete, :revert]
+  before_filter :load_artist, :only => [:ban, :unban, :show, :edit, :update, :destroy, :undelete]
 
   def new
     @artist = Artist.new_with_defaults(params)
@@ -97,7 +97,8 @@ class ArtistsController < ApplicationController
   end
 
   def revert
-    @version = ArtistVersion.find(params[:version_id])
+    @artist = Artist.find(params[:id])
+    @version = @artist.versions.find(params[:version_id])
     @artist.revert_to!(@version)
     respond_with(@artist)
   end
@@ -112,10 +113,15 @@ class ArtistsController < ApplicationController
   end
 
   def finder
-    @artists = Artist.url_matches(params[:url]).order("id desc").limit(20)
-    if @artists.empty? && params[:referer_url].present? && params[:referer_url] != params[:url]
-      @artists = Artist.url_matches(params[:referer_url]).order("id desc").limit(20)
+    begin
+      @artists = Artist.url_matches(params[:url]).order("id desc").limit(20)
+      if @artists.empty? && params[:referer_url].present? && params[:referer_url] != params[:url]
+        @artists = Artist.url_matches(params[:referer_url]).order("id desc").limit(20)
+      end
+    rescue PixivApiClient::Error => e
+      @artists = []
     end
+
     respond_with(@artists) do |format|
       format.xml do
         render :xml => @artists.to_xml(:include => [:urls], :root => "artists")
@@ -131,5 +137,4 @@ private
   def load_artist
     @artist = Artist.find(params[:id])
   end
-
 end

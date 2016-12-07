@@ -12,6 +12,7 @@ class ApplicationController < ActionController::Base
   # before_filter :secure_cookies_check
   layout "default"
   force_ssl :if => :ssl_login?
+  helper_method :show_moderation_notice?
 
   rescue_from Exception, :with => :rescue_exception
   rescue_from User::PrivilegeError, :with => :access_denied
@@ -19,6 +20,10 @@ class ApplicationController < ActionController::Base
   rescue_from Danbooru::Paginator::PaginationError, :with => :render_pagination_limit
 
 protected
+  def show_moderation_notice?
+    CurrentUser.can_approve_posts? && (cookies[:moderated].blank? || Time.at(cookies[:moderated].to_i) < 1.day.ago)
+  end
+
   def ssl_login?
     cookies[:ssl_login].present?
   end
@@ -27,24 +32,27 @@ protected
     response.headers["Access-Control-Allow-Origin"] = "*"
   end
 
-  def require_shared_key
-    unless params[:key] == Danbooru.config.shared_remote_key
+  def require_reportbooru_key
+    unless params[:key] == Danbooru.config.reportbooru_key
       render(text: "forbidden", status: 403)
       return false
     end
   end
-  
+
   def api_check
     if request.format.to_s =~ /\/json|\/xml/ || params[:controller] == "iqdb"
-      if ApiLimiter.throttled?(request.remote_ip)
-        render :text => "421 User Throttled\n", :layout => false, :status => 421
+      if ApiLimiter.throttled?(CurrentUser.id || request.remote_ip, request.request_method)
+        render :text => "429 Too Many Requests\n", :layout => false, :status => 429
         return false
       end
+    # elsif request.format.to_s =~ /\/html/ && !ApiLimiter.idempotent?(request.request_method)
+    #   if ApiLimiter.throttled?(CurrentUser.id || request.remote_ip, request.request_method)
+    #     render :template => "static/too_many_requests", :status => 429
+    #   end
     end
-    
+
     return true
   end
-
   def rescue_exception(exception)
     @exception = exception
 
@@ -124,9 +132,9 @@ protected
     end
   end
 
-  %w(member banned builder gold platinum janitor moderator admin).each do |level|
-    define_method("#{level}_only") do
-      if !CurrentUser.user.is_banned_or_ip_banned? && CurrentUser.user.__send__("is_#{level}?")
+  User::Roles.each do |role|
+    define_method("#{role}_only") do
+      if !CurrentUser.user.is_banned_or_ip_banned? && CurrentUser.user.__send__("is_#{role}?")
         true
       else
         access_denied()
@@ -163,15 +171,6 @@ protected
       Rails.application.config.session_store :cookie_store, :key => '_danbooru_session', :secure => true
     else
       Rails.application.config.session_store :cookie_store, :key => '_danbooru_session', :secure => false
-    end
-  end
-
-  def post_approvers_only
-    if CurrentUser.can_approve_posts?
-      true
-    else
-      access_denied()
-      false
     end
   end
 end

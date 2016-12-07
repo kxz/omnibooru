@@ -542,6 +542,37 @@ ALTER SEQUENCE amazon_backups_id_seq OWNED BY amazon_backups.id;
 
 
 --
+-- Name: anti_voters; Type: TABLE; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE TABLE anti_voters (
+    id integer NOT NULL,
+    user_id integer,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL
+);
+
+
+--
+-- Name: anti_voters_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE anti_voters_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: anti_voters_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE anti_voters_id_seq OWNED BY anti_voters.id;
+
+
+--
 -- Name: api_keys; Type: TABLE; Schema: public; Owner: -; Tablespace: 
 --
 
@@ -2186,7 +2217,8 @@ CREATE TABLE forum_topics (
     created_at timestamp without time zone,
     updated_at timestamp without time zone,
     is_deleted boolean DEFAULT false NOT NULL,
-    category_id integer DEFAULT 0 NOT NULL
+    category_id integer DEFAULT 0 NOT NULL,
+    min_level integer DEFAULT 0 NOT NULL
 );
 
 
@@ -2593,6 +2625,38 @@ ALTER SEQUENCE post_appeals_id_seq OWNED BY post_appeals.id;
 
 
 --
+-- Name: post_approvals; Type: TABLE; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE TABLE post_approvals (
+    id integer NOT NULL,
+    user_id integer NOT NULL,
+    post_id integer NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL
+);
+
+
+--
+-- Name: post_approvals_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE post_approvals_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: post_approvals_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE post_approvals_id_seq OWNED BY post_approvals.id;
+
+
+--
 -- Name: post_disapprovals; Type: TABLE; Schema: public; Owner: -; Tablespace: 
 --
 
@@ -2659,6 +2723,15 @@ CREATE SEQUENCE post_flags_id_seq
 --
 
 ALTER SEQUENCE post_flags_id_seq OWNED BY post_flags.id;
+
+
+--
+-- Name: post_updates; Type: TABLE; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE UNLOGGED TABLE post_updates (
+    post_id integer
+);
 
 
 --
@@ -3275,7 +3348,8 @@ CREATE TABLE wiki_page_versions (
     updater_ip_addr inet NOT NULL,
     wiki_page_id integer NOT NULL,
     is_locked boolean DEFAULT false NOT NULL,
-    other_names text
+    other_names text,
+    is_deleted boolean DEFAULT false NOT NULL
 );
 
 
@@ -3313,7 +3387,8 @@ CREATE TABLE wiki_pages (
     body_index tsvector,
     updater_id integer,
     other_names text,
-    other_names_index tsvector
+    other_names_index tsvector,
+    is_deleted boolean DEFAULT false NOT NULL
 );
 
 
@@ -3355,6 +3430,13 @@ ALTER TABLE ONLY advertisements ALTER COLUMN id SET DEFAULT nextval('advertiseme
 --
 
 ALTER TABLE ONLY amazon_backups ALTER COLUMN id SET DEFAULT nextval('amazon_backups_id_seq'::regclass);
+
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY anti_voters ALTER COLUMN id SET DEFAULT nextval('anti_voters_id_seq'::regclass);
 
 
 --
@@ -4271,6 +4353,13 @@ ALTER TABLE ONLY post_appeals ALTER COLUMN id SET DEFAULT nextval('post_appeals_
 -- Name: id; Type: DEFAULT; Schema: public; Owner: -
 --
 
+ALTER TABLE ONLY post_approvals ALTER COLUMN id SET DEFAULT nextval('post_approvals_id_seq'::regclass);
+
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: -
+--
+
 ALTER TABLE ONLY post_disapprovals ALTER COLUMN id SET DEFAULT nextval('post_disapprovals_id_seq'::regclass);
 
 
@@ -4422,6 +4511,14 @@ ALTER TABLE ONLY advertisements
 
 ALTER TABLE ONLY amazon_backups
     ADD CONSTRAINT amazon_backups_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: anti_voters_pkey; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace: 
+--
+
+ALTER TABLE ONLY anti_voters
+    ADD CONSTRAINT anti_voters_pkey PRIMARY KEY (id);
 
 
 --
@@ -4670,6 +4767,14 @@ ALTER TABLE ONLY pools
 
 ALTER TABLE ONLY post_appeals
     ADD CONSTRAINT post_appeals_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: post_approvals_pkey; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace: 
+--
+
+ALTER TABLE ONLY post_approvals
+    ADD CONSTRAINT post_approvals_pkey PRIMARY KEY (id);
 
 
 --
@@ -6722,6 +6827,20 @@ CREATE INDEX index_post_appeals_on_post_id ON post_appeals USING btree (post_id)
 
 
 --
+-- Name: index_post_approvals_on_post_id; Type: INDEX; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE INDEX index_post_approvals_on_post_id ON post_approvals USING btree (post_id);
+
+
+--
+-- Name: index_post_approvals_on_user_id; Type: INDEX; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE INDEX index_post_approvals_on_user_id ON post_approvals USING btree (user_id);
+
+
+--
 -- Name: index_post_disapprovals_on_post_id; Type: INDEX; Schema: public; Owner: -; Tablespace: 
 --
 
@@ -7401,4 +7520,16 @@ INSERT INTO schema_migrations (version) VALUES ('20160219172840');
 INSERT INTO schema_migrations (version) VALUES ('20160222211328');
 
 INSERT INTO schema_migrations (version) VALUES ('20160526174848');
+
+INSERT INTO schema_migrations (version) VALUES ('20160820003534');
+
+INSERT INTO schema_migrations (version) VALUES ('20160822230752');
+
+INSERT INTO schema_migrations (version) VALUES ('20160919234407');
+
+INSERT INTO schema_migrations (version) VALUES ('20161018221128');
+
+INSERT INTO schema_migrations (version) VALUES ('20161024220345');
+
+INSERT INTO schema_migrations (version) VALUES ('20161101003139');
 

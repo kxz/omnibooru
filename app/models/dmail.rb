@@ -1,3 +1,5 @@
+require 'digest/sha1'
+
 class Dmail < ActiveRecord::Base
   validates_presence_of :to_id
   validates_presence_of :from_id
@@ -78,6 +80,16 @@ class Dmail < ActiveRecord::Base
     end
   end
 
+  module ApiMethods
+    def hidden_attributes
+      super + [:message_index]
+    end
+    
+    def method_attributes
+      super + [:key]
+    end
+  end
+  
   module SearchMethods
     def for(user)
       where("owner_id = ?", user)
@@ -164,6 +176,7 @@ class Dmail < ActiveRecord::Base
 
   include AddressMethods
   include FactoryMethods
+  include ApiMethods
   extend SearchMethods
 
   def validate_sender_is_not_banned
@@ -208,12 +221,14 @@ class Dmail < ActiveRecord::Base
       to.update_attribute(:has_mail, true)
     end
   end
-
-  def visible_to?(user)
-    user.is_moderator? || owner_id == user.id
+  
+  def key
+    digest = OpenSSL::Digest.new("sha256")
+    OpenSSL::HMAC.hexdigest(digest, Danbooru.config.email_key, "#{title} #{body}")
+  end
+  
+  def visible_to?(user, key)
+    owner_id == user.id || (user.is_moderator? && key == self.key)
   end
 
-  def hidden_attributes
-    super + [:message_index]
-  end
 end

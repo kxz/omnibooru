@@ -77,7 +77,18 @@ class PostFlag < ActiveRecord::Base
     end
   end
 
+  module ApiMethods
+    def hidden_attributes
+      list = super
+      unless CurrentUser.is_moderator?
+        list += [:creator_id]
+      end
+      super + list
+    end
+  end
+
   extend SearchMethods
+  include ApiMethods
 
   def update_post
     post.update_column(:is_flagged, true) unless post.is_flagged?
