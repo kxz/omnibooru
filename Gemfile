@@ -67,7 +67,6 @@ end
 group :production do
   gem 'unicorn-worker-killer'
   gem 'gctools', :platforms => :ruby
-  gem 'capistrano-deploytags', '~> 1.0.0', require: false
 end
 
 group :development do
