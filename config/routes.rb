@@ -65,13 +65,15 @@ Rails.application.routes.draw do
       resource :deletion, :only => [:show, :destroy]
       resource :email_change, :only => [:new, :create]
       resource :dmail_filter, :only => [:edit, :update]
+      resource :api_key, :only => [:show, :view, :update, :destroy] do
+        post :view
+      end
     end
   end
 
   resources :advertisements do
     resources :hits, :controller => "advertisement_hits", :only => [:create]
   end
-  resources :api_keys, :only => [:new, :create]
   resources :artists do
     member do
       put :revert
@@ -100,7 +102,6 @@ Rails.application.routes.draw do
     resources :votes, :controller => "comment_votes", :only => [:create, :destroy]
     collection do
       get :search
-      get :index_all
     end
     member do
       put :unvote
@@ -191,6 +192,10 @@ Rails.application.routes.draw do
   resources :pool_versions, :only => [:index]
   resources :posts do
     resources :events, :only => [:index], :controller => "post_events"
+    resource :artist_commentary, :only => [:index, :show] do
+      collection { put :create_or_update }
+      member { put :revert }
+    end
     resources :votes, :controller => "post_votes", :only => [:create, :destroy]
     collection do
       get :home
@@ -214,7 +219,7 @@ Rails.application.routes.draw do
       get :search
     end
   end
-  resources :artist_commentaries do
+  resources :artist_commentaries, :only => [:index, :show] do
     collection do
       put :create_or_update
       get :search
@@ -278,6 +283,9 @@ Rails.application.routes.draw do
   end
   resources :users do
     resource :password, :only => [:edit], :controller => "maintenance/user/passwords"
+    resource :api_key, :only => [:show, :view, :update, :destroy], :controller => "maintenance/user/api_keys" do
+      post :view
+    end
 
     collection do
       get :search

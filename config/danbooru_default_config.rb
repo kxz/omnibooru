@@ -253,6 +253,10 @@ module Danbooru
       "help:flag_notice"
     end
 
+    def appeal_notice_wiki_page
+      "help:appeal_notice"
+    end
+
     # The number of posts displayed per page.
     def posts_per_page
       20
@@ -478,7 +482,7 @@ module Danbooru
       false
     end
 
-    def aws_sqs_queue_url
+    def aws_sqs_saved_search_url
     end
 
     def aws_sqs_reltagcalc_url
@@ -491,6 +495,9 @@ module Danbooru
     end
 
     def aws_sqs_iqdb_url
+    end
+
+    def aws_sqs_archives_url
     end
   end
 end

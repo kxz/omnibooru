@@ -14,7 +14,7 @@ class Post < ActiveRecord::Base
   before_validation :parse_pixiv_id
   before_validation :blank_out_nonexistent_parents
   before_validation :remove_parent_loops
-  validates_uniqueness_of :md5
+  validates_uniqueness_of :md5, :on => :create
   validates_inclusion_of :rating, in: %w(s q e), message: "rating must be s, q, or e"
   validate :post_is_not_its_own_parent
   validate :updater_can_change_rating
@@ -44,7 +44,7 @@ class Post < ActiveRecord::Base
   has_many :versions, lambda {order("post_versions.updated_at ASC, post_versions.id ASC")}, :class_name => "PostVersion", :dependent => :destroy
   has_many :votes, :class_name => "PostVote", :dependent => :destroy
   has_many :notes, :dependent => :destroy
-  has_many :comments, lambda {order("comments.id")}, :dependent => :destroy
+  has_many :comments, lambda {includes(:creator, :updater).order("comments.id")}, :dependent => :destroy
   has_many :children, lambda {order("posts.id")}, :class_name => "Post", :foreign_key => "parent_id"
   has_many :disapprovals, :class_name => "PostDisapproval", :dependent => :destroy
   has_many :favorites, :dependent => :destroy
@@ -332,7 +332,7 @@ class Post < ActiveRecord::Base
       PostApproval.create(user_id: CurrentUser.id, post_id: id)
 
       if is_deleted_was == true
-        ModAction.create(:description => "undeleted post ##{id}")
+        ModAction.log("undeleted post ##{id}")
       end
 
       save!
@@ -633,6 +633,7 @@ class Post < ActiveRecord::Base
       normalized_tags = TagAlias.to_aliased(normalized_tags)
       normalized_tags = add_automatic_tags(normalized_tags)
       normalized_tags = TagImplication.with_descendants(normalized_tags)
+      normalized_tags = normalized_tags.compact
       normalized_tags.sort!
       set_tag_string(normalized_tags.uniq.sort.join(" "))
     end
@@ -964,9 +965,7 @@ class Post < ActiveRecord::Base
     end
 
     def favorited_users
-      favorited_user_ids.map {|id| User.find(id)}.select do |x|
-        !x.hide_favorites?
-      end
+      User.find(favorited_user_ids).reject(&:hide_favorites?)
     end
 
     def favorite_groups(active_id=nil)
@@ -1338,7 +1337,7 @@ class Post < ActiveRecord::Base
         return false
       end
 
-      ModAction.create(:description => "permanently deleted post ##{id}")
+      ModAction.log("permanently deleted post ##{id}")
       delete!(:without_mod_action => true)
       Post.without_timeout do
         give_favorites_to_parent
@@ -1353,12 +1352,12 @@ class Post < ActiveRecord::Base
 
     def ban!
       update_column(:is_banned, true)
-      ModAction.create(:description => "banned post ##{id}")
+      ModAction.log("banned post ##{id}")
     end
 
     def unban!
       update_column(:is_banned, false)
-      ModAction.create(:description => "unbanned post ##{id}")
+      ModAction.log("unbanned post ##{id}")
     end
 
     def delete!(options = {})
@@ -1383,9 +1382,9 @@ class Post < ActiveRecord::Base
 
         unless options[:without_mod_action]
           if options[:reason]
-            ModAction.create(:description => "deleted post ##{id}, reason: #{options[:reason]}")
+            ModAction.log("deleted post ##{id}, reason: #{options[:reason]}")
           else
-            ModAction.create(:description => "deleted post ##{id}")
+            ModAction.log("deleted post ##{id}")
           end
         end
       end
@@ -1409,7 +1408,7 @@ class Post < ActiveRecord::Base
       self.approver_id = CurrentUser.id
       save
       Post.expire_cache_for_all(tag_array)
-      ModAction.create(:description => "undeleted post ##{id}")
+      ModAction.log("undeleted post ##{id}")
     end
   end
 
@@ -1693,32 +1692,36 @@ class Post < ActiveRecord::Base
     extend ActiveSupport::Concern
 
     module ClassMethods
+      def iqdb_sqs_service
+        SqsService.new(Danbooru.config.aws_sqs_iqdb_url)
+      end
+
+      def iqdb_enabled?
+        Danbooru.config.aws_sqs_iqdb_url.present?
+      end
+
       def remove_iqdb(post_id)
-        if Danbooru.config.aws_sqs_iqdb_url
-          client = SqsService.new(Danbooru.config.aws_sqs_iqdb_url)
-          client.send_message("remove\n#{post_id}")
+        if iqdb_enabled?
+          iqdb_sqs_service.send_message("remove\n#{post_id}")
         end
       end
     end
 
     def update_iqdb_async
-      if File.exists?(preview_file_path) && Danbooru.config.aws_sqs_iqdb_url
-        client = SqsService.new(Danbooru.config.aws_sqs_iqdb_url)
-        client.send_message("update\n#{id}\n#{complete_preview_file_url}")
+      if File.exists?(preview_file_path) && Post.iqdb_enabled?
+        Post.iqdb_sqs_service.send_message("update\n#{id}\n#{complete_preview_file_url}")
       end
     end
 
     def remove_iqdb_async
-      if File.exists?(preview_file_path) && Danbooru.config.aws_sqs_iqdb_url
-        client = SqsService.new(Danbooru.config.aws_sqs_iqdb_url)
-        client.send_message("remove\n#{id}")
+      if File.exists?(preview_file_path) && Post.iqdb_enabled?
+        Post.iqdb_sqs_service.send_message("remove\n#{id}")
       end
     end
 
     def update_iqdb
-      if Danbooru.config.aws_sqs_iqdb_url
-        client = SqsService.new(Danbooru.config.aws_sqs_iqdb_url)
-        client.send_message("update\n#{id}\n#{complete_preview_file_url}")
+      if Post.iqdb_enabled? && Post.iqdb_enabled?
+        Post.iqdb_sqs_service.send_message("update\n#{id}\n#{complete_preview_file_url}")
       end
     end
   end

@@ -52,7 +52,7 @@ class User < ActiveRecord::Base
   has_bit_flags BOOLEAN_ATTRIBUTES, :field => "bit_prefs"
 
   attr_accessor :password, :old_password
-  attr_accessible :dmail_filter_attributes, :enable_privacy_mode, :enable_post_navigation, :new_post_navigation_layout, :password, :old_password, :password_confirmation, :password_hash, :email, :last_logged_in_at, :last_forum_read_at, :has_mail, :receive_email_notifications, :comment_threshold, :always_resize_images, :favorite_tags, :blacklisted_tags, :name, :ip_addr, :time_zone, :default_image_size, :enable_sequential_post_navigation, :per_page, :hide_deleted_posts, :style_usernames, :enable_auto_complete, :custom_style, :show_deleted_children, :disable_categorized_saved_searches, :disable_tagged_filenames, :enable_recent_searches, :as => [:moderator, :janitor, :gold, :member, :anonymous, :default, :builder, :admin]
+  attr_accessible :dmail_filter_attributes, :enable_privacy_mode, :enable_post_navigation, :new_post_navigation_layout, :password, :old_password, :password_confirmation, :password_hash, :email, :last_logged_in_at, :last_forum_read_at, :has_mail, :receive_email_notifications, :comment_threshold, :always_resize_images, :favorite_tags, :blacklisted_tags, :name, :ip_addr, :time_zone, :default_image_size, :enable_sequential_post_navigation, :per_page, :hide_deleted_posts, :style_usernames, :enable_auto_complete, :custom_style, :show_deleted_children, :disable_categorized_saved_searches, :disable_tagged_filenames, :enable_recent_searches, :as => [:moderator, :janitor, :gold, :platinum, :member, :anonymous, :default, :builder, :admin]
   attr_accessible :level, :as => :admin
   validates_length_of :name, :within => 2..100, :on => :create
   validates_format_of :name, :with => /\A[^\s:]+\Z/, :on => :create, :message => "cannot have whitespace or colons"
@@ -362,25 +362,7 @@ class User < ActiveRecord::Base
     end
 
     def role
-      case level
-      when Levels::MEMBER
-        :member
-
-      when Levels::GOLD
-        :gold
-
-      when Levels::BUILDER
-        :builder
-
-      when Levels::MODERATOR
-        :moderator
-
-      when Levels::JANITOR
-        :janitor
-
-      when Levels::ADMIN
-        :admin
-      end
+      level_string.downcase.to_sym
     end
 
     def level_string_was
@@ -441,7 +423,7 @@ class User < ActiveRecord::Base
 
     def create_mod_action
       if level_changed?
-        ModAction.create(:description => %{"#{name}":/users/#{id} level changed #{level_string_was} -> #{level_string}})
+        ModAction.log(%{"#{name}":/users/#{id} level changed #{level_string_was} -> #{level_string}})
       end
     end
 
@@ -686,7 +668,7 @@ class User < ActiveRecord::Base
     end
 
     def pool_version_count
-      PoolVersion.for_user(id).count
+      PoolArchive.for_user(id).count
     end
 
     def forum_post_count
@@ -841,15 +823,19 @@ class User < ActiveRecord::Base
 
   module SavedSearchMethods
     def unique_saved_search_categories
-      categories = saved_searches.pluck(:category)
+      if SavedSearch.enabled?
+        categories = saved_searches.pluck(:category)
 
-      if categories.any? {|x| x.blank?}
-        categories.reject! {|x| x.blank?}
-        categories.unshift(SavedSearch::UNCATEGORIZED_NAME)
+        if categories.any? {|x| x.blank?}
+          categories.reject! {|x| x.blank?}
+          categories.unshift(SavedSearch::UNCATEGORIZED_NAME)
+        end
+
+        categories.uniq!
+        categories
+      else
+        []
       end
-
-      categories.uniq!
-      categories
     end
   end
 

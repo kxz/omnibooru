@@ -11,14 +11,21 @@ class Comment < ActiveRecord::Base
   before_validation :initialize_creator, :on => :create
   before_validation :initialize_updater
   after_create :update_last_commented_at_on_create
+  after_update(:if => lambda {|rec| CurrentUser.id != rec.creator_id}) do
+    ModAction.log("comment ##{rec.id} updated by #{CurrentUser.name}")
+  end
   after_destroy :update_last_commented_at_on_destroy
-  attr_accessible :body, :post_id, :do_not_bump_post, :is_deleted
+  after_destroy(:if => lambda {|rec| CurrentUser.id != rec.creator_id}) do
+    ModAction.log("comment ##{rec.id} deleted by #{CurrentUser.name}")
+  end
+  attr_accessible :body, :post_id, :do_not_bump_post, :is_deleted, :as => [:member, :gold, :platinum, :builder, :janitor, :moderator, :admin]
+  attr_accessible :is_sticky, :as => [:moderator, :admin]
   mentionable(
     :message_field => :body, 
     :user_field => :creator_id, 
     :title => "You were mentioned in a comment",
     :body => lambda {|rec, user_name| "You were mentioned in a \"comment\":/posts/#{rec.post_id}#comment-#{rec.id}\n\n---\n\n[i]#{rec.creator.name} said:[/i]\n\n#{ActionController::Base.helpers.excerpt(rec.body, user_name)}"}
-  )
+    )
 
   module SearchMethods
     def recent
@@ -34,11 +41,11 @@ class Comment < ActiveRecord::Base
     end
 
     def hidden(user)
-      where("score < ?", user.comment_threshold)
+      where("score < ? and is_sticky = false", user.comment_threshold)
     end
 
     def visible(user)
-      where("score >= ?", user.comment_threshold)
+      where("score >= ? or is_sticky = true", user.comment_threshold)
     end
 
     def deleted
@@ -54,11 +61,11 @@ class Comment < ActiveRecord::Base
     end
 
     def for_creator(user_id)
-      where("creator_id = ?", user_id)
+      user_id.present? ? where("creator_id = ?", user_id) : where("false")
     end
 
     def for_creator_name(user_name)
-      where("creator_id = (select _.id from users _ where lower(_.name) = lower(?))", user_name.mb_chars.downcase)
+      for_creator(User.name_to_id(user_name))
     end
 
     def search(params)
@@ -69,8 +76,12 @@ class Comment < ActiveRecord::Base
         q = q.body_matches(params[:body_matches])
       end
 
+      if params[:id].present?
+        q = q.where("id in (?)", params[:id].split(",").map(&:to_i))
+      end
+
       if params[:post_id].present?
-        q = q.where("post_id = ?", params[:post_id].to_i)
+        q = q.where("post_id in (?)", params[:post_id].split(",").map(&:to_i))
       end
 
       if params[:post_tags_match].present?
@@ -78,7 +89,7 @@ class Comment < ActiveRecord::Base
       end
 
       if params[:creator_name].present?
-        q = q.for_creator_name(params[:creator_name].tr(" ", "_"))
+        q = q.for_creator_name(params[:creator_name])
       end
 
       if params[:creator_id].present?
@@ -199,12 +210,16 @@ class Comment < ActiveRecord::Base
     super + [:body_index]
   end
 
+  def method_attributes
+    super + [:creator_name, :updater_name]
+  end
+
   def delete!
-    update_attributes(:is_deleted => true)
+    update({ :is_deleted => true }, :as => CurrentUser.role)
   end
 
   def undelete!
-    update_attributes(:is_deleted => false)
+    update({ :is_deleted => false }, :as => CurrentUser.role)
   end
 end
 

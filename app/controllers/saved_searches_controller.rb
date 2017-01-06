@@ -1,4 +1,6 @@
 class SavedSearchesController < ApplicationController
+  include SavedSearches::CheckAvailability
+
   before_filter :member_only
   respond_to :html, :xml, :json, :js
   
@@ -46,7 +48,6 @@ class SavedSearchesController < ApplicationController
   end
 
 private
-
   def saved_searches
     CurrentUser.user.saved_searches
   end

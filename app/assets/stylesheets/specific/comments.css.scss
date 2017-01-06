@@ -15,6 +15,11 @@ div.comments-for-post {
     article.comment {
       margin-bottom: 2em;
       word-wrap: break-word;
+      padding: 5px;
+
+      &[data-is-sticky="true"] {
+        background: $menu_color;
+      }
 
       div.author {
         width: 12em;
@@ -40,23 +45,13 @@ div.comments-for-post {
       }
     }
 
-    article.comment.below-threshold {
-      -ms-filter: progid:DXImageTransform.Microsoft.Alpha(Opacity=30);
-      filter: alpha(opacity=30);
-      zoom: 1;
+    article.comment.below-threshold:not([data-is-sticky="true"]) {
       opacity: 0.3;
     }
 
     article.comment.below-threshold:hover {
-      -ms-filter: progid:DXImageTransform.Microsoft.Alpha(Opacity=100);
-      filter: alpha(opacity=100);
-      zoom: 1;
       opacity: 1.0;
     }
-  }
-
-  div.comment-preview {
-    margin-bottom: 2em;
   }
 }
 
@@ -150,5 +145,14 @@ div#c-comments {
         display: inline-block;
       }
     }
+  }
+}
+
+form.edit_comment div.input.boolean {
+  display: inline-block;
+
+  label {
+    font-weight: normal;
+    vertical-align: initial;
   }
 }

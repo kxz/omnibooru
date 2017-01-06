@@ -903,7 +903,8 @@ CREATE TABLE comments (
     updater_id integer,
     updater_ip_addr inet,
     do_not_bump_post boolean DEFAULT false NOT NULL,
-    is_deleted boolean DEFAULT false NOT NULL
+    is_deleted boolean DEFAULT false NOT NULL,
+    is_sticky boolean DEFAULT false NOT NULL
 );
 
 
@@ -2518,41 +2519,6 @@ ALTER SEQUENCE pixiv_ugoira_frame_data_id_seq OWNED BY pixiv_ugoira_frame_data.i
 
 
 --
--- Name: pool_versions; Type: TABLE; Schema: public; Owner: -; Tablespace: 
---
-
-CREATE TABLE pool_versions (
-    pool_id integer NOT NULL,
-    post_ids text DEFAULT ''::text NOT NULL,
-    updater_id integer,
-    updater_ip_addr inet,
-    created_at timestamp without time zone,
-    updated_at timestamp without time zone,
-    id integer NOT NULL,
-    name character varying(255)
-);
-
-
---
--- Name: pool_versions_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE pool_versions_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: pool_versions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE pool_versions_id_seq OWNED BY pool_versions.id;
-
-
---
 -- Name: pools; Type: TABLE; Schema: public; Owner: -; Tablespace: 
 --
 
@@ -3095,39 +3061,6 @@ CREATE SEQUENCE tags_id_seq
 --
 
 ALTER SEQUENCE tags_id_seq OWNED BY tags.id;
-
-
---
--- Name: transaction_log_items; Type: TABLE; Schema: public; Owner: -; Tablespace: 
---
-
-CREATE TABLE transaction_log_items (
-    id integer NOT NULL,
-    category character varying(255),
-    user_id integer,
-    data text,
-    created_at timestamp without time zone,
-    updated_at timestamp without time zone
-);
-
-
---
--- Name: transaction_log_items_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE transaction_log_items_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: transaction_log_items_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE transaction_log_items_id_seq OWNED BY transaction_log_items.id;
 
 
 --
@@ -4332,13 +4265,6 @@ ALTER TABLE ONLY pixiv_ugoira_frame_data ALTER COLUMN id SET DEFAULT nextval('pi
 -- Name: id; Type: DEFAULT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY pool_versions ALTER COLUMN id SET DEFAULT nextval('pool_versions_id_seq'::regclass);
-
-
---
--- Name: id; Type: DEFAULT; Schema: public; Owner: -
---
-
 ALTER TABLE ONLY pools ALTER COLUMN id SET DEFAULT nextval('pools_id_seq'::regclass);
 
 
@@ -4431,13 +4357,6 @@ ALTER TABLE ONLY tag_subscriptions ALTER COLUMN id SET DEFAULT nextval('tag_subs
 --
 
 ALTER TABLE ONLY tags ALTER COLUMN id SET DEFAULT nextval('tags_id_seq'::regclass);
-
-
---
--- Name: id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY transaction_log_items ALTER COLUMN id SET DEFAULT nextval('transaction_log_items_id_seq'::regclass);
 
 
 --
@@ -4746,14 +4665,6 @@ ALTER TABLE ONLY pixiv_ugoira_frame_data
 
 
 --
--- Name: pool_versions_pkey; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace: 
---
-
-ALTER TABLE ONLY pool_versions
-    ADD CONSTRAINT pool_versions_pkey PRIMARY KEY (id);
-
-
---
 -- Name: pools_pkey; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace: 
 --
 
@@ -4863,14 +4774,6 @@ ALTER TABLE ONLY tag_subscriptions
 
 ALTER TABLE ONLY tags
     ADD CONSTRAINT tags_pkey PRIMARY KEY (id);
-
-
---
--- Name: transaction_log_items_pkey; Type: CONSTRAINT; Schema: public; Owner: -; Tablespace: 
---
-
-ALTER TABLE ONLY transaction_log_items
-    ADD CONSTRAINT transaction_log_items_pkey PRIMARY KEY (id);
 
 
 --
@@ -6750,34 +6653,6 @@ CREATE UNIQUE INDEX index_pixiv_ugoira_frame_data_on_post_id ON pixiv_ugoira_fra
 
 
 --
--- Name: index_pool_versions_on_pool_id; Type: INDEX; Schema: public; Owner: -; Tablespace: 
---
-
-CREATE INDEX index_pool_versions_on_pool_id ON pool_versions USING btree (pool_id);
-
-
---
--- Name: index_pool_versions_on_updated_at; Type: INDEX; Schema: public; Owner: -; Tablespace: 
---
-
-CREATE INDEX index_pool_versions_on_updated_at ON pool_versions USING btree (updated_at);
-
-
---
--- Name: index_pool_versions_on_updater_id; Type: INDEX; Schema: public; Owner: -; Tablespace: 
---
-
-CREATE INDEX index_pool_versions_on_updater_id ON pool_versions USING btree (updater_id);
-
-
---
--- Name: index_pool_versions_on_updater_ip_addr; Type: INDEX; Schema: public; Owner: -; Tablespace: 
---
-
-CREATE INDEX index_pool_versions_on_updater_ip_addr ON pool_versions USING btree (updater_ip_addr);
-
-
---
 -- Name: index_pools_on_creator_id; Type: INDEX; Schema: public; Owner: -; Tablespace: 
 --
 
@@ -7090,20 +6965,6 @@ CREATE UNIQUE INDEX index_tags_on_name ON tags USING btree (name);
 --
 
 CREATE INDEX index_tags_on_post_count ON tags USING btree (post_count);
-
-
---
--- Name: index_transaction_log_items_on_created_at; Type: INDEX; Schema: public; Owner: -; Tablespace: 
---
-
-CREATE INDEX index_transaction_log_items_on_created_at ON transaction_log_items USING btree (created_at);
-
-
---
--- Name: index_transaction_log_items_on_user_id; Type: INDEX; Schema: public; Owner: -; Tablespace: 
---
-
-CREATE INDEX index_transaction_log_items_on_user_id ON transaction_log_items USING btree (user_id);
 
 
 --
@@ -7532,4 +7393,10 @@ INSERT INTO schema_migrations (version) VALUES ('20161018221128');
 INSERT INTO schema_migrations (version) VALUES ('20161024220345');
 
 INSERT INTO schema_migrations (version) VALUES ('20161101003139');
+
+INSERT INTO schema_migrations (version) VALUES ('20161221225849');
+
+INSERT INTO schema_migrations (version) VALUES ('20161227003428');
+
+INSERT INTO schema_migrations (version) VALUES ('20161229001201');
 
