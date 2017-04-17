@@ -1,9 +1,12 @@
 class PoolArchive < ActiveRecord::Base
+
+  belongs_to :updater, :class_name => "User"
+
   def self.enabled?
     Danbooru.config.aws_sqs_archives_url.present?
   end
 
-  establish_connection "archive_#{Rails.env}".to_sym if enabled?
+  establish_connection (ENV["ARCHIVE_DATABASE_URL"] || "archive_#{Rails.env}".to_sym) if enabled?
   self.table_name = "pool_versions"
 
   module SearchMethods
@@ -40,7 +43,7 @@ class PoolArchive < ActiveRecord::Base
   def self.queue(pool)
     # queue updates to sqs so that if archives goes down for whatever reason it won't
     # block pool updates
-    raise "Archive service is not configured" if !enabled?
+    raise NotImplementedError.new("Archive service is not configured.") if !enabled?
 
     json = {
       pool_id: pool.id,
@@ -57,6 +60,24 @@ class PoolArchive < ActiveRecord::Base
     }
     msg = "add pool version\n#{json.to_json}"
     sqs_service.send_message(msg)
+  end
+
+  def build_diff(other = nil)
+    diff = {}
+    prev = previous
+
+    if prev.nil?
+      diff[:added_post_ids] = added_post_ids
+      diff[:removed_post_ids] = removed_post_ids
+      diff[:added_desc] = description
+    else
+      diff[:added_post_ids] = post_ids - prev.post_ids
+      diff[:removed_post_ids] = prev.post_ids - post_ids
+      diff[:added_desc] = description
+      diff[:removed_desc] = prev.description
+    end
+
+    diff
   end
 
   def previous

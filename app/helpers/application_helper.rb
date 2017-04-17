@@ -49,9 +49,9 @@ module ApplicationHelper
     raw %{<a href="#{h(url)}" #{attributes}>#{text}</a>}
   end
 
-  def format_text(text, options = {})
-    if options[:ragel]
-      raw(DTextRagel.parse(text))
+  def format_text(text, ragel: true, **options)
+    if ragel
+      raw DTextRagel.parse(text, **options)
     else
       DText.parse(text)
     end
@@ -89,6 +89,10 @@ module ApplicationHelper
     time_tag(time.strftime("%Y-%m-%d %H:%M"), time)
   end
 
+  def link_to_ip(ip)
+    link_to ip, moderator_ip_addrs_path(:search => {:ip_addr => ip})
+  end
+
   def link_to_user(user, options = {})
     user_class = user.level_class
     user_class = user_class + " user-post-approver" if user.can_approve_posts?
@@ -122,7 +126,7 @@ module ApplicationHelper
   end
 
   def dtext_field(object, name, options = {})
-    options[:name] ||= "Body"
+    options[:name] ||= name.capitalize
     options[:input_id] ||= "#{object}_#{name}"
     options[:input_name] ||= "#{object}[#{name}]"
     options[:value] ||= instance_variable_get("@#{object}").try(name)

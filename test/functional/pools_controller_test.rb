@@ -14,6 +14,7 @@ class PoolsControllerTest < ActionController::TestCase
       CurrentUser.ip_addr = "127.0.0.1"
       @post = FactoryGirl.create(:post)
       mock_pool_archive_service!
+      PoolArchive.sqs_service.stubs(:merge?).returns(false)
       start_pool_archive_transaction
     end
 
@@ -49,11 +50,35 @@ class PoolsControllerTest < ActionController::TestCase
       end
     end
 
+    context "gallery action" do
+      should "render" do
+        pool = FactoryGirl.create(:pool)
+        get :gallery, {:id => pool.id}
+        assert_response :success
+      end
+    end
+
+    context "new action" do
+      should "render" do
+        get :new, {}, { user_id: @user.id }
+        assert_response :success
+      end
+    end
+
     context "create action" do
       should "create a pool" do
         assert_difference("Pool.count", 1) do
           post :create, {:pool => {:name => "xxx", :description => "abc"}}, {:user_id => @user.id}
         end
+      end
+    end
+
+    context "edit action" do
+      should "render" do
+        pool = FactoryGirl.create(:pool)
+
+        get :edit, { id: pool.id }, { user_id: @user.id }
+        assert_response :success
       end
     end
 

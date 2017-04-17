@@ -40,9 +40,51 @@ class WikiPagesControllerTest < ActionController::TestCase
         assert_response :success
       end
 
+      should "render for a title" do
+        get :show, {:id => @wiki_page.title}
+        assert_response :success
+      end
+
+      should "redirect for a nonexistent title" do
+        get :show, {:id => "what"}
+        assert_redirected_to(show_or_new_wiki_pages_path(title: "what"))
+      end
+
       should "render for a negated tag" do
         @wiki_page.update_attribute(:title, "-aaa")
         get :show, {:id => @wiki_page.id}
+        assert_response :success
+      end
+    end
+
+    context "show_or_new action" do
+      setup do
+        @wiki_page = FactoryGirl.create(:wiki_page)
+      end
+
+      should "redirect when given a title" do
+        get :show_or_new, { title: @wiki_page.title }
+        assert_redirected_to(@wiki_page)
+      end
+
+      should "render when given a nonexistent title" do
+        get :show_or_new, { title: "what" }
+        assert_response :success
+      end
+    end
+
+    context "new action" do
+      should "render" do
+        get :new, {}, { user_id: @mod.id }
+        assert_response :success
+      end
+    end
+
+    context "edit action" do
+      should "render" do
+        wiki_page = FactoryGirl.create(:wiki_page)
+
+        get :edit, { id: wiki_page.id }, { user_id: @mod.id }
         assert_response :success
       end
     end
@@ -57,7 +99,8 @@ class WikiPagesControllerTest < ActionController::TestCase
 
     context "update action" do
       setup do
-        @wiki_page = FactoryGirl.create(:wiki_page)
+        @tag = FactoryGirl.create(:tag, name: "foo", post_count: 42)
+        @wiki_page = FactoryGirl.create(:wiki_page, title: "foo")
       end
 
       should "update a wiki_page" do
@@ -65,17 +108,40 @@ class WikiPagesControllerTest < ActionController::TestCase
         @wiki_page.reload
         assert_equal("xyz", @wiki_page.body)
       end
+
+      should "not rename a wiki page with a non-empty tag" do
+        post :update, {:id => @wiki_page.id, :wiki_page => {:title => "bar"}}, {:user_id => @user.id}
+
+        assert_equal("foo", @wiki_page.reload.title)
+      end
+
+      should "rename a wiki page with a non-empty tag if secondary validations are skipped" do
+        post :update, {:id => @wiki_page.id, :wiki_page => {:title => "bar", :skip_secondary_validations => "1"}}, {:user_id => @user.id}
+
+        assert_equal("bar", @wiki_page.reload.title)
+      end
     end
 
     context "destroy action" do
       setup do
         @wiki_page = FactoryGirl.create(:wiki_page)
+        @mod = FactoryGirl.create(:mod_user)
       end
 
       should "destroy a wiki_page" do
-        post :destroy, {:id => @wiki_page.id}, {:user_id => @mod.id}
+        CurrentUser.scoped(@mod) do
+          post :destroy, {:id => @wiki_page.id}, {:user_id => @mod.id}
+        end
         @wiki_page.reload
         assert_equal(true, @wiki_page.is_deleted?)
+      end
+
+      should "record the deleter" do
+        CurrentUser.scoped(@mod) do
+          post :destroy, {:id => @wiki_page.id}, {:user_id => @mod.id}
+        end
+        @wiki_page.reload
+        assert_equal(@mod.id, @wiki_page.updater_id)
       end
     end
 

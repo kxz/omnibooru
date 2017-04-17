@@ -3,6 +3,7 @@
 
   Danbooru.Pool.initialize_all = function() {
     if ($("#c-pools").length) {
+      this.initialize_shortcuts();
       if (Danbooru.meta("enable-auto-complete") === "true") {
         this.initialize_autocomplete_for("#search_name_matches,#quick_search_name_matches");
       }
@@ -26,7 +27,6 @@
         $.ajax({
           url: "/pools.json",
           data: {
-            "search[is_active]": "true",
             "search[name_matches]": req.term,
             "limit": 10
           },
@@ -69,6 +69,18 @@
       $("#pool_name").val($(this).html());
     });
   }
+
+  Danbooru.Pool.initialize_shortcuts = function() {
+    if ($("#c-pools #a-show").length) {
+      Danbooru.keydown("e", "edit", function(e) {
+        $("#pool-edit a")[0].click();
+      });
+
+      Danbooru.keydown("shift+d", "delete", function(e) {
+        $("#pool-delete a")[0].click();
+      });
+    }
+  };
 
   Danbooru.Pool.initialize_simple_edit = function() {
     $("#sortable").sortable({

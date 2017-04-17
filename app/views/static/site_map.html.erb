@@ -59,9 +59,6 @@
       </ul>
       <ul>
         <li><h1>Reports</h1></li>
-        <li><%= link_to("User Promotions", reports_user_promotions_path) %></li>
-        <li><%= link_to("Contributors", reports_contributors_path) %></li>
-        <li><%= link_to("Janitor Trials", reports_janitor_trials_path) %></li>
         <li><%= link_to("Uploads", reports_uploads_path) %></li>
         <li><%= link_to("Performance Reports", "https://isshiki.donmai.us/user-reports") %></li>
         <% if Danbooru.config.reportbooru_server %>
@@ -122,16 +119,13 @@
 
         <% if CurrentUser.is_moderator? %>
           <li><%= link_to("IP Bans", ip_bans_path) %></li>
+          <li><%= link_to("Bulk Revert", new_moderator_bulk_revert_path) %></li>
         <% end %>
 
         <% if CurrentUser.is_admin? %>
           <li><%= link_to("News Updates", news_updates_path) %></li>
           <li><%= link_to("Alias & Implication Import", new_admin_alias_and_implication_import_path) %></li>
           <li><%= link_to("Admin Dashboard", admin_dashboard_path) %></li>
-        <% end %>
-
-        <% if Danbooru.config.is_user_advertiser?(CurrentUser.user) %>
-          <li><%= link_to("Advertisements", advertisements_path) %></li>
         <% end %>
       </ul>
     </section>

@@ -19,9 +19,9 @@ class ApplicationController < ActionController::Base
   rescue_from SessionLoader::AuthenticationFailure, :with => :authentication_failed
   rescue_from Danbooru::Paginator::PaginationError, :with => :render_pagination_limit
 
-protected
+  protected
   def show_moderation_notice?
-    CurrentUser.can_approve_posts? && (cookies[:moderated].blank? || Time.at(cookies[:moderated].to_i) < 1.day.ago)
+    CurrentUser.can_approve_posts? && (cookies[:moderated].blank? || Time.at(cookies[:moderated].to_i) < 20.hours.ago)
   end
 
   def ssl_login?
@@ -40,19 +40,37 @@ protected
   end
 
   def api_check
-    if request.format.to_s =~ /\/json|\/xml/ || params[:controller] == "iqdb"
-      if ApiLimiter.throttled?(CurrentUser.id || request.remote_ip, request.request_method)
-        render :text => "429 Too Many Requests\n", :layout => false, :status => 429
+    if !CurrentUser.is_anonymous? && !request.get? && !request.head?
+      if CurrentUser.user.token_bucket.nil?
+        TokenBucket.create_default(CurrentUser.user)
+        CurrentUser.user.reload
+      end
+
+      throttled = CurrentUser.user.token_bucket.throttled?
+      headers["X-Api-Limit"] = CurrentUser.user.token_bucket.token_count.to_s
+
+      if throttled
+        respond_to do |format|
+          format.json do
+            render json: {success: false, reason: "too many requests"}.to_json, status: 429
+          end
+
+          format.xml do
+            render xml: {success: false, reason: "too many requests"}.to_xml(:root => "response"), status: 429
+          end
+
+          format.html do
+            render :template => "static/too_many_requests", :status => 429
+          end
+        end
+
         return false
       end
-    # elsif request.format.to_s =~ /\/html/ && !ApiLimiter.idempotent?(request.request_method)
-    #   if ApiLimiter.throttled?(CurrentUser.id || request.remote_ip, request.request_method)
-    #     render :template => "static/too_many_requests", :status => 429
-    #   end
     end
 
     return true
   end
+
   def rescue_exception(exception)
     @exception = exception
 
@@ -62,6 +80,13 @@ protected
     elsif exception.is_a?(::ActiveRecord::RecordNotFound)
       @error_message = "That record was not found"
       render :template => "static/error", :status => 404
+    elsif exception.is_a?(NotImplementedError)
+      flash[:notice] = "This feature isn't available: #{@exception.message}"
+      respond_to do |fmt|
+        fmt.html { redirect_to :back }
+        fmt.json { render template: "static/error", status: 501 }
+        fmt.xml  { render template: "static/error", status: 501 }
+      end
     else
       render :template => "static/error", :status => 500
     end

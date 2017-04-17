@@ -8,9 +8,36 @@ class SavedSearchTest < ActiveSupport::TestCase
   def setup
     super
     mock_saved_search_service!
-    Danbooru.config.stubs(:listbooru_enabled?).returns(true)
-    Danbooru.config.stubs(:listbooru_auth_key).returns("blahblahblah")
-    Danbooru.config.stubs(:listbooru_server).returns("http://localhost:3001")
+  end
+
+  context ".labels_for" do
+    setup do
+      @user = FactoryGirl.create(:user)
+      FactoryGirl.create(:saved_search, user: @user, label_string: "blah", query: "blah")
+      FactoryGirl.create(:saved_search, user: @user, label_string: "zah", query: "blah")
+    end
+
+    should "fetch the labels used by a user" do
+      assert_equal(%w(blah zah), SavedSearch.labels_for(@user.id))
+    end
+
+    should "expire when a search is updated" do
+      Cache.expects(:delete).once
+      FactoryGirl.create(:saved_search, user: @user, query: "blah")
+    end
+  end
+
+  context ".queries_for" do
+    setup do
+      @user = FactoryGirl.create(:user)
+      FactoryGirl.create(:saved_search, user: @user, label_string: "blah", query: "aaa")
+      FactoryGirl.create(:saved_search, user: @user, label_string: "zah", query: "bbb")
+    end
+
+    should "fetch the queries used by a user for a label" do
+      assert_equal(%w(aaa), SavedSearch.queries_for(@user.id, "blah"))
+      assert_equal(%w(aaa bbb), SavedSearch.queries_for(@user.id))
+    end
   end
 
   context "Fetching the post ids for a search" do
@@ -22,9 +49,10 @@ class SavedSearchTest < ActiveSupport::TestCase
       FakeWeb.clean_registry
     end
 
-    context "with a name" do
+    context "with a label" do
       setup do
-        FakeWeb.register_uri(:get, "http://localhost:3001/users?key=blahblahblah&user_id=1&name=blah", :body => [1,2,3,4].to_json)
+        SavedSearch.expects(:queries_for).with(1, "blah").returns(%w(a b c))
+        FakeWeb.register_uri(:post, "http://localhost:3001/v2/search", :body => "1 2 3 4")
       end
 
       should "return a list of ids" do
@@ -33,9 +61,10 @@ class SavedSearchTest < ActiveSupport::TestCase
       end
     end
 
-    context "without a name" do
+    context "without a label" do
       setup do
-        FakeWeb.register_uri(:get, "http://localhost:3001/users?key=blahblahblah&user_id=1&name", :body => [1,2,3,4].to_json)
+        SavedSearch.expects(:queries_for).with(1, nil).returns(%w(a b c))
+        FakeWeb.register_uri(:post, "http://localhost:3001/v2/search", :body => "1 2 3 4")
       end
 
       should "return a list of ids" do
@@ -43,12 +72,23 @@ class SavedSearchTest < ActiveSupport::TestCase
         assert_equal([1,2,3,4], post_ids)
       end
     end
+
+    context "with a nonexistent label" do
+      setup do
+        SavedSearch.expects(:queries_for).with(1, "empty").returns([])
+      end
+
+      should "return an empty list of ids" do
+        post_ids = SavedSearch.post_ids(1, "empty")
+        assert_equal([], post_ids)
+      end
+    end
   end
 
   context "Creating a saved search" do
     setup do
       @user = FactoryGirl.create(:gold_user)
-      @saved_search = @user.saved_searches.create(:tag_query => " xxx ")
+      @saved_search = @user.saved_searches.create(:query => " xxx ")
     end
 
     should "update the bitpref on the user" do
@@ -57,11 +97,7 @@ class SavedSearchTest < ActiveSupport::TestCase
     end
 
     should "normalize whitespace" do
-      assert_equal("xxx", @saved_search.tag_query)
-    end
-
-    should "send messages" do
-      assert_equal(%w(create), SavedSearch.sqs_service.commands)
+      assert_equal("xxx", @saved_search.query)
     end
   end
 
@@ -76,17 +112,13 @@ class SavedSearchTest < ActiveSupport::TestCase
       @user.reload
       assert(!@user.has_saved_searches?, "should not have the saved_searches bitpref set")
     end
-
-    should "send messages" do
-      assert_equal(%w(create delete), SavedSearch.sqs_service.commands)
-    end
   end
 
   context "A user with max saved searches" do
     setup do
       @user = FactoryGirl.create(:gold_user)
       User.any_instance.stubs(:max_saved_searches).returns(0)
-      @saved_search = @user.saved_searches.create(:tag_query => "xxx")
+      @saved_search = @user.saved_searches.create(:query => "xxx")
     end
 
     should "not be able to create another saved search" do

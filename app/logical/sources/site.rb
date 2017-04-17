@@ -1,4 +1,4 @@
-﻿# encoding: UTF-8
+# encoding: UTF-8
 
 module Sources
   class Site
@@ -10,7 +10,7 @@ module Sources
       :artist_commentary_desc, :rewrite_thumbnails, :illust_id_from_url, :to => :strategy
 
     def self.strategies
-      [Strategies::PixivWhitecube, Strategies::Pixiv, Strategies::NicoSeiga, Strategies::DeviantArt, Strategies::Nijie, Strategies::Twitter, Strategies::Tumblr]
+      [Strategies::PixivWhitecube, Strategies::Pixiv, Strategies::NicoSeiga, Strategies::DeviantArt, Strategies::ArtStation, Strategies::Nijie, Strategies::Twitter, Strategies::Tumblr]
     end
 
     def initialize(url, options = {})
@@ -45,6 +45,7 @@ module Sources
     def translated_tags
       untranslated_tags = tags
       untranslated_tags = untranslated_tags.map(&:first)
+      untranslated_tags += untranslated_tags.grep(/\//).map {|x| x.split(/\//)}.flatten
       untranslated_tags = untranslated_tags.map do |tag|
         if tag =~ /\A(\S+?)_?\d+users入り\Z/
           $1
@@ -55,7 +56,7 @@ module Sources
       WikiPage.other_names_match(untranslated_tags).map{|wiki_page| [wiki_page.title, wiki_page.category_name]}
     end
 
-    def to_json
+    def to_h
       return {
         :artist_name => artist_name,
         :profile_url => profile_url,
@@ -70,7 +71,11 @@ module Sources
           :title => artist_commentary_title,
           :description => artist_commentary_desc,
         }
-      }.to_json
+      }
+    end
+
+    def to_json
+      to_h.to_json
     end
 
     def available?

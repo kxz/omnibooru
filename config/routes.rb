@@ -1,4 +1,5 @@
 Rails.application.routes.draw do
+
   namespace :admin do
     resources :users, :only => [:edit, :update]
     resource  :alias_and_implication_import, :only => [:new, :create]
@@ -71,9 +72,6 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :advertisements do
-    resources :hits, :controller => "advertisement_hits", :only => [:create]
-  end
   resources :artists do
     member do
       put :revert
@@ -99,12 +97,11 @@ Rails.application.routes.draw do
     end
   end
   resources :comments do
-    resources :votes, :controller => "comment_votes", :only => [:create, :destroy]
+    resource :votes, :controller => "comment_votes", :only => [:create, :destroy]
     collection do
       get :search
     end
     member do
-      put :unvote
       post :undelete
     end
   end
@@ -114,7 +111,7 @@ Rails.application.routes.draw do
     end
   end
   resources :delayed_jobs, :only => [:index]
-  resources :dmails do
+  resources :dmails, :only => [:new, :create, :index, :show, :destroy] do
     collection do
       get :search
       post :mark_all_as_read
@@ -150,7 +147,7 @@ Rails.application.routes.draw do
     resource :visit, :controller => "forum_topic_visits"
   end
   resources :ip_bans
-  resources :iqdb_queries, :only => [:create]
+  resources :iqdb_queries, :only => [:create, :index]
   resources :janitor_trials do
     collection do
       get :test
@@ -161,7 +158,6 @@ Rails.application.routes.draw do
     end
   end
   resources :jobs
-  resource :landing
   resources :mod_actions
   resources :news_updates
   resources :notes do
@@ -189,25 +185,28 @@ Rails.application.routes.draw do
       get :all_select
     end
   end
-  resources :pool_versions, :only => [:index]
+  resources :pool_versions, :only => [:index] do
+    member do
+      get :diff
+    end
+  end
   resources :posts do
     resources :events, :only => [:index], :controller => "post_events"
     resource :artist_commentary, :only => [:index, :show] do
       collection { put :create_or_update }
       member { put :revert }
     end
-    resources :votes, :controller => "post_votes", :only => [:create, :destroy]
+    resource :votes, :controller => "post_votes", :only => [:create, :destroy]
     collection do
-      get :home
       get :random
     end
     member do
       put :revert
       put :copy_notes
       get :show_seq
-      put :unvote
       put :mark_as_translated
     end
+    get :similar, :to => "iqdb_queries#index"
   end
   resources :post_appeals
   resources :post_flags
@@ -230,19 +229,16 @@ Rails.application.routes.draw do
   end
   resources :artist_commentary_versions, :only => [:index]
   resource :related_tag, :only => [:show, :update]
-  get "reports/user_promotions" => "reports#user_promotions"
-  get "reports/janitor_trials" => "reports#janitor_trials"
-  get "reports/contributors" => "reports#contributors"
   get "reports/uploads" => "reports#uploads"
   get "reports/similar_users" => "reports#similar_users"
+  get "reports/upload_tags" => "reports#upload_tags"
   get "reports/post_versions" => "reports#post_versions"
   post "reports/post_versions_create" => "reports#post_versions_create"
   resources :saved_searches, :except => [:show] do
     collection do
-      get :categories
+      get :labels
     end
   end
-  resource :saved_search_category_change, :only => [:new, :create]
   resource :session do
     collection do
       get :sign_out

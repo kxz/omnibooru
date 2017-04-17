@@ -30,6 +30,15 @@ module Danbooru
       "webmaster@#{server_host}"
     end
 
+    # System actions, such as sending automated dmails, will be performed with this account.
+    def system_user
+      User.find_by_name("DanbooruBot") || User.admins.first
+    end
+
+    def upload_feedback_topic
+      ForumTopic.where(title: "Upload Feedback Thread").first
+    end
+
     def upgrade_account_email
       contact_email
     end
@@ -105,11 +114,6 @@ module Danbooru
     # When calculating statistics based on the posts table, gather this many posts to sample from.
     def post_sample_size
       300
-    end
-
-    # Where the ad banners are stored in the file system
-    def advertisement_path
-      nil
     end
 
     # List of memcached servers
@@ -270,10 +274,6 @@ module Danbooru
       !user.is_gold?
     end
 
-    def is_user_advertiser?(user)
-      user.is_admin?
-    end
-
     def can_user_see_post?(user, post)
      if is_user_restricted?(user) && is_post_restricted?(post)
         false
@@ -412,6 +412,11 @@ module Danbooru
     def addthis_key
     end
 
+    # enable s3-nginx proxy caching
+    def use_s3_proxy?(post)
+      post.id < 10_000
+    end
+
     # include essential tags in image urls (requires nginx/apache rewrites)
     def enable_seo_post_urls
       false
@@ -430,10 +435,6 @@ module Danbooru
     end
 
     # listbooru options - see https://github.com/r888888888/listbooru
-    def listbooru_enabled?
-      false
-    end
-
     def listbooru_server
     end
 
@@ -498,6 +499,22 @@ module Danbooru
     end
 
     def aws_sqs_archives_url
+    end
+  end
+
+  class EnvironmentConfiguration
+    def custom_configuration
+      @custom_configuration ||= CustomConfiguration.new
+    end
+
+    def method_missing(method, *args)
+      var = ENV["DANBOORU_#{method.to_s.upcase}"]
+
+      if var.present?
+        var
+      else
+        custom_configuration.send(method, *args)
+      end
     end
   end
 end

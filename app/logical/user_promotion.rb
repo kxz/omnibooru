@@ -15,18 +15,35 @@ class UserPromotion
     @old_can_upload_free = user.can_upload_free?
 
     user.level = new_level
-    user.can_approve_posts = options[:can_approve_posts]
-    user.can_upload_free = options[:can_upload_free]
+
+    if options.has_key?(:can_approve_posts)
+      user.can_approve_posts = options[:can_approve_posts]
+    end
+
+    if options.has_key?(:can_upload_free)
+      user.can_upload_free = options[:can_upload_free]
+    end
+    
     user.inviter_id = promoter.id
 
     create_user_feedback unless options[:skip_feedback]
     create_dmail unless options[:skip_dmail]
-    update_saved_searches
+    create_mod_actions
 
     user.save
   end
 
 private
+  
+  def create_mod_actions
+    if old_can_approve_posts != user.can_approve_posts?
+      ModAction.log("\"#{promoter.name}\":/users/#{promoter.id} changed approval privileges for \"#{user.name}\":/users/#{user.id} from #{old_can_approve_posts} to [b]#{user.can_approve_posts?}[/b]")
+    end
+
+    if old_can_upload_free != user.can_upload_free?
+      ModAction.log("\"#{promoter.name}\":/users/#{promoter.id} changed unlimited upload privileges for \"#{user.name}\":/users/#{user.id} from #{old_can_upload_free} to [b]#{user.can_upload_free?}[/b]")
+    end
+  end
   
   def validate
     # admins can do anything
@@ -66,7 +83,7 @@ private
   end
 
   def create_dmail
-    Dmail.create_split(
+    Dmail.create_automated(
       :to_id => user.id,
       :title => "You have been promoted",
       :body => build_messages
@@ -79,17 +96,5 @@ private
       :body => build_messages,
       :disable_dmail_notification => true
     )
-  end
-
-  def update_saved_searches
-    if user.is_gold?
-      user.saved_searches.each do |ss|
-        ss.update_listbooru_on_create
-      end
-    else
-      user.saved_searches.each do |ss|
-        ss.update_listbooru_on_destroy
-      end
-    end
   end
 end

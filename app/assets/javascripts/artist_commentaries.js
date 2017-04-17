@@ -36,7 +36,7 @@
       width: 500,
       buttons: {
         "Submit": function() {
-          $("#add-commentary-dialog form").submit();
+          $("#add-commentary-dialog #edit-commentary").submit();
           $(this).dialog("close");
         },
         "Cancel": function() {
@@ -45,7 +45,7 @@
       }
     });
 
-    $('#add-commentary-dialog form').submit(function() {
+    $('#add-commentary-dialog #edit-commentary').submit(function() {
       $('#add-commentary-dialog').dialog('close');
     });
 
@@ -115,10 +115,12 @@
   // If the new description conflicts with the current description, merge them
   // by appending the new description onto the old one.
   Danbooru.ArtistCommentary.merge_commentaries = function(description, commentary) {
+    var normalized_source = $("#image-container").data().normalizedSource;
+
     if ((commentary.original_description && description) &&
         (commentary.original_description != description)) {
       return description
-        + "\n\n[tn]\nSource: " + $("#post_source").val() + "\n[/tn]"
+        + "\n\n[tn]\nSource: " + normalized_source + "\n[/tn]"
         + "\n\nh6. " + (commentary.original_title || "Untitled")
         + "\n\n" + commentary.original_description
         + "\n\n[tn]\nSource: " + commentary.source + "\n[/tn]";

@@ -7,9 +7,7 @@
         this.initialize_autocomplete();
       }
 
-      if (Danbooru.meta("enable-js-navigation") === "true") {
-        this.initialize_shortcuts();
-      }
+      this.initialize_shortcuts();
     }
   }
 
@@ -22,7 +20,9 @@
         $.ajax({
           url: "/wiki_pages.json",
           data: {
-            "search[title]": "*" + req.term + "*",
+            "search[title]": req.term + "*",
+            "search[hide_deleted]": "Yes",
+            "search[order]": "post_count",
             "limit": 10
           },
           method: "get",
@@ -51,9 +51,12 @@
 
   Danbooru.WikiPage.initialize_shortcuts = function() {
     if ($("#a-show").length) {
-      $(document).bind("keydown", "e", function(e) {
-        $("#wiki-page-edit-link")[0].click();
-        e.preventDefault();
+      Danbooru.keydown("e", "edit", function(e) {
+        $("#wiki-page-edit a")[0].click();
+      });
+
+      Danbooru.keydown("shift+d", "delete", function(e) {
+        $("#wiki-page-delete a")[0].click();
       });
     }
   }

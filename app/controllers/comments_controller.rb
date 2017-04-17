@@ -1,7 +1,7 @@
 class CommentsController < ApplicationController
   respond_to :html, :xml, :json
   before_filter :member_only, :except => [:index, :search, :show]
-  rescue_from ActiveRecord::StatementInvalid, :with => :rescue_exception
+  skip_before_filter :api_check
 
   def index
     if params[:group_by] == "comment"
@@ -69,13 +69,6 @@ class CommentsController < ApplicationController
     end
   end
 
-  def unvote
-    @comment = Comment.find(params[:id])
-    @comment.unvote!
-  rescue CommentVote::Error => x
-    @error = x
-  end
-
 private
   def index_for_post
     @post = Post.find(params[:post_id])
@@ -96,7 +89,7 @@ private
   end
 
   def index_by_comment
-    @comments = Comment.search(params[:search]).order("comments.id DESC").paginate(params[:page], :limit => params[:limit], :search_count => params[:search])
+    @comments = Comment.search(params[:search]).paginate(params[:page], :limit => params[:limit], :search_count => params[:search])
     respond_with(@comments) do |format|
       format.html {render :action => "index_by_comment"}
       format.xml do

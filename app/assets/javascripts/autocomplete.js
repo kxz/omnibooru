@@ -89,7 +89,7 @@
   Danbooru.Autocomplete.initialize_tag_autocomplete = function() {
     var $fields_multiple = $(
       "#tags,#post_tag_string,#upload_tag_string,#tag-script-field,#c-moderator-post-queues #query," +
-      "#user_blacklisted_tags,#user_favorite_tags,#tag_subscription_tag_query,#search_post_tags_match"
+      "#user_blacklisted_tags,#user_favorite_tags,#search_post_tags_match"
     );
     var $fields_single = $(
       "#c-tags #search_name_matches,#c-tag-aliases #query,#c-tag-implications #query," +
@@ -101,7 +101,7 @@
     );
 
     var prefixes = "-|~|general:|gen:|artist:|art:|copyright:|copy:|co:|character:|char:|ch:";
-    var metatags = "order|-status|status|-rating|rating|-locked|locked|child|" +
+    var metatags = "order|-status|status|-rating|rating|-locked|locked|child|filetype|-filetype|" +
       "-user|user|-approver|approver|commenter|comm|noter|noteupdater|artcomm|-fav|fav|ordfav|" +
       "sub|-pool|pool|ordpool|favgroup";
 
@@ -159,6 +159,8 @@
         case "locked":
         case "-locked":
         case "child":
+        case "filetype":
+        case "-filetype":
           Danbooru.Autocomplete.static_metatag_source(term, resp, metatag);
           return;
         }
@@ -181,9 +183,6 @@
         case "-fav":
         case "ordfav":
           Danbooru.Autocomplete.user_source(term, resp, metatag);
-          break;
-        case "sub":
-          Danbooru.Autocomplete.subscription_source(term, resp);
           break;
         case "pool":
         case "-pool":
@@ -316,6 +315,7 @@
       "favcount", "favcount_asc",
       "change", "change_asc",
       "comment", "comment_asc",
+      "comment_bumped", "comment_bumped_asc",
       "note", "note_asc",
       "artcomm", "artcomm_asc",
       "mpixels", "mpixels_asc",
@@ -335,7 +335,10 @@
     ],
     child: [
       "any", "none"
-    ]
+    ],
+    filetype: [
+      "jpg", "png", "gif", "swf", "zip", "webm", "mp4"
+    ],
   }
 
   Danbooru.Autocomplete.static_metatag_source = function(term, resp, metatag) {
@@ -383,34 +386,6 @@
         }));
       }
     });
-  }
-
-  Danbooru.Autocomplete.subscription_source = function(term, resp) {
-    var match = term.match(/^(.+?):(.*)$/);
-    if (match) {
-      var user_name = match[1];
-      var subscription_name = match[2];
-
-      $.ajax({
-        url: "/tag_subscriptions.json",
-        data: {
-          "search[creator_name]": user_name,
-          "search[name_matches]": subscription_name + "*",
-          "limit": 10
-        },
-        method: "get",
-        success: function(data) {
-          resp($.map(data, function(subscription) {
-            return {
-              label: subscription.name.replace(/_/g, " "),
-              value: "sub:" + user_name + ":" + subscription.name
-            };
-          }));
-        }
-      });
-    } else {
-      Danbooru.Autocomplete.user_source(term, resp, "sub");
-    }
   }
 
   Danbooru.Autocomplete.pool_source = function(term, resp, metatag) {

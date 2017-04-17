@@ -11,11 +11,11 @@ class Comment < ActiveRecord::Base
   before_validation :initialize_creator, :on => :create
   before_validation :initialize_updater
   after_create :update_last_commented_at_on_create
-  after_update(:if => lambda {|rec| CurrentUser.id != rec.creator_id}) do
+  after_update(:if => lambda {|rec| CurrentUser.id != rec.creator_id}) do |rec|
     ModAction.log("comment ##{rec.id} updated by #{CurrentUser.name}")
   end
-  after_destroy :update_last_commented_at_on_destroy
-  after_destroy(:if => lambda {|rec| CurrentUser.id != rec.creator_id}) do
+  after_update :update_last_commented_at_on_destroy, :if => lambda {|rec| rec.is_deleted? && rec.is_deleted_changed?}
+  after_update(:if => lambda {|rec| rec.is_deleted? && rec.is_deleted_changed? && CurrentUser.id != rec.creator_id}) do |rec|
     ModAction.log("comment ##{rec.id} deleted by #{CurrentUser.name}")
   end
   attr_accessible :body, :post_id, :do_not_bump_post, :is_deleted, :as => [:member, :gold, :platinum, :builder, :janitor, :moderator, :admin]
@@ -23,9 +23,9 @@ class Comment < ActiveRecord::Base
   mentionable(
     :message_field => :body, 
     :user_field => :creator_id, 
-    :title => "You were mentioned in a comment",
-    :body => lambda {|rec, user_name| "You were mentioned in a \"comment\":/posts/#{rec.post_id}#comment-#{rec.id}\n\n---\n\n[i]#{rec.creator.name} said:[/i]\n\n#{ActionController::Base.helpers.excerpt(rec.body, user_name)}"}
-    )
+    :title => lambda {|user_name| "#{creator_name} mentioned you in a comment on post ##{post_id}"},
+    :body => lambda {|user_name| "@#{creator_name} mentioned you in a \"comment\":/posts/#{post_id}#comment-#{id} on post ##{post_id}:\n\n[quote]\n#{DText.excerpt(body, "@"+user_name)}\n[/quote]\n"},
+  )
 
   module SearchMethods
     def recent
@@ -54,6 +54,22 @@ class Comment < ActiveRecord::Base
 
     def undeleted
       where("comments.is_deleted = false")
+    end
+
+    def sticky
+      where("comments.is_sticky = true")
+    end
+
+    def unsticky
+      where("comments.is_sticky = false")
+    end
+
+    def bumping
+      where("comments.do_not_bump_post = false")
+    end
+
+    def nonbumping
+      where("comments.do_not_bump_post = true")
     end
 
     def post_tags_match(query)
@@ -96,10 +112,24 @@ class Comment < ActiveRecord::Base
         q = q.for_creator(params[:creator_id].to_i)
       end
 
-      if params[:is_deleted] == "true"
-        q = q.deleted
-      elsif params[:is_deleted] == "false"
-        q = q.undeleted
+      q = q.deleted if params[:is_deleted] == "true"
+      q = q.undeleted if params[:is_deleted] == "false"
+
+      q = q.sticky if params[:is_sticky] == "true"
+      q = q.unsticky if params[:is_sticky] == "false"
+
+      q = q.nonbumping if params[:do_not_bump_post] == "true"
+      q = q.bumping if params[:do_not_bump_post] == "false"
+
+      case params[:order]
+      when "post_id", "post_id_desc"
+        q = q.order("comments.post_id DESC, comments.id DESC")
+      when "score", "score_desc"
+        q = q.order("comments.score DESC, comments.id DESC")
+      when "updated_at", "updated_at_desc"
+        q = q.order("comments.updated_at DESC")
+      else
+        q = q.order("comments.id DESC")
       end
 
       q
@@ -109,14 +139,12 @@ class Comment < ActiveRecord::Base
   module VoteMethods
     def vote!(val)
       numerical_score = val == "up" ? 1 : -1
-      vote = votes.create(:score => numerical_score)
+      vote = votes.create!(:score => numerical_score)
 
-      if vote.errors.empty?
-        if vote.is_positive?
-          update_column(:score, score + 1)
-        elsif vote.is_negative?
-          update_column(:score, score - 1)
-        end
+      if vote.is_positive?
+        update_column(:score, score + 1)
+      elsif vote.is_negative?
+        update_column(:score, score - 1)
       end
 
       return vote
